@@ -26,7 +26,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         playsInline 
         className="absolute inset-0 w-full h-full object-cover z-0 opacity-100 pointer-events-none"
       >
-        <source src="/premium.mp4" type="video/mp4" />
+        <source src="/Assets/Videos/bg-video/premium.mp4" type="video/mp4" />
       </video>
 
       {/* Soft overlay to ensure text readability */}

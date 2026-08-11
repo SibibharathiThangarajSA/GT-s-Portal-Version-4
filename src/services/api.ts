@@ -1,14 +1,208 @@
 import { Session, StudyMaterial, Quiz, PersonalNote, DiscussionPost, User } from '../types';
 
+type CreateStudyMaterialPayload = Partial<StudyMaterial> & {
+  versionNote?: string;
+  updatedBy?: string;
+};
+
+const defaultGuestUser: User = {
+  id: 'guest-user',
+  name: 'Guest Learner',
+  email: 'guest@gtportal.local',
+  role: 'GT',
+  batch: 'GT-Guest',
+  xp: 0,
+  level: 1,
+  streakDays: 0,
+  lastActiveDate: new Date().toISOString().split('T')[0],
+  dailyGoalMinutes: 45,
+  todayMinutesSpent: 0,
+  isGuest: true
+};
+
+const emptySession = (id: string): Session => ({
+  id,
+  name: 'Session unavailable',
+  category: '.NET',
+  description: 'This session is not currently available from the backend.',
+  thumbnail: '',
+  durationHours: 0,
+  difficulty: 'Beginner',
+  progressPercent: 0,
+  isPublished: false,
+  learningObjectives: [],
+  topics: [],
+  studyMaterials: [],
+  quizzes: [],
+  assignments: [],
+  notes: [],
+  rating: 0,
+  ratingCount: 0
+});
+
+export const normalizeSessionPayload = (raw: any): Session => {
+  const learningObjectives = Array.isArray(raw?.learningObjectives)
+    ? raw.learningObjectives.map((item: any) => typeof item === 'string' ? item : item?.objectiveText || item?.text || '')
+    : [];
+
+  const topics = Array.isArray(raw?.topics)
+    ? raw.topics.map((topic: any) => ({
+        id: topic?.id || `topic-${Math.random().toString(36).slice(2)}`,
+        title: topic?.title || 'Topic',
+        order: Number(topic?.order ?? topic?.orderIndex ?? 1),
+        orderIndex: Number(topic?.orderIndex ?? topic?.order ?? 1),
+        status: topic?.status || 'Unlocked',
+        description: topic?.description || '',
+        subtopics: Array.isArray(topic?.subtopics) ? topic.subtopics.map((sub: any) => ({
+          id: sub?.id || `subtopic-${Math.random().toString(36).slice(2)}`,
+          title: sub?.title || 'Subtopic',
+          durationMinutes: Number(sub?.durationMinutes || 0),
+          status: sub?.status || 'Unlocked',
+          description: sub?.description || '',
+          videoUrl: sub?.videoUrl || '',
+          documentUrl: sub?.documentUrl || '',
+          materialsUrl: sub?.materialsUrl || '',
+          assignment: sub?.assignment || ''
+        })) : [],
+        videoUrl: topic?.videoUrl || '',
+        documentUrl: topic?.documentUrl || '',
+        materialsUrl: topic?.materialsUrl || '',
+        assignment: topic?.assignment || ''
+      }))
+    : [];
+
+  const studyMaterials = Array.isArray(raw?.studyMaterials)
+    ? raw.studyMaterials.map((item: any) => ({
+        id: item?.id || `material-${Math.random().toString(36).slice(2)}`,
+        topicId: item?.topicId || undefined,
+        sessionId: item?.sessionId || raw?.id || '',
+        title: item?.title || 'Study Material',
+        type: item?.type || 'PDF',
+        url: item?.url || '',
+        urlType: item?.urlType || 'Website',
+        materialCategory: item?.materialCategory || 'Provided',
+        materialType: item?.materialType || 'Provided',
+        fileName: item?.fileName || '',
+        fileType: item?.fileType || '',
+        fileSize: item?.fileSize || '',
+        course: item?.course || '',
+        module: item?.module || '',
+        description: item?.description || '',
+        durationOrPages: item?.durationOrPages || '',
+        currentVersion: Number(item?.currentVersion || 1),
+        versions: Array.isArray(item?.versions) ? item.versions.map((version: any) => ({
+          version: Number(version?.version ?? version?.versionNumber ?? 1),
+          updatedAt: version?.updatedAt || version?.createdAt || new Date().toISOString(),
+          updatedBy: version?.updatedBy || 'Admin',
+          changeLog: version?.changeLog || 'Initial version',
+          contentUrl: version?.contentUrl || ''
+        })) : [],
+        contentBody: item?.contentBody || '',
+        tags: Array.isArray(item?.tags) ? item.tags : []
+      }))
+    : [];
+
+  const quizzes = Array.isArray(raw?.quizzes)
+    ? raw.quizzes.map((item: any) => ({
+        id: item?.id || `quiz-${Math.random().toString(36).slice(2)}`,
+        sessionId: item?.sessionId || raw?.id || '',
+        topicId: item?.topicId || undefined,
+        title: item?.title || 'Practice Quiz',
+        description: item?.description || '',
+        passingScorePercent: Number(item?.passingScorePercent || 70),
+        timeLimitMinutes: Number(item?.timeLimitMinutes || 15),
+        questions: Array.isArray(item?.questions) ? item.questions.map((question: any) => ({
+          id: question?.id || `question-${Math.random().toString(36).slice(2)}`,
+          type: question?.type || 'MCQ',
+          prompt: question?.prompt || '',
+          options: Array.isArray(question?.options) ? question.options : [],
+          correctAnswer: question?.correctAnswer || question?.correctAnswerJson || '',
+          explanation: question?.explanation || '',
+          points: Number(question?.points || 10),
+          codeSnippet: question?.codeSnippet || '',
+          matchPairs: Array.isArray(question?.matchPairs) ? question.matchPairs : []
+        })) : []
+      }))
+    : [];
+
+  const providedMaterials = studyMaterials.filter((item) => {
+    const category = (item.materialCategory || item.materialType || '').toString().toLowerCase();
+    return category === 'provided' || category === 'official';
+  });
+
+  const additionalMaterials = studyMaterials.filter((item) => {
+    const category = (item.materialCategory || item.materialType || '').toString().toLowerCase();
+    return category === 'additional' || category === 'extra';
+  });
+
+  const assignments = Array.isArray(raw?.assignments)
+    ? raw.assignments.map((item: any) => ({
+        id: item?.id || `assignment-${Math.random().toString(36).slice(2)}`,
+        sessionId: item?.sessionId || raw?.id || '',
+        topicId: item?.topicId || undefined,
+        title: item?.title || 'Assignment',
+        description: item?.description || '',
+        dueDate: item?.dueDate || '',
+        totalPoints: Number(item?.totalPoints || 0),
+        instructions: item?.instructions || '',
+        submissionFormat: item?.submissionFormat || '',
+        attachmentName: item?.attachmentName || '',
+        attachmentUrl: item?.attachmentUrl || '',
+        status: item?.status || 'Pending',
+        submittedUrl: item?.submittedUrl || '',
+        submittedAt: item?.submittedAt || ''
+      }))
+    : [];
+
+  return {
+    id: raw?.id || '',
+    name: raw?.name || 'Session',
+    category: raw?.category || '.NET',
+    description: raw?.description || '',
+    thumbnail: raw?.thumbnail || raw?.thumbnailUrl || '',
+    durationHours: Number(raw?.durationHours || 0),
+    difficulty: raw?.difficulty || 'Beginner',
+    progressPercent: Number(raw?.progressPercent || 0),
+    isPublished: raw?.isPublished ?? (raw?.status === 'Published' || raw?.status === 'Publish'),
+    learningObjectives,
+    topics,
+    studyMaterials,
+    providedMaterials,
+    additionalMaterials,
+    quizzes,
+    assignments,
+    notes: Array.isArray(raw?.notes) ? raw.notes : [],
+    rating: Number(raw?.rating || 0),
+    ratingCount: Number(raw?.ratingCount || 0),
+    trainerName: raw?.trainerName || '',
+    status: raw?.status || (raw?.isPublished ? 'Published' : 'Draft'),
+    videoUrl: raw?.videoUrl || raw?.featuredVideoUrl || ''
+  } as Session;
+};
+
 export const fetchCurrentUser = async (): Promise<User> => {
   try {
     const res = await fetch('/api/user');
     if (!res.ok) throw new Error('Failed to fetch user');
-    return await res.json();
+    const data = await res.json();
+    return {
+      id: data?.id || defaultGuestUser.id,
+      name: data?.name || `${data?.firstName || ''} ${data?.lastName || ''}`.trim() || defaultGuestUser.name,
+      email: data?.email || defaultGuestUser.email,
+      role: data?.role || 'GT',
+      avatar: data?.avatar || '',
+      batch: data?.batch || 'GT-2026-Batch-01',
+      xp: Number(data?.xp || 0),
+      level: Number(data?.level || 1),
+      streakDays: Number(data?.streakDays || 0),
+      lastActiveDate: data?.lastActiveDate || new Date().toISOString().split('T')[0],
+      dailyGoalMinutes: Number(data?.dailyGoalMinutes || 45),
+      todayMinutesSpent: Number(data?.todayMinutesSpent || 0),
+      isGuest: false
+    };
   } catch (err) {
-    console.warn('API fallback to local mock user', err);
-    const { mockCurrentUser } = await import('../data/mockData');
-    return mockCurrentUser;
+    console.warn('User API unavailable; returning guest user state', err);
+    return defaultGuestUser;
   }
 };
 
@@ -16,11 +210,11 @@ export const fetchSessions = async (): Promise<Session[]> => {
   try {
     const res = await fetch('/api/sessions');
     if (!res.ok) throw new Error('Failed to fetch sessions');
-    return await res.json();
+    const data = await res.json();
+    return Array.isArray(data) ? data.map(normalizeSessionPayload) : [];
   } catch (err) {
-    console.warn('API fallback to local mock sessions', err);
-    const { mockSessions } = await import('../data/mockData');
-    return mockSessions;
+    console.warn('Sessions API unavailable; returning empty session list', err);
+    return [];
   }
 };
 
@@ -28,17 +222,23 @@ export const fetchSessionById = async (id: string): Promise<Session & { studyMat
   try {
     const res = await fetch(`/api/sessions/${id}`);
     if (!res.ok) throw new Error('Session not found');
-    return await res.json();
-  } catch (err) {
-    console.warn(`API fallback for session ${id}`, err);
-    const { mockSessions, mockStudyMaterials, mockQuizzes, mockDiscussions } = await import('../data/mockData');
-    const s = mockSessions.find(x => x.id === id) || mockSessions[0];
+    const data = await res.json();
+    const normalized = normalizeSessionPayload(data);
     return {
-      ...s,
-      studyMaterials: mockStudyMaterials.filter(m => m.sessionId === s.id),
-      quizzes: mockQuizzes.filter(q => q.sessionId === s.id),
-      discussions: mockDiscussions.filter(d => d.sessionId === s.id)
-    };
+      ...normalized,
+      studyMaterials: normalized.studyMaterials || [],
+      quizzes: normalized.quizzes || [],
+      discussions: []
+    } as Session & { studyMaterials: StudyMaterial[]; quizzes: Quiz[]; discussions: DiscussionPost[] };
+  } catch (err) {
+    console.warn(`Session API unavailable for ${id}; using empty placeholder`, err);
+    const fallback = emptySession(id);
+    return {
+      ...fallback,
+      studyMaterials: [],
+      quizzes: [],
+      discussions: []
+    } as Session & { studyMaterials: StudyMaterial[]; quizzes: Quiz[]; discussions: DiscussionPost[] };
   }
 };
 
@@ -61,6 +261,38 @@ export const createSessionApi = async (sessionData: Partial<Session>): Promise<S
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(sessionData)
   });
+  return await res.json();
+};
+
+export const uploadStudyMaterialFile = async (file: File): Promise<{ fileName: string; url: string; driveItemId?: string; webUrl?: string; downloadUrl?: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch('/api/materials/files/upload', {
+    method: 'POST',
+    body: formData
+  });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(`File upload failed: ${message}`);
+  }
+
+  return await res.json();
+};
+
+export const createStudyMaterialApi = async (materialData: CreateStudyMaterialPayload): Promise<StudyMaterial> => {
+  const res = await fetch('/api/materials', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(materialData)
+  });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(`Create study material failed: ${message}`);
+  }
+
   return await res.json();
 };
 
@@ -236,7 +468,7 @@ export const LOCAL_AUTH_USERS: Record<string, { password: string; role: 'GT' | '
 export const loginApi = async (email: string, password?: string): Promise<{ success: boolean; data?: AuthUserDto; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
   try {
-    const res = await fetch('http://localhost:5000/api/auth/login', {
+    const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, password })
@@ -315,7 +547,7 @@ export const forgotPasswordApi = async (email: string): Promise<{ success: boole
   }
 
   try {
-    const res = await fetch('http://localhost:5000/api/auth/forgot-password', {
+    const res = await fetch('/api/auth/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail })
@@ -355,7 +587,7 @@ export const verifyOtpApi = async (email: string, otp: string): Promise<{ succes
   }
 
   try {
-    const res = await fetch('http://localhost:5000/api/auth/verify-otp', {
+    const res = await fetch('/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, otp: otp.trim() })
@@ -393,7 +625,7 @@ export const resetPasswordApi = async (email: string, resetToken: string, newPas
   }
 
   try {
-    const res = await fetch('http://localhost:5000/api/auth/reset-password', {
+    const res = await fetch('/api/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, resetToken, newPassword })
@@ -418,7 +650,7 @@ export const resetPasswordApi = async (email: string, resetToken: string, newPas
 export const changePasswordApi = async (email: string, currentPassword: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
   try {
-    const res = await fetch('http://localhost:5000/api/auth/change-password', {
+    const res = await fetch('/api/auth/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, currentPassword, newPassword })

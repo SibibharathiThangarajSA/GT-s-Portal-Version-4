@@ -37,7 +37,7 @@ const getDisplayCategory = (category: string): string => {
   return category;
 };
 
-const heroVideo = '/videos/overall-final-vid-new.mp4';
+const heroVideo = '/Assets/Videos/Final Overview/overall-final-vid-new.mp4';
 
 export const SessionsList: React.FC<SessionsListProps> = ({
   sessions,

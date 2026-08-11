@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { User, Session, Quiz, RoadmapTopic, StudyMaterial } from './types';
-import { mockUser, mockSessions } from './data/mockData';
 import { fetchSessionsApi, logActivityApi } from './services/api';
+
+const defaultGuestUser: User = {
+  id: 'guest-user',
+  name: 'Guest Learner',
+  email: 'guest@gtportal.local',
+  role: 'GT',
+  batch: 'GT-Guest',
+  xp: 0,
+  level: 1,
+  streakDays: 0,
+  lastActiveDate: new Date().toISOString().split('T')[0],
+  dailyGoalMinutes: 45,
+  todayMinutesSpent: 0,
+  isGuest: true
+};
 import { Header } from './components/Header';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
@@ -104,10 +118,10 @@ export function App() {
         if (parsed.currentUser) return parsed.currentUser;
       }
     } catch (e) {}
-    return mockUser;
+    return defaultGuestUser;
   });
 
-  const [sessions, setSessions] = useState<Session[]>(mockSessions);
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   // Global Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {

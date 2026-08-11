@@ -37,6 +37,32 @@ interface SessionManagerProps {
   onBackToDashboard: () => void;
 }
 
+const deriveEditingSessionMaterials = (session: Partial<Session>): Partial<Session> => {
+  const studyMaterials = Array.isArray(session.studyMaterials) ? session.studyMaterials : [];
+  const providedMaterials = Array.isArray(session.providedMaterials) ? session.providedMaterials : [];
+  const additionalMaterials = Array.isArray(session.additionalMaterials) ? session.additionalMaterials : [];
+
+  const normalizedProvided = providedMaterials.length > 0
+    ? providedMaterials
+    : studyMaterials.filter((item) => {
+        const category = (item.materialCategory || item.materialType || item.type || '').toString().toLowerCase();
+        return category === 'provided' || category === 'official';
+      });
+
+  const normalizedAdditional = additionalMaterials.length > 0
+    ? additionalMaterials
+    : studyMaterials.filter((item) => {
+        const category = (item.materialCategory || item.materialType || item.type || '').toString().toLowerCase();
+        return category === 'additional' || category === 'extra' || category === 'external';
+      });
+
+  return {
+    ...session,
+    providedMaterials: normalizedProvided,
+    additionalMaterials: normalizedAdditional
+  };
+};
+
 export const SessionManager: React.FC<SessionManagerProps> = ({
   sessions,
   onSaveSession,
@@ -1316,7 +1342,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    setEditingSession(session);
+                    setEditingSession(deriveEditingSessionMaterials(session));
                     setActiveTab('overview');
                   }}
                   style={{

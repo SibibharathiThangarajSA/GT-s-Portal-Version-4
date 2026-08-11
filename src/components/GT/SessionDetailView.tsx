@@ -41,6 +41,7 @@ interface CustomMaterialItem {
   type: 'Doc (PDF/Word)' | 'PowerPoint (PPT)' | 'Video Link' | 'Video File (MP4)' | 'Notes / Guide' | 'Spreadsheet';
   url: string;
   category?: 'Provided' | 'Additional';
+  file?: File;
   fileName?: string;
   fileType?: string;
   fileSize?: string;
@@ -823,7 +824,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const [summaries, setSummaries] = useState<Record<string, string>>({});
 
   // Overview Video State
-  const defaultOverviewUrl = '/videos/overall-final-vid-new.mp4';
+  const defaultOverviewUrl = '/Assets/Videos/Final Overview/overall-final-vid-new.mp4';
 
   const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>(defaultOverviewUrl);
   const [overviewVideoTitle, setOverviewVideoTitle] = useState<string>('Final overview');
@@ -865,12 +866,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       setIsMaterialsLoading(true);
       try {
         const apiMaterials = await fetchStudyMaterialsApi(session.id);
-        const mergedMaterials = [
-          ...(apiMaterials || []),
-          ...(session.studyMaterials || []),
-          ...(session.providedMaterials || []),
-          ...(session.additionalMaterials || [])
-        ];
+        const mergedMaterials = apiMaterials || [];
 
         const normalizedMaterials = buildMaterialItemsFromSession({
           ...session,

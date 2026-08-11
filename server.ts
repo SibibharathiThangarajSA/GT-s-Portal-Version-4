@@ -49,6 +49,44 @@ async function startServer() {
 
   app.use(express.json({ limit: '10mb' }));
 
+  const BACKEND_API_BASE = process.env.API_BACKEND_URL || 'http://localhost:5001';
+
+  const proxyToBackend = async (req: express.Request, res: express.Response) => {
+    const targetUrl = `${BACKEND_API_BASE}${req.originalUrl}`;
+    const headers = { ...req.headers } as Record<string, string>;
+    delete headers.host;
+    delete headers['content-length'];
+
+    try {
+      const upstreamResponse = await fetch(targetUrl, {
+        method: req.method,
+        headers,
+        body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
+        redirect: 'manual'
+      });
+
+      res.status(upstreamResponse.status);
+      upstreamResponse.headers.forEach((value, key) => {
+        if (key.toLowerCase() === 'transfer-encoding') return;
+        res.setHeader(key, value);
+      });
+
+      const responseBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
+      if (responseBuffer.length) {
+        res.send(responseBuffer);
+      } else {
+        res.end();
+      }
+    } catch (err: any) {
+      console.error(`Proxy failed for ${req.originalUrl}`, err);
+      res.status(502).json({
+        success: false,
+        message: 'Backend proxy failed.',
+        details: err?.message || String(err)
+      });
+    }
+  };
+
   // --- API ROUTES ---
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -272,102 +310,12 @@ async function startServer() {
     res.json(currentUser);
   });
 
-  // Sessions CRUD
-  app.get("/api/sessions", (req, res) => {
-    res.json(sessions);
+  // Proxy backend routes for materials, sessions, quizzes, search, analytics, and uploads.
+  app.use(['/api/materials', '/uploads', '/api/sessions', '/api/quizzes', '/api/search', '/api/analytics'], async (req, res) => {
+    await proxyToBackend(req, res);
   });
 
-  app.get("/api/sessions/:id", (req, res) => {
-    const session = sessions.find(s => s.id === req.params.id);
-    if (!session) {
-      return res.status(404).json({ error: "Session not found" });
-    }
-    const sessionMaterials = studyMaterials.filter(m => m.sessionId === session.id);
-    const sessionQuizzes = quizzes.filter(q => q.sessionId === session.id);
-    const sessionDiscussions = discussions.filter(d => d.sessionId === session.id);
-    res.json({
-      ...session,
-      studyMaterials: sessionMaterials,
-      quizzes: sessionQuizzes,
-      discussions: sessionDiscussions
-    });
-  });
-
-  app.post("/api/sessions", (req, res) => {
-    const newSession: Session = {
-      id: `session-${Date.now()}`,
-      name: req.body.name || "New Learning Session",
-      category: req.body.category || ".NET with C#",
-      description: req.body.description || "Created by Admin L&D",
-      thumbnail: req.body.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=80",
-      durationHours: Number(req.body.durationHours) || 10,
-      difficulty: req.body.difficulty || "Intermediate",
-      progressPercent: 0,
-      isPublished: req.body.isPublished ?? true,
-      rating: 5.0,
-      ratingCount: 1,
-      learningObjectives: req.body.learningObjectives || ["Master key concepts"],
-      topics: req.body.topics || []
-    };
-    sessions.unshift(newSession);
-    res.status(201).json(newSession);
-  });
-
-  app.put("/api/sessions/:id", (req, res) => {
-    const index = sessions.findIndex(s => s.id === req.params.id);
-    if (index === -1) return res.status(404).json({ error: "Session not found" });
-    sessions[index] = { ...sessions[index], ...req.body };
-    res.json(sessions[index]);
-  });
-
-  app.delete("/api/sessions/:id", (req, res) => {
-    sessions = sessions.filter(s => s.id !== req.params.id);
-    studyMaterials = studyMaterials.filter(m => m.sessionId !== req.params.id);
-    quizzes = quizzes.filter(q => q.sessionId !== req.params.id);
-    res.json({ success: true, message: "Session deleted" });
-  });
-
-
-  // Study Materials
-  app.get("/api/materials", (req, res) => {
-    res.json(studyMaterials);
-  });
-
-  app.post("/api/materials", (req, res) => {
-    const newMat: StudyMaterial = {
-      id: `mat-${Date.now()}`,
-      sessionId: req.body.sessionId,
-      topicId: req.body.topicId,
-      title: req.body.title || "New Document",
-      type: req.body.type || "PDF",
-      url: req.body.url || "#",
-      description: req.body.description || "",
-      durationOrPages: req.body.durationOrPages || "10 Pages",
-      currentVersion: 1.0,
-      versions: [
-        { version: 1.0, updatedAt: new Date().toISOString().split('T')[0], updatedBy: 'Admin L&D', changeLog: 'Initial upload' }
-      ],
-      contentBody: req.body.contentBody || "",
-      tags: req.body.tags || ["General"]
-    };
-    studyMaterials.unshift(newMat);
-    res.status(201).json(newMat);
-  });
-
-  app.post("/api/materials/:id/new-version", (req, res) => {
-    const mat = studyMaterials.find(m => m.id === req.params.id);
-    if (!mat) return res.status(404).json({ error: "Material not found" });
-    const newVer = Number((mat.currentVersion + 0.1).toFixed(1));
-    mat.currentVersion = newVer;
-    mat.contentBody = req.body.contentBody || mat.contentBody;
-    mat.versions.unshift({
-      version: newVer,
-      updatedAt: new Date().toISOString().split('T')[0],
-      updatedBy: req.body.updatedBy || 'Admin L&D',
-      changeLog: req.body.changeLog || 'Version update'
-    });
-    res.json(mat);
-  });
+  // Local mock fallback routes for auth, profile, notes, discussions, and AI remain available.
 
   // Quizzes & Attempts
   app.get("/api/quizzes", (req, res) => {
