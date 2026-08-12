@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Session, StudyMaterial, Quiz, PersonalNote } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
-import { fetchStudyMaterialsApi, summarizeMaterialAiApi, uploadStudyMaterialFile } from '../../services/api';
-import { SITE_VIDEOS } from '../../data/videoAssets';
+import { fetchStudyMaterialsApi, summarizeMaterialAiApi } from '../../services/api';
+import { useFileUpload } from '../../hooks/useFileUpload';
+import { UploadProgressOverlay } from '../UploadProgressOverlay';
 import {
   ArrowLeft,
   BookOpen,
@@ -226,11 +227,14 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   };
   const [summarizingId, setSummarizingId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
+  const { isUploading, progress, uploadingFileName, uploadFile } = useFileUpload();
 
   // Overview Video State
-  const defaultOverviewUrl = SITE_VIDEOS.c2cOverview;
-
-  const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>(defaultOverviewUrl);
+  //
+  // The overview belongs to the session being viewed. This used to default to the shared C2C
+  // video, so every session showed that same clip regardless of what had been uploaded for it,
+  // and a session with no video of its own looked like it had one.
+  const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>(session.videoUrl || '');
   const [overviewVideoTitle, setOverviewVideoTitle] = useState<string>('Final overview');
   const [overviewVideoDesc, setOverviewVideoDesc] = useState<string>(
     `Comprehensive attendee video walkthrough covering key architectural concepts, trainer expectations, and session prerequisites for ${session.name}.`
@@ -262,6 +266,12 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     const initialMaterials = buildMaterialItemsFromSession(session);
     return initialMaterials.additional;
   });
+
+  // Opening a different session must swap the video with it; state initialised once would keep
+  // showing the previous session's clip.
+  useEffect(() => {
+    setOverviewVideoUrl(session.videoUrl || '');
+  }, [session.id, session.videoUrl]);
 
   useEffect(() => {
     let isActive = true;
@@ -535,6 +545,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
   return (
     <div className="space-y-8 animate-fadeIn text-slate-900 dark:text-slate-100">
+      <UploadProgressOverlay isUploading={isUploading} progress={progress} fileName={uploadingFileName} />
 
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
@@ -547,7 +558,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         </button>
 
         <span className="text-xs font-mono font-bold text-blue-900 bg-blue-50 px-3.5 py-1.5 rounded-lg border border-blue-200 shadow-sm">
-          Learning Track • {session.category}
+          Learning Track â€¢ {session.category}
         </span>
       </div>
 
@@ -566,14 +577,25 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
         {/* Video Player Box - Fills available area in 16:9 aspect ratio */}
         <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-md flex items-center justify-center">
-          <video
-            controls
-            src={overviewVideoUrl}
-            className="w-full h-full object-cover"
-            poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=80"
-          >
-            Your browser does not support HTML5 video streaming.
-          </video>
+          {overviewVideoUrl ? (
+            <video
+              controls
+              src={overviewVideoUrl}
+              className="w-full h-full object-cover"
+              poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=80"
+            >
+              Your browser does not support HTML5 video streaming.
+            </video>
+          ) : (
+            // Saying there is no video is more honest than playing an unrelated one.
+            <div className="text-center space-y-2 px-6">
+              <Video className="w-10 h-10 text-slate-600 mx-auto" />
+              <p className="text-sm font-bold text-slate-300">No overview video yet</p>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                Once an overview video is uploaded for this session, it plays here.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -663,7 +685,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           {/* <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl flex items-center justify-between text-xs"> */}
           {/* <div className="flex items-center gap-2 text-blue-900 font-medium">
               <Layers className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              <span>Interactive Session Roadmap — GTs can view this pathway for structured reference & topic progression.</span>
+              <span>Interactive Session Roadmap â€” GTs can view this pathway for structured reference & topic progression.</span>
             </div> */}
           {/* <span className="font-mono text-[11px] font-bold text-blue-700 bg-white px-3 py-1 rounded-lg border border-blue-200">
               {(session?.topics || []).length} Topics Total
@@ -751,7 +773,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 </div>
 
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-500 font-mono">Provided by L&D • {mat.updatedAt}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">Provided by L&D â€¢ {mat.updatedAt}</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1073,7 +1095,8 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                         // Uploaded rather than turned into an object URL, so the video survives the
                         // page and is playable by everyone else on the session.
                         try {
-                          const uploadResult = await uploadStudyMaterialFile(file, session.id);
+                          const uploadResult = await uploadFile(file, session.id);
+                          if (!uploadResult) { setSelectedVideoFileName(''); return; }
                           setVideoInputUrl(uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '');
                         } catch (error: any) {
                           console.error('Video upload failed', error);
@@ -1084,7 +1107,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     />
                   </div>
 
-                  <div className="text-center text-[10px] text-slate-400 font-mono">— OR PASTE VIDEO URL —</div>
+                  <div className="text-center text-[10px] text-slate-400 font-mono">â€” OR PASTE VIDEO URL â€”</div>
 
                   <input
                     type="url"

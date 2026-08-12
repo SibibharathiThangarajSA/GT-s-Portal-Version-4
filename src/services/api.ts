@@ -293,17 +293,57 @@ export const createSessionApi = async (sessionData: Partial<Session>): Promise<S
   return normalizeSessionPayload(data);
 };
 
-export const uploadStudyMaterialFile = async (file: File, sessionId?: string): Promise<{ fileName: string; url: string; driveItemId?: string; webUrl?: string; downloadUrl?: string }> => {
+/**
+ * Uploads a file and reports how far it has got.
+ *
+ * XMLHttpRequest rather than fetch, because fetch cannot report upload progress: it resolves
+ * only once the whole body has been sent. A session video can be hundreds of megabytes, so
+ * without progress the UI has nothing to show for minutes and looks frozen.
+ */
+export const uploadStudyMaterialFile = (
+  file: File,
+  sessionId?: string,
+  onProgress?: (percent: number) => void
+): Promise<{ fileName: string; url: string; driveItemId?: string; webUrl?: string; downloadUrl?: string }> => {
   const formData = new FormData();
   formData.append('file', file);
   if (sessionId) formData.append('sessionId', sessionId);
 
-  const res = await fetch('/api/materials/files/upload', {
-    method: 'POST',
-    body: formData
-  });
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', '/api/materials/files/upload');
 
-  return await parseApiResponse<any>(res);
+    request.upload.onprogress = (event) => {
+      // Servers do not always report a total; without one a percentage would be meaningless.
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        try {
+          resolve(JSON.parse(request.responseText));
+        } catch {
+          reject(new Error('The upload finished but the response could not be read.'));
+        }
+        return;
+      }
+
+      let message = `Upload failed (${request.status}).`;
+      try {
+        message = JSON.parse(request.responseText)?.message || message;
+      } catch {
+        /* a non-JSON error body is not worth surfacing verbatim */
+      }
+      reject(new Error(message));
+    };
+
+    request.onerror = () => reject(new Error('The upload failed. Check your connection and try again.'));
+    request.onabort = () => reject(new Error('The upload was cancelled.'));
+
+    request.send(formData);
+  });
 };
 
 export const createStudyMaterialApi = async (materialData: CreateStudyMaterialPayload): Promise<StudyMaterial> => {

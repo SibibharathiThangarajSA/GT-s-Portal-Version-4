@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Session, CategoryType, RoadmapTopic, SubTopic, StudyMaterial, SessionAssignment, PersonalNote, Quiz, QuizQuestion } from '../../types';
 import { SessionTracker } from './SessionTracker';
-import { uploadStudyMaterialFile } from '../../services/api';
+import { useFileUpload } from '../../hooks/useFileUpload';
+import { UploadProgressOverlay } from '../UploadProgressOverlay';
 import { 
   Plus, 
   Search, 
@@ -74,6 +75,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
   onDeleteSession,
   onBackToDashboard
 }) => {
+  const { isUploading, progress, uploadingFileName, uploadFile } = useFileUpload();
   const [editingSession, setEditingSession] = useState<Partial<Session> | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'roadmap' | 'provided' | 'additional' | 'assignments' | 'notes' | 'quiz'>('overview');
   const [sessionManagerMode, setSessionManagerMode] = useState<'modules' | 'tracker'>('modules');
@@ -496,7 +498,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                         // The file has to reach the bucket: an object URL only resolves inside this
                         // tab, so saving one gives every other viewer a dead video.
                         try {
-                          const uploadResult = await uploadStudyMaterialFile(file, editingSession?.id);
+                          const uploadResult = await uploadFile(file, editingSession?.id);
+                                    if (!uploadResult) return;
                           setEditingSession({
                             ...editingSession,
                             videoUrl: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || ''
@@ -776,7 +779,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   try {
-                                    const uploadResult = await uploadStudyMaterialFile(file, editingSession?.id);
+                                    const uploadResult = await uploadFile(file, editingSession?.id);
+                                    if (!uploadResult) return;
                                     const list = [...(editingSession.providedMaterials || [])];
                                     list[mIdx] = {
                                       ...list[mIdx],
@@ -1003,7 +1007,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   try {
-                                    const uploadResult = await uploadStudyMaterialFile(file, editingSession?.id);
+                                    const uploadResult = await uploadFile(file, editingSession?.id);
+                                    if (!uploadResult) return;
                                     const list = [...(editingSession.additionalMaterials || [])];
                                     list[mIdx] = {
                                       ...list[mIdx],
@@ -1158,7 +1163,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                               // Same reason as the overview video: the attachment has to be stored
                               // server-side or trainees open a link that only ever worked here.
                               try {
-                                const uploadResult = await uploadStudyMaterialFile(file, editingSession?.id);
+                                const uploadResult = await uploadFile(file, editingSession?.id);
+                                    if (!uploadResult) return;
                                 const list = [...(editingSession.assignments || [])];
                                 list[aIdx] = {
                                   ...list[aIdx],
@@ -1385,7 +1391,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
 
   return (
     <div className="space-y-6">
-      
+      <UploadProgressOverlay isUploading={isUploading} progress={progress} fileName={uploadingFileName} />
+
       {/* Admin Session Control Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
         <div>
