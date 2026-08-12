@@ -1,1 +1,8 @@
 *.mp4 filter=lfs diff=lfs merge=lfs -text
+
+# Railway's GitHub builds check the repository out without resolving LFS, so an LFS-tracked
+# video reaches the container as its 132-byte pointer file and the <video> element renders
+# nothing. Every other video now lives in the object storage bucket for that reason; this one
+# stays in the repository because it is small and sits on the landing page's first paint, so
+# it is stored as an ordinary blob rather than through LFS.
+public/Assets/Videos/bg-video/premium.mp4 !filter !diff !merge -text
