@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Session, StudyMaterial, Quiz, PersonalNote } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
 import { fetchStudyMaterialsApi, summarizeMaterialAiApi, uploadStudyMaterialFile } from '../../services/api';
+import { SITE_VIDEOS } from '../../data/videoAssets';
 import {
   ArrowLeft,
   BookOpen,
@@ -227,7 +228,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const [summaries, setSummaries] = useState<Record<string, string>>({});
 
   // Overview Video State
-  const defaultOverviewUrl = '/Assets/Videos/C2C/C to C_new_vid.mp4';
+  const defaultOverviewUrl = SITE_VIDEOS.c2cOverview;
 
   const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>(defaultOverviewUrl);
   const [overviewVideoTitle, setOverviewVideoTitle] = useState<string>('Final overview');

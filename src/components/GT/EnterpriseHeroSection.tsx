@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { SITE_VIDEOS } from '../../data/videoAssets';
 import {
   BookOpen,
   Play,
@@ -34,7 +35,7 @@ const videos: VideoData[] = [
     duration: '05:23 min',
     presenter: 'Leadership Team',
     thumbnailUrl: 'https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=1200&auto=format&fit=crop&q=80',
-    sampleVideoUrl: '/Assets/Videos/Leadership Insights/leadership.mp4'
+    sampleVideoUrl: SITE_VIDEOS.leadershipInsights
   },
   {
     id: 'overview',
@@ -45,7 +46,7 @@ const videos: VideoData[] = [
     duration: '19:38 min',
     presenter: 'L&D Team',
     thumbnailUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&auto=format&fit=crop&q=80',
-    sampleVideoUrl: '/Assets/Videos/Final Overview/overall-final-vid-new.mp4'
+    sampleVideoUrl: SITE_VIDEOS.finalOverview
   }
 ];
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { EnterpriseHeroSection } from './EnterpriseHeroSection';
 import { Session, CategoryType, StudyMaterial } from '../../types';
+import { SITE_VIDEOS } from '../../data/videoAssets';
 import {
   Search,
   Filter,
@@ -26,7 +27,7 @@ const getDisplayCategory = (category: string): string => {
   return category;
 };
 
-const heroVideo = '/Assets/Videos/Final Overview/overall-final-vid-new.mp4';
+const heroVideo = SITE_VIDEOS.finalOverview;
 
 export const SessionsList: React.FC<SessionsListProps> = ({
   sessions,
