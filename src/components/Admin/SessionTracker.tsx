@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { SessionTrackerRecord, Session } from '../../types';
-import { mockSessionTrackerRecords } from '../../data/mockData';
 import { 
   Table, 
   Plus, 
@@ -41,32 +40,29 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   onSaveRecord,
   onDeleteRecord
 }) => {
-  // Initialize state with props or mock records merged with existing sessions
+  // Initialize state with props or build from provided sessions.
   const [trackerRecords, setTrackerRecords] = useState<SessionTrackerRecord[]>(() => {
     if (initialRecords && initialRecords.length > 0) return initialRecords;
-    
-    // Combine mock tracker records with any sessions not already present
-    const base = [...mockSessionTrackerRecords];
+
+    const base: SessionTrackerRecord[] = [];
     if (sessions && sessions.length > 0) {
       sessions.forEach(s => {
-        if (!base.some(r => r.sessionName.toLowerCase() === s.name.toLowerCase())) {
-          base.push({
-            id: `track-${s.id}`,
-            sessionCode: `SESS-${s.id.toUpperCase().slice(0, 6)}`,
-            sessionName: s.name,
-            category: s.category,
-            trainerName: s.trainerName || 'Assigned Instructor',
-            scheduleDate: '2026-08-15',
-            scheduleTime: '10:00 AM - 01:00 PM',
-            durationHours: s.durationHours || 10,
-            status: s.progressPercent === 100 ? 'Completed' : s.progressPercent > 0 ? 'In Progress' : 'Scheduled',
-            enrolledCount: 35,
-            maxCapacity: 40,
-            completionRatePercent: s.progressPercent || 0,
-            notes: s.description || '',
-            lastUpdated: '2026-08-03'
-          });
-        }
+        base.push({
+          id: `track-${s.id}`,
+          sessionCode: `SESS-${String(s.id).toUpperCase().slice(0, 6)}`,
+          sessionName: s.name,
+          category: s.category,
+          trainerName: (s as any).trainerName || 'Assigned Instructor',
+          scheduleDate: new Date().toISOString().split('T')[0],
+          scheduleTime: '10:00 AM - 01:00 PM',
+          durationHours: s.durationHours || 10,
+          status: s.progressPercent === 100 ? 'Completed' : s.progressPercent > 0 ? 'In Progress' : 'Scheduled',
+          enrolledCount: 35,
+          maxCapacity: 40,
+          completionRatePercent: s.progressPercent || 0,
+          notes: s.description || '',
+          lastUpdated: new Date().toISOString().split('T')[0]
+        });
       });
     }
     return base;

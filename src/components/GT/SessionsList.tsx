@@ -19,18 +19,7 @@ interface SessionsListProps {
   onSelectSession: (sessionId: string) => void;
 }
 
-const DOMAIN_THUMBNAILS: Record<string, string> = {
-  '.NET with C#': 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
-  '.NET': 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80',
-  'Insurance': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&auto=format&fit=crop&q=80',
-  'Frontend': 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80',
-  'SQL': 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800&auto=format&fit=crop&q=80',
-  'C2C': 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80'
-};
-
-const getThumbnail = (category: string, fallback: string): string => {
-  return DOMAIN_THUMBNAILS[category] || fallback;
-};
+const DEFAULT_SESSION_THUMBNAIL = 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop&q=80';
 
 const getDisplayCategory = (category: string): string => {
   if (category === '.NET with C#') return '.NET';
@@ -416,7 +405,7 @@ export const SessionsList: React.FC<SessionsListProps> = ({
       {/* Grid of Session Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
         {filteredSessions.map((session) => {
-          const thumbnail = getThumbnail(session.category, session.thumbnail);
+          const thumbnail = session.thumbnail?.trim() ? session.thumbnail : DEFAULT_SESSION_THUMBNAIL;
           const categoryDisplay = getDisplayCategory(session.category);
           const isActive = activeCardId === session.id;
 

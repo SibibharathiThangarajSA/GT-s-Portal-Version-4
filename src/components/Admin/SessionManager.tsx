@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Session, CategoryType, RoadmapTopic, SubTopic, StudyMaterial, SessionAssignment, PersonalNote, Quiz, QuizQuestion } from '../../types';
 import { SessionTracker } from './SessionTracker';
+import { uploadStudyMaterialFile } from '../../services/api';
 import { 
   Plus, 
   Search, 
@@ -101,94 +102,24 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
 
   const handleCreateNew = () => {
     setEditingSession({
-      id: `session-${Date.now()}`,
+      id: '',
       name: '',
       description: '',
       category: '.NET with C#',
       trainerName: '',
-      durationHours: 10,
+      durationHours: 0,
       difficulty: 'Intermediate',
       status: 'Draft',
       progressPercent: 0,
-      rating: 4.8,
-      ratingCount: 1,
-      thumbnail: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&auto=format&fit=crop&q=80',
-      learningObjectives: ['Master fundamental syntax', 'Implement enterprise best practices'],
-      topics: [
-        {
-          id: `topic-${Date.now()}-1`,
-          title: 'Introduction & Environment Setup',
-          description: 'Getting started with tools, runtime, and architecture.',
-          order: 1,
-          status: 'Unlocked',
-          videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-          documentUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          assignment: 'Set up development environment and build a basic Hello World console application.',
-          subtopics: [
-            {
-              id: `sub-${Date.now()}-1`,
-              title: 'Runtime Overview & Project Structure',
-              durationMinutes: 45,
-              status: 'Unlocked',
-              description: 'Understanding compilation, dependencies, and configuration.',
-              videoUrl: '',
-              documentUrl: '',
-              assignment: ''
-            }
-          ]
-        }
-      ],
-      providedMaterials: [
-        {
-          id: `prov-1`,
-          sessionId: `session-${Date.now()}`,
-          title: 'Official Enterprise Curriculum Handbook & Guide',
-          type: 'PDF',
-          url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          description: 'Standard organization-issued reference guide.',
-          durationOrPages: '42 Pages',
-          currentVersion: 1,
-          versions: [],
-          tags: ['Curriculum', 'Official']
-        }
-      ],
-      additionalMaterials: [
-        {
-          id: `add-1`,
-          sessionId: `session-${Date.now()}`,
-          title: 'Microsoft Official Documentation & Best Practices',
-          type: 'External',
-          url: 'https://learn.microsoft.com',
-          description: 'Recommended external reading guide.',
-          currentVersion: 1,
-          versions: [],
-          tags: ['Reference', 'Docs']
-        }
-      ],
-      assignments: [
-        {
-          id: `assign-1`,
-          sessionId: `session-${Date.now()}`,
-          title: 'Hands-on Implementation Task',
-          description: 'Implement core functionality as covered in the roadmap topics.',
-          dueDate: '2026-08-15',
-          totalPoints: 100,
-          instructions: 'Submit GitHub repository URL or zipped source code.',
-          submissionFormat: 'URL / ZIP',
-          status: 'Pending'
-        }
-      ],
-      notes: [
-        {
-          id: `note-1`,
-          topicId: 't1',
-          sessionId: `session-${Date.now()}`,
-          topicTitle: 'Quick Reference Cheat Sheet',
-          content: 'Key syntax and architecture design patterns to remember during implementation.',
-          createdAt: '2026-08-01',
-          updatedAt: '2026-08-01'
-        }
-      ],
+      rating: 0,
+      ratingCount: 0,
+      thumbnail: '',
+      learningObjectives: [],
+      topics: [],
+      providedMaterials: [],
+      additionalMaterials: [],
+      assignments: [],
+      notes: [],
       quizzes: []
     });
     setActiveTab('overview');
@@ -289,6 +220,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       title: 'New Provided Material',
       type: 'PDF',
       url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+      urlType: 'Website',
       description: 'Official session guide or slide deck.',
       durationOrPages: '10 Pages',
       currentVersion: 1,
@@ -308,6 +240,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       title: 'New Additional Material',
       type: 'External',
       url: 'https://example.com',
+      urlType: 'Website',
       description: 'Supplementary reading material or video link.',
       currentVersion: 1,
       versions: [],
@@ -763,61 +696,141 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                         />
                       </div>
 
-                      {/* Upload Document Button */}
-                      <div className="space-y-1">
-                        <label className="text-slate-700 font-bold block mb-1">Upload Document</label>
-                        <label className="cursor-pointer inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-4 py-2 rounded-xl border border-slate-300 shadow-sm transition-all">
-                          <Upload className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Upload File</span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
+                      <div className="space-y-1 md:col-span-2">
+                        <span className="text-slate-700 font-bold block mb-2">Source</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 cursor-pointer bg-white">
+                            <input
+                              type="radio"
+                              name={`provided-source-${mIdx}`}
+                              checked={mat.urlType === 'File'}
+                              onChange={() => {
                                 const list = [...(editingSession.providedMaterials || [])];
-                                list[mIdx] = { ...list[mIdx], url: file.name };
+                                list[mIdx] = {
+                                  ...list[mIdx],
+                                  urlType: 'File',
+                                  url: '',
+                                  webUrl: '',
+                                  downloadUrl: '',
+                                  driveItemId: undefined,
+                                  fileName: '',
+                                  fileType: '',
+                                  fileSize: ''
+                                };
                                 setEditingSession({ ...editingSession, providedMaterials: list });
-                              }
-                            }}
-                          />
-                        </label>
-                        {mat.url && !mat.url.startsWith('http') && (
-                          <span className="text-[11px] text-blue-700 font-mono font-bold ml-2">File: {mat.url}</span>
-                        )}
-                      </div>
-
-                      {/* Add URLs Section */}
-                      <div className="space-y-2.5 md:col-span-2 pt-2 border-t border-slate-200">
-                        <label className="text-slate-700 font-bold flex items-center gap-1.5">
-                          <ExternalLink className="w-3.5 h-3.5 text-blue-600" /> Add URLs (Video or Website Link)
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <input
-                            type="text"
-                            value={mat.url || ''}
-                            onChange={(e) => {
-                              const list = [...(editingSession.providedMaterials || [])];
-                              list[mIdx] = { ...list[mIdx], url: e.target.value };
-                              setEditingSession({ ...editingSession, providedMaterials: list });
-                            }}
-                            placeholder="https://..."
-                            className="sm:col-span-2 bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-medium"
-                          />
-                          <select
-                            value={mat.urlType || (mat.type === 'Video' ? 'Video' : 'Website')}
-                            onChange={(e) => {
-                              const list = [...(editingSession.providedMaterials || [])];
-                              list[mIdx] = { ...list[mIdx], urlType: e.target.value as any };
-                              setEditingSession({ ...editingSession, providedMaterials: list });
-                            }}
-                            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-bold"
-                          >
-                            <option value="Video">Video URL</option>
-                            <option value="Website">Website URL</option>
-                          </select>
+                              }}
+                              className="accent-blue-600"
+                            />
+                            Upload document
+                          </label>
+                          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 cursor-pointer bg-white">
+                            <input
+                              type="radio"
+                              name={`provided-source-${mIdx}`}
+                              checked={mat.urlType !== 'File'}
+                              onChange={() => {
+                                const list = [...(editingSession.providedMaterials || [])];
+                                list[mIdx] = {
+                                  ...list[mIdx],
+                                  urlType: 'Website',
+                                  fileName: '',
+                                  fileType: '',
+                                  fileSize: '',
+                                  webUrl: '',
+                                  downloadUrl: '',
+                                  driveItemId: undefined
+                                };
+                                setEditingSession({ ...editingSession, providedMaterials: list });
+                              }}
+                              className="accent-blue-600"
+                            />
+                            Add URL
+                          </label>
                         </div>
                       </div>
+
+                      {/* Upload Document Button */}
+                      {mat.urlType === 'File' ? (
+                        <div className="space-y-1">
+                          <label className="text-slate-700 font-bold block mb-1">Upload Document</label>
+                          <label className="cursor-pointer inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-4 py-2 rounded-xl border border-slate-300 shadow-sm transition-all">
+                            <Upload className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Upload File</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const uploadResult = await uploadStudyMaterialFile(file, editingSession?.id);
+                                    const list = [...(editingSession.providedMaterials || [])];
+                                    list[mIdx] = {
+                                      ...list[mIdx],
+                                      file: undefined,
+                                      fileName: uploadResult.fileName || file.name,
+                                      fileType: file.type,
+                                      fileSize: `${file.size} bytes`,
+                                      urlType: 'File',
+                                      url: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '',
+                                      webUrl: uploadResult.webUrl || uploadResult.url || '',
+                                      downloadUrl: uploadResult.downloadUrl || uploadResult.url || '',
+                                      driveItemId: uploadResult.driveItemId || undefined
+                                    };
+                                    setEditingSession({ ...editingSession, providedMaterials: list });
+                                  } catch (error: any) {
+                                    console.error('File upload failed', error);
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                          {(mat.fileName || (mat.url && !mat.url.startsWith('http'))) && (
+                            <span className="text-[11px] text-blue-700 font-mono font-bold ml-2">File: {mat.fileName || mat.url}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5 md:col-span-2 pt-2 border-t border-slate-200">
+                          <label className="text-slate-700 font-bold flex items-center gap-1.5">
+                            <ExternalLink className="w-3.5 h-3.5 text-blue-600" /> Add URLs (Video or Website Link)
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input
+                              type="text"
+                              value={mat.url || ''}
+                              onChange={(e) => {
+                                const list = [...(editingSession.providedMaterials || [])];
+                                list[mIdx] = {
+                                  ...list[mIdx],
+                                  url: e.target.value,
+                                  urlType: 'Website',
+                                  file: undefined,
+                                  fileName: '',
+                                  fileType: '',
+                                  fileSize: '',
+                                  webUrl: '',
+                                  downloadUrl: ''
+                                };
+                                setEditingSession({ ...editingSession, providedMaterials: list });
+                              }}
+                              placeholder="https://..."
+                              className="sm:col-span-2 bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-medium"
+                            />
+                            <select
+                              value={mat.urlType || 'Website'}
+                              onChange={(e) => {
+                                const list = [...(editingSession.providedMaterials || [])];
+                                list[mIdx] = { ...list[mIdx], urlType: e.target.value as any };
+                                setEditingSession({ ...editingSession, providedMaterials: list });
+                              }}
+                              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-bold"
+                            >
+                              <option value="Video">Video URL</option>
+                              <option value="Website">Website URL</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -911,60 +924,140 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       </div>
 
                       {/* Upload Document Button */}
-                      <div className="space-y-1">
-                        <label className="text-slate-700 font-bold block mb-1">Upload Document</label>
-                        <label className="cursor-pointer inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-4 py-2 rounded-xl border border-slate-300 shadow-sm transition-all">
-                          <Upload className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Upload File</span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
+                      <div className="space-y-1 md:col-span-2">
+                        <span className="text-slate-700 font-bold block mb-2">Source</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 cursor-pointer bg-white">
+                            <input
+                              type="radio"
+                              name={`additional-source-${mIdx}`}
+                              checked={mat.urlType === 'File'}
+                              onChange={() => {
                                 const list = [...(editingSession.additionalMaterials || [])];
-                                list[mIdx] = { ...list[mIdx], url: file.name };
+                                list[mIdx] = {
+                                  ...list[mIdx],
+                                  urlType: 'File',
+                                  url: '',
+                                  webUrl: '',
+                                  downloadUrl: '',
+                                  driveItemId: undefined,
+                                  fileName: '',
+                                  fileType: '',
+                                  fileSize: ''
+                                };
                                 setEditingSession({ ...editingSession, additionalMaterials: list });
-                              }
-                            }}
-                          />
-                        </label>
-                        {mat.url && !mat.url.startsWith('http') && (
-                          <span className="text-[11px] text-blue-700 font-mono font-bold ml-2">File: {mat.url}</span>
-                        )}
-                      </div>
-
-                      {/* Add URLs Section */}
-                      <div className="space-y-2.5 md:col-span-2 pt-2 border-t border-slate-200">
-                        <label className="text-slate-700 font-bold flex items-center gap-1.5">
-                          <ExternalLink className="w-3.5 h-3.5 text-blue-600" /> Add URLs (Video or Website Link)
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <input
-                            type="text"
-                            value={mat.url || ''}
-                            onChange={(e) => {
-                              const list = [...(editingSession.additionalMaterials || [])];
-                              list[mIdx] = { ...list[mIdx], url: e.target.value };
-                              setEditingSession({ ...editingSession, additionalMaterials: list });
-                            }}
-                            placeholder="https://..."
-                            className="sm:col-span-2 bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-medium"
-                          />
-                          <select
-                            value={mat.urlType || 'Website'}
-                            onChange={(e) => {
-                              const list = [...(editingSession.additionalMaterials || [])];
-                              list[mIdx] = { ...list[mIdx], urlType: e.target.value as any };
-                              setEditingSession({ ...editingSession, additionalMaterials: list });
-                            }}
-                            className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-bold"
-                          >
-                            <option value="Video">Video URL</option>
-                            <option value="Website">Website URL</option>
-                          </select>
+                              }}
+                              className="accent-blue-600"
+                            />
+                            Upload document
+                          </label>
+                          <label className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 cursor-pointer bg-white">
+                            <input
+                              type="radio"
+                              name={`additional-source-${mIdx}`}
+                              checked={mat.urlType !== 'File'}
+                              onChange={() => {
+                                const list = [...(editingSession.additionalMaterials || [])];
+                                list[mIdx] = {
+                                  ...list[mIdx],
+                                  urlType: 'Website',
+                                  fileName: '',
+                                  fileType: '',
+                                  fileSize: '',
+                                  webUrl: '',
+                                  downloadUrl: '',
+                                  driveItemId: undefined
+                                };
+                                setEditingSession({ ...editingSession, additionalMaterials: list });
+                              }}
+                              className="accent-blue-600"
+                            />
+                            Add URL
+                          </label>
                         </div>
                       </div>
+
+                      {mat.urlType === 'File' ? (
+                        <div className="space-y-1">
+                          <label className="text-slate-700 font-bold block mb-1">Upload Document</label>
+                          <label className="cursor-pointer inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-4 py-2 rounded-xl border border-slate-300 shadow-sm transition-all">
+                            <Upload className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Upload File</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const uploadResult = await uploadStudyMaterialFile(file, editingSession?.id);
+                                    const list = [...(editingSession.additionalMaterials || [])];
+                                    list[mIdx] = {
+                                      ...list[mIdx],
+                                      file: undefined,
+                                      fileName: uploadResult.fileName || file.name,
+                                      fileType: file.type,
+                                      fileSize: `${file.size} bytes`,
+                                      urlType: 'File',
+                                      url: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '',
+                                      webUrl: uploadResult.webUrl || uploadResult.url || '',
+                                      downloadUrl: uploadResult.downloadUrl || uploadResult.url || '',
+                                      driveItemId: uploadResult.driveItemId || undefined
+                                    };
+                                    setEditingSession({ ...editingSession, additionalMaterials: list });
+                                  } catch (error: any) {
+                                    console.error('File upload failed', error);
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                          {(mat.fileName || (mat.url && !mat.url.startsWith('http'))) && (
+                            <span className="text-[11px] text-blue-700 font-mono font-bold ml-2">File: {mat.fileName || mat.url}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5 md:col-span-2 pt-2 border-t border-slate-200">
+                          <label className="text-slate-700 font-bold flex items-center gap-1.5">
+                            <ExternalLink className="w-3.5 h-3.5 text-blue-600" /> Add URLs (Video or Website Link)
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input
+                              type="text"
+                              value={mat.url || ''}
+                              onChange={(e) => {
+                                const list = [...(editingSession.additionalMaterials || [])];
+                                list[mIdx] = {
+                                  ...list[mIdx],
+                                  url: e.target.value,
+                                  urlType: 'Website',
+                                  file: undefined,
+                                  fileName: '',
+                                  fileType: '',
+                                  fileSize: '',
+                                  webUrl: '',
+                                  downloadUrl: ''
+                                };
+                                setEditingSession({ ...editingSession, additionalMaterials: list });
+                              }}
+                              placeholder="https://..."
+                              className="sm:col-span-2 bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-medium"
+                            />
+                            <select
+                              value={mat.urlType || 'Website'}
+                              onChange={(e) => {
+                                const list = [...(editingSession.additionalMaterials || [])];
+                                list[mIdx] = { ...list[mIdx], urlType: e.target.value as any };
+                                setEditingSession({ ...editingSession, additionalMaterials: list });
+                              }}
+                              className="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-bold"
+                            >
+                              <option value="Video">Video URL</option>
+                              <option value="Website">Website URL</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1306,7 +1399,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             data-inspect-id="SessionCard"
           >
             <div className="flex items-start gap-4">
-              <img src={session.thumbnail} alt={session.name} className="w-20 h-20 rounded-xl object-cover border border-slate-200 shadow-sm flex-shrink-0" />
+              <img src={session.thumbnail?.trim() ? session.thumbnail : DEFAULT_SESSION_THUMBNAIL} alt={session.name} className="w-20 h-20 rounded-xl object-cover border border-slate-200 shadow-sm flex-shrink-0" />
               <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Session, StudyMaterial, CategoryType } from '../../types';
-import { mockStudyMaterials } from '../../data/mockData';
 import { SessionTracker } from './SessionTracker';
 import {
   ShieldCheck,
@@ -47,7 +46,7 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   sessions,
-  studyMaterials = mockStudyMaterials,
+  studyMaterials = [],
   onAddNewSession,
   onManageSessions,
   onOpenSessionTracker,
@@ -78,6 +77,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // State for Material Reader Modal
   const [activeReadingMaterial, setActiveReadingMaterial] = useState<StudyMaterial | null>(null);
   const [showVersionHistoryId, setShowVersionHistoryId] = useState<string | null>(null);
+  const DEFAULT_SESSION_THUMBNAIL = 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop&q=80';
 
   // Helper to get study materials for a specific session
   const getSessionMaterials = (session: Session): StudyMaterial[] => {
@@ -119,18 +119,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     ).slice(0, 5);
   }, [allMaterials, searchQuery]);
 
+  const normalizedCategories = React.useMemo(() => {
+    const categories = sessions
+      .map(s => (s.category || '').toString().trim() || 'Uncategorized')
+      .filter(Boolean);
+
+    return ['ALL', ...Array.from(new Set(categories)).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    )];
+  }, [sessions]);
+
   // Filter sessions based on search & category
   const filteredSessions = sessions.filter(session => {
-    const matchesCategory = selectedCategory === 'ALL' ||
-      session.category === selectedCategory ||
-      (selectedCategory === '.NET with C#' && (session.category === '.NET' || session.category === '.NET with C#')) ||
-      (selectedCategory === 'SQL' && (session.category === 'SQL' || session.category === 'Data Modeling')) ||
-      (selectedCategory === 'C2C' && (session.category === 'C2C' || session.category === 'Campus to Corporate'));
+    const category = (session.category || '').toString().trim() || 'Uncategorized';
+    const matchesCategory = selectedCategory === 'ALL' || category === selectedCategory;
 
     const sessionMats = getSessionMaterials(session);
     const matchesSearch =
       session.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      session.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      category.toLowerCase().includes(searchQuery.toLowerCase()) ||
       session.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (session.trainerName && session.trainerName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       sessionMats.some(m => m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.description.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -154,7 +161,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return 0;
   });
 
-  const categories = ['ALL', '.NET with C#', 'Insurance', 'SQL', 'C2C', 'Frontend'];
+  const categories = normalizedCategories;
 
   // Material type icon & color map
   const getMaterialTypeBadge = (type: string) => {
@@ -336,7 +343,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {/* Thumbnail & Text Info */}
                   <div className="flex items-start gap-4">
                     <img
-                      src={session.thumbnail}
+                      src={session.thumbnail?.trim() ? session.thumbnail : DEFAULT_SESSION_THUMBNAIL}
                       alt={session.name}
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-slate-200 flex-shrink-0 shadow-sm"
                     />

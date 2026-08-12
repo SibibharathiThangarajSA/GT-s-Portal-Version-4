@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Session, Quiz, RoadmapTopic, StudyMaterial } from './types';
-import { fetchSessionsApi, logActivityApi } from './services/api';
+import { fetchSessionsApi, createSessionApi, updateSessionApi, deleteSessionApi, logActivityApi } from './services/api';
 
 const defaultGuestUser: User = {
   id: 'guest-user',
@@ -318,12 +318,19 @@ export function App() {
     }
   }, [activePortal]);
 
+  const refreshSessions = async () => {
+    try {
+      const data = await fetchSessionsApi();
+      setSessions(data);
+      return data;
+    } catch (err) {
+      console.error('Failed to refresh sessions', err);
+      return [] as Session[];
+    }
+  };
+
   useEffect(() => {
-    fetchSessionsApi().then((data) => {
-      if (data && data.length > 0) {
-        setSessions(data);
-      }
-    }).catch(err => console.error(err));
+    refreshSessions();
   }, []);
 
   useEffect(() => {
@@ -351,31 +358,299 @@ export function App() {
     }
   }, [sessions, activePortal, activeAdminSession]);
 
-  const handleSaveAdminSession = (sessionData: Partial<Session>) => {
-    if (!sessionData.id) return;
-    setSessions(prev => {
-      const exists = prev.some(s => s.id === sessionData.id);
-      if (exists) {
-        addToast('success', 'Session updated successfully');
-        return prev.map(s => s.id === sessionData.id ? { ...s, ...sessionData } as Session : s);
-      } else {
-        addToast('success', 'New session created successfully');
-        return [sessionData as Session, ...prev];
-      }
-    });
+  const isValidGuid = (value?: string) => {
+    return typeof value === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(value);
   };
 
-  const handleDeleteAdminSession = (sessionId: string) => {
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
-    addToast('info', 'Session deleted');
+  const isSessionPublished = (session: Session) => {
+    const normalizedStatus = (session.status || '').toString().toLowerCase();
+    return session.isPublished === true || normalizedStatus === 'published' || normalizedStatus === 'publish';
+  };
+
+  const publishedSessions = sessions.filter(isSessionPublished);
+
+  const prepareSessionPayload = (sessionData: Partial<Session>) => {
+    const payload = JSON.parse(JSON.stringify(sessionData || {})) as Record<string, any>;
+
+    const cleanIds = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return;
+      if (Array.isArray(obj)) {
+        obj.forEach(cleanIds);
+        return;
+      }
+
+      for (const key of Object.keys(obj)) {
+        const value = obj[key];
+        if ((key === 'id' || key.endsWith('Id')) && typeof value === 'string') {
+          if (!isValidGuid(value)) {
+            delete obj[key];
+            continue;
+          }
+          obj[key] = value;
+          continue;
+        }
+
+        if (typeof value === 'object') {
+          cleanIds(value);
+        }
+      }
+    };
+
+    const normalizeLearningObjectives = (objectives: any): any[] => {
+      if (!Array.isArray(objectives)) return [];
+      return objectives
+        .map((item: any, index: number) => {
+          if (typeof item === 'string') {
+            const objectiveText = item.trim();
+            return objectiveText ? { objectiveText, orderIndex: index + 1 } : null;
+          }
+          if (item && typeof item === 'object') {
+            const objectiveText = item.objectiveText || item.ObjectiveText || item.text || item.name || '';
+            return objectiveText ? { objectiveText: objectiveText.toString(), orderIndex: Number(item.orderIndex ?? item.order ?? index + 1) } : null;
+          }
+          return null;
+        })
+        .filter(Boolean);
+    };
+
+    const normalizeSubtopics = (subtopics: any): any[] => {
+      if (!Array.isArray(subtopics)) return [];
+      return subtopics.map((sub: any, idx: number) => ({
+        id: isValidGuid(sub?.id) ? sub.id : undefined,
+        title: sub?.title || 'Subtopic',
+        durationMinutes: Number(sub?.durationMinutes || 0),
+        orderIndex: Number(sub?.orderIndex ?? sub?.order ?? idx + 1),
+        defaultStatus: sub?.defaultStatus || sub?.status || 'Unlocked',
+        description: sub?.description || '',
+        videoUrl: sub?.videoUrl || '',
+        documentUrl: sub?.documentUrl || ''
+      }));
+    };
+
+    const normalizeTopics = (topics: any): any[] => {
+      if (!Array.isArray(topics)) return [];
+      return topics.map((topic: any, idx: number) => ({
+        id: isValidGuid(topic?.id) ? topic.id : undefined,
+        title: topic?.title || 'Topic',
+        description: topic?.description || '',
+        orderIndex: Number(topic?.orderIndex ?? topic?.order ?? idx + 1),
+        defaultStatus: topic?.defaultStatus || topic?.status || 'Unlocked',
+        videoUrl: topic?.videoUrl || '',
+        documentUrl: topic?.documentUrl || '',
+        assignment: topic?.assignment || '',
+        subtopics: normalizeSubtopics(topic?.subtopics)
+      }));
+    };
+
+    const normalizeMaterials = (materials: any): any[] => {
+      if (!Array.isArray(materials)) return [];
+      return materials.map((item: any) => ({
+        id: isValidGuid(item?.id) ? item.id : undefined,
+        sessionId: isValidGuid(item?.sessionId) ? item.sessionId : undefined,
+        topicId: isValidGuid(item?.topicId) ? item.topicId : undefined,
+        title: item?.title || 'Study Material',
+        type: item?.type || 'PDF',
+        url: item?.url || item?.link || item?.webUrl || item?.downloadUrl || '',
+        urlType: item?.urlType || 'Website',
+        materialCategory: item?.materialCategory || item?.materialType || 'Provided',
+        materialType: item?.materialType || item?.materialCategory || 'Provided',
+        fileName: item?.fileName || '',
+        fileType: item?.fileType || '',
+        fileSize: item?.fileSize || '',
+        course: item?.course || '',
+        module: item?.module || '',
+        description: item?.description || '',
+        durationOrPages: item?.durationOrPages || '',
+        webUrl: item?.webUrl || '',
+        downloadUrl: item?.downloadUrl || '',
+        driveItemId: item?.driveItemId || '',
+        currentVersion: Number(item?.currentVersion || 1),
+        versions: Array.isArray(item?.versions)
+          ? item.versions.map((version: any) => ({
+              version: Number(version?.version ?? version?.versionNumber ?? 1),
+              updatedAt: version?.updatedAt || version?.createdAt || new Date().toISOString(),
+              updatedBy: version?.updatedBy || 'Admin',
+              changeLog: version?.changeLog || 'Initial version',
+              contentUrl: version?.contentUrl || ''
+            }))
+          : [],
+        contentBody: item?.contentBody || '',
+        tags: Array.isArray(item?.tags) ? item.tags : []
+      }));
+    };
+
+    const normalizeAssignments = (assignments: any): any[] => {
+      if (!Array.isArray(assignments)) return [];
+      return assignments.map((item: any) => ({
+        id: isValidGuid(item?.id) ? item.id : undefined,
+        sessionId: isValidGuid(item?.sessionId) ? item.sessionId : undefined,
+        topicId: isValidGuid(item?.topicId) ? item.topicId : undefined,
+        title: item?.title || 'Assignment',
+        description: item?.description || '',
+        dueDate: item?.dueDate || item?.DueDate || undefined,
+        totalPoints: Number(item?.totalPoints || 0),
+        instructions: item?.instructions || '',
+        submissionFormat: item?.submissionFormat || 'URL / File',
+        attachmentName: item?.attachmentName || '',
+        attachmentUrl: item?.attachmentUrl || '',
+        status: item?.status || 'Pending'
+      }));
+    };
+
+    const normalizeNotes = (notes: any): any[] => {
+      if (!Array.isArray(notes)) return [];
+      return notes.map((item: any) => ({
+        id: isValidGuid(item?.id) ? item.id : undefined,
+        sessionId: isValidGuid(item?.sessionId) ? item.sessionId : undefined,
+        topicId: isValidGuid(item?.topicId) ? item.topicId : undefined,
+        topicTitle: item?.topicTitle || '',
+        content: item?.content || '',
+        highlightedText: item?.highlightedText || '',
+        createdAt: item?.createdAt || new Date().toISOString(),
+        updatedAt: item?.updatedAt || new Date().toISOString()
+      }));
+    };
+
+    const normalizeQuizzes = (quizzes: any): any[] => {
+      if (!Array.isArray(quizzes)) return [];
+      return quizzes.map((item: any) => ({
+        id: isValidGuid(item?.id) ? item.id : undefined,
+        sessionId: isValidGuid(item?.sessionId) ? item.sessionId : undefined,
+        topicId: isValidGuid(item?.topicId) ? item.topicId : undefined,
+        title: item?.title || 'Practice Quiz',
+        description: item?.description || '',
+        passingScorePercent: Number(item?.passingScorePercent || 70),
+        timeLimitMinutes: Number(item?.timeLimitMinutes || 15),
+        questions: Array.isArray(item?.questions)
+          ? item.questions.map((question: any, qIdx: number) => ({
+              id: isValidGuid(question?.id) ? question.id : undefined,
+              type: question?.type || 'MCQ',
+              prompt: question?.prompt || '',
+              options: Array.isArray(question?.options) ? question.options : [],
+              correctAnswerJson: JSON.stringify(question?.correctAnswer ?? question?.correctAnswerJson ?? ''),
+              explanation: question?.explanation || '',
+              points: Number(question?.points || 10),
+              codeSnippet: question?.codeSnippet || '',
+              orderIndex: Number(question?.orderIndex ?? qIdx + 1)
+            }))
+          : []
+      }));
+    };
+
+    if (!isValidGuid(payload.id)) {
+      delete payload.id;
+    }
+
+    if (payload.thumbnail) {
+      payload.thumbnailUrl = payload.thumbnail;
+      delete payload.thumbnail;
+    }
+
+    if (payload.videoUrl) {
+      payload.featuredVideoUrl = payload.videoUrl;
+      delete payload.videoUrl;
+    }
+
+    if (!payload.slug && payload.name) {
+      payload.slug = payload.name.toString().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || `session-${Date.now()}`;
+    }
+
+    payload.learningObjectives = normalizeLearningObjectives(payload.learningObjectives);
+    payload.topics = normalizeTopics(payload.topics);
+
+    const combinedMaterials = [
+      ...(Array.isArray(payload.studyMaterials) ? payload.studyMaterials : []),
+      ...(Array.isArray(payload.providedMaterials) ? payload.providedMaterials : []),
+      ...(Array.isArray(payload.additionalMaterials) ? payload.additionalMaterials : [])
+    ];
+
+    const dedupeMaterials = (materials: any[]): any[] => {
+      const getMaterialKey = (material: any): string => {
+        if (!material || typeof material !== 'object') return '';
+        if (material.id) return `id:${material.id}`;
+        const url = (material.downloadUrl || material.webUrl || material.url || '').toString().trim().toLowerCase();
+        const title = (material.title || '').toString().trim().toLowerCase();
+        const type = (material.type || material.urlType || material.materialCategory || material.materialType || '').toString().trim().toLowerCase();
+        return `key:${url}|${title}|${type}`;
+      };
+
+      return Array.from(
+        materials.reduce((map, material) => {
+          const key = getMaterialKey(material);
+          if (key && !map.has(key)) {
+            map.set(key, material);
+          }
+          return map;
+        }, new Map<string, any>())
+      ).map(([_, value]) => value);
+    };
+
+    payload.studyMaterials = normalizeMaterials(dedupeMaterials(combinedMaterials));
+    delete payload.providedMaterials;
+    delete payload.additionalMaterials;
+
+    payload.assignments = normalizeAssignments(payload.assignments);
+    payload.notes = normalizeNotes(payload.notes);
+    payload.quizzes = normalizeQuizzes(payload.quizzes);
+
+    payload.isPublished = payload.isPublished ?? (payload.status === 'Published' || payload.status === 'Publish');
+    if (payload.status && !payload.isPublished) {
+      if (payload.status === 'Published' || payload.status === 'Publish') {
+        payload.isPublished = true;
+      }
+    }
+
+    cleanIds(payload);
+    return payload;
+  };
+
+  const handleSaveAdminSession = async (sessionData: Partial<Session>) => {
+    try {
+      const payload = prepareSessionPayload(sessionData);
+      const savedSession = sessionData.id && isValidGuid(sessionData.id)
+        ? await updateSessionApi(sessionData.id, payload)
+        : await createSessionApi(payload);
+
+      setSessions(prev => {
+        const exists = prev.some(s => s.id === savedSession.id);
+        if (exists) {
+          return prev.map(s => s.id === savedSession.id ? savedSession : s);
+        }
+        return [savedSession, ...prev];
+      });
+
+      setActiveAdminSession(savedSession);
+      addToast('success', sessionData.id && isValidGuid(sessionData.id) ? 'Session updated successfully' : 'New session created successfully');
+      await refreshSessions();
+    } catch (err: any) {
+      console.error('Failed to save session', err);
+      addToast('error', `Failed to save session: ${err?.message || err}`);
+    }
+  };
+
+  const handleDeleteAdminSession = async (sessionId: string) => {
+    try {
+      await deleteSessionApi(sessionId);
+      addToast('info', 'Session deleted');
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (activeAdminSession?.id === sessionId) {
+        setActiveAdminSession(null);
+      }
+      if (selectedSessionId === sessionId) {
+        setSelectedSessionId(null);
+      }
+      await refreshSessions();
+    } catch (err: any) {
+      console.error('Failed to delete session', err);
+      addToast('error', `Failed to delete session: ${err?.message || err}`);
+    }
   };
 
   const rawSelectedSession = sessions.find(s => s.id === selectedSessionId);
   const selectedSession = rawSelectedSession ? {
     ...rawSelectedSession,
     studyMaterials: rawSelectedSession.studyMaterials || [],
-    quizzes: rawSelectedSession.quizzes || [],
-    discussions: []
+    quizzes: rawSelectedSession.quizzes || []
   } : undefined;
 
   return (
@@ -502,10 +777,10 @@ export function App() {
               />
             ) : (
               <SessionsList
-                sessions={sessions}
+                sessions={publishedSessions}
                 onSelectSession={(id) => {
                   setSelectedSessionId(id);
-                  const sessionName = sessions.find(s => s.id === id)?.name || id;
+                  const sessionName = publishedSessions.find(s => s.id === id)?.name || id;
                   logActivityApi('StartLearning', `User opened learning session: ${sessionName}`);
                 }}
               />

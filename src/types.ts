@@ -127,6 +127,8 @@ export interface StudyMaterial {
   fileName?: string;
   fileType?: string;
   fileSize?: string;
+  webUrl?: string;
+  downloadUrl?: string;
   course?: string;
   module?: string;
   description: string;
@@ -231,29 +233,6 @@ export interface PersonalNote {
   highlightedText?: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface DiscussionPost {
-  id: string;
-  sessionId: string;
-  authorName: string;
-  authorRole: UserRole;
-  authorAvatar?: string;
-  title: string;
-  body: string;
-  createdAt: string;
-  upvotes: number;
-  replies: DiscussionReply[];
-}
-
-export interface DiscussionReply {
-  id: string;
-  authorName: string;
-  authorRole: UserRole;
-  authorAvatar?: string;
-  body: string;
-  createdAt: string;
-  isAnswer?: boolean;
 }
 
 export interface InspectMetadata {

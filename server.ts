@@ -2,23 +2,6 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-import {
-  mockSessions,
-  mockStudyMaterials,
-  mockQuizzes,
-  mockCurrentUser,
-  mockPersonalNotes,
-  mockDiscussions
-} from "./src/data/mockData";
-import { Session, StudyMaterial, Quiz, PersonalNote, DiscussionPost } from "./src/types";
-
-// In-memory persistent database state for dev session
-let sessions: Session[] = [...mockSessions];
-let studyMaterials: StudyMaterial[] = [...mockStudyMaterials];
-let quizzes: Quiz[] = [...mockQuizzes];
-let personalNotes: PersonalNote[] = [...mockPersonalNotes];
-let discussions: DiscussionPost[] = [...mockDiscussions];
-let currentUser = { ...mockCurrentUser };
 
 // Initialize Gemini Client
 const getGeminiClient = () => {
@@ -47,21 +30,41 @@ async function startServer() {
     server.on('error', (err: any) => reject(err));
   });
 
+  app.use(['/api/materials', '/uploads', '/api/sessions', '/api/quizzes', '/api/analytics'], express.raw({ type: '*/*', limit: '50mb' }));
   app.use(express.json({ limit: '10mb' }));
 
-  const BACKEND_API_BASE = process.env.API_BACKEND_URL || 'http://localhost:5001';
+  const BACKEND_API_BASE = process.env.API_BACKEND_URL || 'http://localhost:5000';
 
   const proxyToBackend = async (req: express.Request, res: express.Response) => {
     const targetUrl = `${BACKEND_API_BASE}${req.originalUrl}`;
-    const headers = { ...req.headers } as Record<string, string>;
-    delete headers.host;
-    delete headers['content-length'];
+    const headers = new Headers();
+    Object.entries(req.headers).forEach(([key, value]) => {
+      if (!value || key.toLowerCase() === 'host' || key.toLowerCase() === 'content-length') {
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        headers.set(key, value.join(', '));
+      } else {
+        headers.set(key, value.toString());
+      }
+    });
+
+    const body = req.method === 'GET' || req.method === 'HEAD'
+      ? undefined
+      : req.body && Buffer.isBuffer(req.body)
+        ? req.body
+        : req.body && typeof req.body === 'string'
+          ? req.body
+          : req.body
+            ? JSON.stringify(req.body)
+            : undefined;
 
     try {
       const upstreamResponse = await fetch(targetUrl, {
         method: req.method,
         headers,
-        body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
+        body,
         redirect: 'manual'
       });
 
@@ -92,418 +95,14 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Auth Routes
-  const registeredUsers: Record<string, { password: string; role: 'GT' | 'Admin'; firstName: string; lastName: string; avatar: string; batch: string }> = {
-    'sibibharathi.thangaraj@valuemomentum.com': {
-      password: '$NMFeE1998x',
-      role: 'GT',
-      firstName: 'Sibibharathi',
-      lastName: 'Thangaraj',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      batch: 'GT-2026-Batch-01'
-    },
-    'pavithran.sivanandham@valuemomentum.com': {
-      password: '$NMFeE1998x',
-      role: 'GT',
-      firstName: 'Pavithran',
-      lastName: 'Sivanandham',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      batch: 'GT-2026-Batch-01'
-    },
-    'anukraha.magdalene@valuemomentum.com': {
-      password: '$NMFeE1998x',
-      role: 'Admin',
-      firstName: 'Anukraha',
-      lastName: 'Magdalene',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-      batch: 'L&D Administration'
-    }
-  };
+  // Auth/profile routes are proxied to the backend in development.
 
-  const otpStore: Record<string, { otp: string; expiry: number; attempts: number; used: boolean }> = {};
-  const resetTokenStore: Record<string, { token: string; expiry: number; used: boolean }> = {};
-
-  app.post("/api/auth/login", (req, res) => {
-    const email = (req.body.email || "").trim().toLowerCase();
-    const password = req.body.password;
-
-    const user = registeredUsers[email];
-    if (!user || user.password !== password) {
-      return res.status(400).json({ success: false, message: "Invalid email address or password." });
-    }
-
-    currentUser = {
-      id: `usr-${Date.now()}`,
-      name: `${user.firstName} ${user.lastName}`,
-      email: email,
-      role: user.role,
-      batch: user.batch,
-      avatar: user.avatar,
-      xp: user.role === 'Admin' ? 5000 : 2850,
-      level: user.role === 'Admin' ? 10 : 5,
-      streakDays: 14,
-      lastActiveDate: new Date().toISOString().split('T')[0],
-      dailyGoalMinutes: 45,
-      todayMinutesSpent: 38
-    };
-
-    res.json({
-      success: true,
-      message: "Login successful.",
-      data: {
-        token: `jwt-${Date.now()}`,
-        userId: currentUser.id,
-        email: email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role
-      }
-    });
-  });
-
-  app.post("/api/auth/forgot-password", (req, res) => {
-    const email = (req.body.email || "").trim().toLowerCase();
-    if (!email || !email.includes("@")) {
-      return res.status(400).json({ success: false, message: "Please enter a valid email address." });
-    }
-
-    const user = registeredUsers[email];
-    if (!user) {
-      return res.status(404).json({ success: false, message: "No registered account was found with this email address." });
-    }
-
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    otpStore[email] = {
-      otp,
-      expiry: Date.now() + 5 * 60 * 1000,
-      attempts: 0,
-      used: false
-    };
-
-    delete resetTokenStore[email];
-    console.log(`[AUTH LOG] OTP for ${email}: ${otp} (expires in 5 minutes)`);
-
-    res.json({
-      success: true,
-      message: "OTP has been sent to your registered email address."
-    });
-  });
-
-  app.post("/api/auth/verify-otp", (req, res) => {
-    const email = (req.body.email || "").trim().toLowerCase();
-    const otp = (req.body.otp || "").trim();
-
-    if (!email || !otp || otp.length !== 4) {
-      return res.status(400).json({ success: false, message: "A valid 4-digit OTP is required." });
-    }
-
-    const record = otpStore[email];
-    if (!record || record.used) {
-      return res.status(400).json({ success: false, message: "No active OTP session found. Please request a new OTP." });
-    }
-
-    if (Date.now() > record.expiry) {
-      delete otpStore[email];
-      return res.status(400).json({ success: false, message: "The OTP has expired (5 minute limit). Please request a new code." });
-    }
-
-    if (record.attempts >= 5) {
-      delete otpStore[email];
-      return res.status(400).json({ success: false, message: "Too many incorrect attempts. Please request a new OTP." });
-    }
-
-    record.attempts++;
-
-    if (record.otp !== otp) {
-      const remaining = 5 - record.attempts;
-      return res.status(400).json({ success: false, message: `Invalid OTP code. ${remaining} attempt(s) remaining.` });
-    }
-
-    record.used = true;
-    delete otpStore[email];
-
-    const resetToken = `rst-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-    resetTokenStore[email] = {
-      token: resetToken,
-      expiry: Date.now() + 10 * 60 * 1000,
-      used: false
-    };
-
-    res.json({
-      success: true,
-      message: "OTP verified successfully.",
-      data: {
-        email,
-        resetToken
-      }
-    });
-  });
-
-  app.post("/api/auth/reset-password", (req, res) => {
-    const email = (req.body.email || "").trim().toLowerCase();
-    const { resetToken, newPassword } = req.body;
-
-    if (!email || !resetToken || !newPassword) {
-      return res.status(400).json({ success: false, message: "Email, reset authorization token, and new password are required." });
-    }
-
-    const tokenRecord = resetTokenStore[email];
-    if (!tokenRecord || tokenRecord.used || tokenRecord.token !== resetToken) {
-      return res.status(403).json({ success: false, message: "Password reset authorization has expired or is invalid." });
-    }
-
-    if (Date.now() > tokenRecord.expiry) {
-      delete resetTokenStore[email];
-      return res.status(403).json({ success: false, message: "Password reset session has expired. Please restart the verification flow." });
-    }
-
-    const user = registeredUsers[email];
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User account not found." });
-    }
-
-    if (newPassword.length < 8) {
-      return res.status(400).json({ success: false, message: "Password must be at least 8 characters long." });
-    }
-
-    user.password = newPassword;
-    tokenRecord.used = true;
-    delete resetTokenStore[email];
-
-    res.json({
-      success: true,
-      message: "Password has been reset successfully. Please log in with your new password."
-    });
-  });
-
-  app.post("/api/auth/change-password", (req, res) => {
-    const email = (req.body.email || "").trim().toLowerCase();
-    const { currentPassword, newPassword } = req.body;
-
-    const user = registeredUsers[email];
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found." });
-    }
-
-    if (user.password !== currentPassword) {
-      return res.status(400).json({ success: false, message: "Current password is incorrect." });
-    }
-
-    if (!newPassword || newPassword.length < 8) {
-      return res.status(400).json({ success: false, message: "New password must be at least 8 characters long." });
-    }
-
-    user.password = newPassword;
-    res.json({ success: true, message: "Password updated successfully in your profile." });
-  });
-
-  // User Profile
-  app.get("/api/user", (req, res) => {
-    res.json(currentUser);
-  });
-
-  app.post("/api/user/goal", (req, res) => {
-    const { dailyGoalMinutes } = req.body;
-    if (typeof dailyGoalMinutes === 'number') {
-      currentUser.dailyGoalMinutes = dailyGoalMinutes;
-    }
-    res.json(currentUser);
-  });
-
-  // Proxy backend routes for materials, sessions, quizzes, search, analytics, and uploads.
-  app.use(['/api/materials', '/uploads', '/api/sessions', '/api/quizzes', '/api/search', '/api/analytics'], async (req, res) => {
+  // Proxy backend routes for materials, sessions, quizzes, analytics, and uploads.
+  app.use(['/api/materials', '/uploads', '/api/sessions', '/api/quizzes', '/api/analytics'], async (req, res) => {
     await proxyToBackend(req, res);
   });
 
-  // Local mock fallback routes for auth, profile, notes, discussions, and AI remain available.
-
-  // Quizzes & Attempts
-  app.get("/api/quizzes", (req, res) => {
-    res.json(quizzes);
-  });
-
-  app.post("/api/quizzes", (req, res) => {
-    const newQuiz: Quiz = {
-      id: `quiz-${Date.now()}`,
-      sessionId: req.body.sessionId,
-      title: req.body.title || "Custom Quiz",
-      passingScorePercent: req.body.passingScorePercent || 80,
-      timeLimitMinutes: req.body.timeLimitMinutes || 15,
-      questions: req.body.questions || []
-    };
-    quizzes.push(newQuiz);
-    res.status(201).json(newQuiz);
-  });
-
-  app.post("/api/quizzes/:id/submit", (req, res) => {
-    const quiz = quizzes.find(q => q.id === req.params.id);
-    if (!quiz) return res.status(404).json({ error: "Quiz not found" });
-    const { userAnswers, timeTakenSeconds } = req.body;
-
-    let correctCount = 0;
-    quiz.questions.forEach((q) => {
-      const userAns = userAnswers[q.id];
-      if (Array.isArray(q.correctAnswer)) {
-        if (Array.isArray(userAns) && userAns.sort().join(',') === q.correctAnswer.sort().join(',')) {
-          correctCount++;
-        }
-      } else if (userAns && String(userAns).trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase()) {
-        correctCount++;
-      }
-    });
-
-    const scorePercent = Math.round((correctCount / quiz.questions.length) * 100);
-    const passed = scorePercent >= quiz.passingScorePercent;
-
-    if (passed) {
-      currentUser.xp += 150;
-      if (typeof timeTakenSeconds === 'number' && !Number.isNaN(timeTakenSeconds)) {
-        currentUser.todayMinutesSpent += Math.round(timeTakenSeconds / 60);
-      }
-    }
-
-    res.json({
-      quizId: quiz.id,
-      scorePercent,
-      correctCount,
-      totalQuestions: quiz.questions.length,
-      passed,
-      timeTakenSeconds,
-      explanations: quiz.questions.map(q => ({
-        questionId: q.id,
-        prompt: q.prompt,
-        userAnswer: userAnswers[q.id],
-        correctAnswer: q.correctAnswer,
-        isCorrect: Array.isArray(q.correctAnswer)
-          ? Array.isArray(userAnswers[q.id]) && userAnswers[q.id].sort().join(',') === q.correctAnswer.sort().join(',')
-          : String(userAnswers[q.id]).trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase(),
-        explanation: q.explanation
-      }))
-    });
-  });
-
-  // Personal Notes
-  app.get("/api/notes", (req, res) => {
-    res.json(personalNotes);
-  });
-
-  app.post("/api/notes", (req, res) => {
-    const note: PersonalNote = {
-      id: `note-${Date.now()}`,
-      sessionId: req.body.sessionId,
-      topicId: req.body.topicId,
-      topicTitle: req.body.topicTitle || "General Note",
-      content: req.body.content,
-      highlightedText: req.body.highlightedText,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    personalNotes.unshift(note);
-    res.status(201).json(note);
-  });
-
-  app.delete("/api/notes/:id", (req, res) => {
-    personalNotes = personalNotes.filter(n => n.id !== req.params.id);
-    res.json({ success: true });
-  });
-
-  // Discussions Q&A
-  app.get("/api/discussions", (req, res) => {
-    res.json(discussions);
-  });
-
-  app.post("/api/discussions", (req, res) => {
-    const newPost: DiscussionPost = {
-      id: `disc-${Date.now()}`,
-      sessionId: req.body.sessionId,
-      authorName: currentUser.name,
-      authorRole: currentUser.role,
-      authorAvatar: currentUser.avatar,
-      title: req.body.title,
-      body: req.body.body,
-      createdAt: 'Just now',
-      upvotes: 0,
-      replies: []
-    };
-    discussions.unshift(newPost);
-    res.status(201).json(newPost);
-  });
-
-  app.post("/api/discussions/:id/reply", (req, res) => {
-    const post = discussions.find(d => d.id === req.params.id);
-    if (!post) return res.status(404).json({ error: "Post not found" });
-    const reply = {
-      id: `rep-${Date.now()}`,
-      authorName: currentUser.name,
-      authorRole: currentUser.role,
-      authorAvatar: currentUser.avatar,
-      body: req.body.body,
-      createdAt: 'Just now',
-      isAnswer: req.body.isAnswer || false
-    };
-    post.replies.push(reply);
-    res.json(post);
-  });
-
-
-
-  // Global Analytics
-  app.get("/api/analytics", (req, res) => {
-    res.json({
-      totalSessions: sessions.length,
-      totalGTs: 124,
-      totalActiveUsers: 88,
-      averageProgress: 68,
-      averageQuizScore: 84,
-      mostViewedSession: ".NET with C# Enterprise Architecture",
-      leastViewedSession: "Azure Cloud Infrastructure",
-      mostDifficultTopic: "Async Programming & Task Concurrency",
-      completionTrends: [
-        { month: 'Jan', completed: 24, avgScore: 78 },
-        { month: 'Feb', completed: 35, avgScore: 81 },
-        { month: 'Mar', completed: 48, avgScore: 82 },
-        { month: 'Apr', completed: 62, avgScore: 85 },
-        { month: 'May', completed: 79, avgScore: 84 },
-        { month: 'Jun', completed: 95, avgScore: 88 }
-      ],
-      trackProgressList: [
-        { name: 'Insurance Domain', progress: 65 },
-        { name: '.NET with C#', progress: 80 },
-        { name: 'Frontend React', progress: 95 },
-        { name: 'SQL & Database', progress: 55 },
-        { name: 'Azure Cloud', progress: 20 }
-      ]
-    });
-  });
-
-  // Search Endpoint
-  app.get("/api/search", (req, res) => {
-    const q = (req.query.q as string || "").toLowerCase();
-    if (!q) return res.json({ sessions: [], materials: [], quizzes: [] });
-
-    const matchedSessions = sessions.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      s.category.toLowerCase().includes(q) ||
-      s.description.toLowerCase().includes(q)
-    );
-
-    const matchedMaterials = studyMaterials.filter(m =>
-      m.title.toLowerCase().includes(q) ||
-      m.description.toLowerCase().includes(q) ||
-      m.tags.some(t => t.toLowerCase().includes(q))
-    );
-
-    const matchedQuizzes = quizzes.filter(quiz =>
-      quiz.title.toLowerCase().includes(q) ||
-      quiz.questions.some(quest => quest.prompt.toLowerCase().includes(q))
-    );
-
-    res.json({
-      sessions: matchedSessions,
-      materials: matchedMaterials,
-      quizzes: matchedQuizzes
-    });
-  });
+  // Local mock fallback routes for auth, profile, notes, and AI remain available.
 
   // --- GEMINI AI ENDPOINTS ---
 

@@ -52,8 +52,8 @@ export const MaterialUploader: React.FC<MaterialUploaderProps> = ({ session, onS
       let downloadUrl: string | undefined;
 
       if (isDocument && file) {
-        const uploadResult = await uploadStudyMaterialFile(file);
-        uploadedUrl = uploadResult.url;
+      const uploadResult = await uploadStudyMaterialFile(file, session.id);
+        uploadedUrl = uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '';
         fileName = uploadResult.fileName;
         driveItemId = uploadResult.driveItemId;
         webUrl = uploadResult.webUrl;
@@ -203,7 +203,15 @@ export const MaterialUploader: React.FC<MaterialUploaderProps> = ({ session, onS
             <label className="text-slate-300 font-semibold">Resource Type</label>
             <select
               value={resourceType}
-              onChange={(e) => setResourceType(e.target.value as 'document' | 'external')}
+              onChange={(e) => {
+                const next = e.target.value as 'document' | 'external';
+                setResourceType(next);
+                if (next === 'document') {
+                  setExternalUrl('');
+                } else {
+                  setFile(null);
+                }
+              }}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
             >
               <option value="document">Document upload</option>

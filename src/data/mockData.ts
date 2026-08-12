@@ -4,7 +4,6 @@ import {
   CodePlaygroundExercise,
   InspectMetadata,
   PersonalNote,
-  DiscussionPost,
   SessionTrackerRecord
 } from '../types';
 
@@ -2887,37 +2886,7 @@ getStudentData(101).then(res => console.log(JSON.stringify(res)));`,
 
 
 
-export const mockDiscussions: DiscussionPost[] = [
-  {
-    id: 'disc-1',
-    sessionId: 'session-dotnet',
-    authorName: 'David Kim',
-    authorRole: 'GT',
-    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    title: 'When should I use AddScoped vs AddTransient in ASP.NET Core DI?',
-    body: 'I am building a DbContext repository wrapper. Should I register it as Scoped or Transient? What happens if I inject a Scoped service into a Singleton?',
-    createdAt: '2 hours ago',
-    upvotes: 12,
-    replies: [
-      {
-        id: 'rep-1',
-        authorName: 'Sarah Jenkins (Lead Architect)',
-        authorRole: 'Admin',
-        authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-        body: 'DbContext is NOT thread-safe and should ALWAYS be registered as AddScoped (one per HTTP request). Injecting a Scoped service into a Singleton creates a "Captive Dependency" and will cause concurrency memory corruption!',
-        createdAt: '1 hour ago',
-        isAnswer: true
-      },
-      {
-        id: 'rep-2',
-        authorName: 'Alex Vance',
-        authorRole: 'GT',
-        body: 'Thanks Sarah! That explains why ASP.NET Core throws a CaptiveDependency error during startup in Development mode.',
-        createdAt: '30 mins ago'
-      }
-    ]
-  }
-];
+// Discussion support removed. No discussion fallback data is kept.
 
 export const mockPersonalNotes: PersonalNote[] = [
   {

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ProfileImage from './ProfileImage';
 import { User } from '../types';
 import { 
   GraduationCap, 
@@ -157,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
                   title="Open profile menu"
                   className="relative p-0.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500/50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/40 shadow-sm"
                 >
-                  <img
+                  <ProfileImage
                     src={currentUser.avatar}
                     alt={currentUser.name}
                     className="w-8 h-8 rounded-lg object-cover ring-2 ring-blue-500/40"
@@ -167,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {showProfilePopover && (
                   <div className="absolute right-0 mt-3 w-72 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl p-4 z-50 text-xs space-y-4 animate-fadeIn text-slate-900">
                     <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                      <img
+                      <ProfileImage
                         src={currentUser.avatar}
                         alt={currentUser.name}
                         className="w-11 h-11 rounded-xl object-cover ring-2 ring-blue-500/50"

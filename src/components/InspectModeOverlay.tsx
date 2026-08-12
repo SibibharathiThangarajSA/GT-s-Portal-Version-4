@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { mockInspectMetadataMap } from '../data/mockData';
 import { InspectMetadata } from '../types';
 import { Terminal, Code, Database, FileText, CheckCircle, HelpCircle, X, Layers, Cpu, Server, Shield } from 'lucide-react';
 
@@ -44,23 +43,26 @@ export const InspectModeOverlay: React.FC<InspectModeOverlayProps> = ({
 
     const handleClick = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest('[data-inspect-id]');
-      if (target) {
+        if (target) {
         e.preventDefault();
         e.stopPropagation();
         const inspectId = target.getAttribute('data-inspect-id') || '';
-        const meta = mockInspectMetadataMap[inspectId] || {
+        // Use a lightweight inline fallback so this inspector does not depend on
+        // the large `mockData.ts` file. Consumers can replace with an API
+        // request later if they want richer metadata.
+        const meta: InspectMetadata = {
           id: inspectId,
           componentName: inspectId,
           technology: 'React Component + Tailwind CSS',
-          backendApi: 'GET /api/session/data',
-          validation: 'JWT Auth token required',
+          backendApi: 'GET /api/sessions (or specific API)',
+          validation: 'JWT Auth token may be required',
           businessPurpose: 'Displays structured enterprise learning data',
-          filesUsed: ['/src/App.tsx'],
-          databaseTable: 'StudentProgress',
+          filesUsed: [],
+          databaseTable: 'StudyMaterials / Sessions',
           authentication: 'Bearer Token',
           relatedLearningTopics: ['React State', 'RESTful API Integration'],
           interviewQuestions: ['How does this component maintain responsive state?'],
-          bestPractices: ['Ensure key prop uniqueness', 'Use strict TypeScript types']
+          bestPractices: ['Use strict TypeScript types', 'Keep components small and focused']
         };
         setSelectedMetadata(meta);
       }

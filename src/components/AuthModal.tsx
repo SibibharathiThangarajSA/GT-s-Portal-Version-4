@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Lock, Mail, ShieldCheck, UserCheck, ArrowRight, ArrowLeft, Key, CheckCircle2, AlertCircle, Check, RefreshCw, Timer } from 'lucide-react';
+import { X, Lock, Mail, ShieldCheck, UserCheck, Eye, EyeOff, ArrowRight, ArrowLeft, Key, CheckCircle2, AlertCircle, Check, RefreshCw, Timer } from 'lucide-react';
 import { loginApi, forgotPasswordApi, verifyOtpApi, resetPasswordApi } from '../services/api';
 import { useToast } from '../context/ToastContext';
 
@@ -30,6 +30,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Login Form Fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [hasNoCredentials, setHasNoCredentials] = useState(false);
 
@@ -38,7 +39,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '']);
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // OTP Expiry & Resend Timers
   const [otpTimerSeconds, setOtpTimerSeconds] = useState(300); // 5 minutes
@@ -59,8 +62,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setOtpDigits(['', '', '', '']);
       setResetToken('');
       setNewPassword('');
+      setShowNewPassword(false);
       setConfirmPassword('');
+      setShowConfirmPassword(false);
       setHasNoCredentials(false);
+      setShowPassword(false);
     }
   }, [isOpen, initialRole]);
 
@@ -517,14 +523,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isGuestAccess}
-                  className="w-full pl-9 pr-3 py-2.5 bg-white/90 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm disabled:bg-slate-100 disabled:text-slate-500"
+                  className="w-full pl-9 pr-10 py-2.5 bg-white/90 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm disabled:bg-slate-100 disabled:text-slate-500"
                   required={!isGuestAccess}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -752,14 +766,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
-                  type="password"
+                  type={showNewPassword ? 'text' : 'password'}
                   placeholder="••••••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-white/90 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm"
+                  className="w-full pl-9 pr-10 py-2.5 bg-white/90 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm"
                   required
                   autoFocus
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -832,11 +854,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="relative">
                 <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="••••••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full pl-9 pr-3 py-2.5 bg-white/90 border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm ${
+                  className={`w-full pl-9 pr-10 py-2.5 bg-white/90 border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm ${
                     isPasswordMismatch
                       ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20'
                       : isPasswordMatch
@@ -845,6 +867,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   }`}
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
 
               {/* Match Indicator */}

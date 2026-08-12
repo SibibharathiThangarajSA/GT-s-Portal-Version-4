@@ -1,8 +1,11 @@
-import { Session, StudyMaterial, Quiz, PersonalNote, DiscussionPost, User } from '../types';
+import { Session, StudyMaterial, Quiz, PersonalNote, User } from '../types';
 
 type CreateStudyMaterialPayload = Partial<StudyMaterial> & {
   versionNote?: string;
   updatedBy?: string;
+  driveItemId?: string;
+  webUrl?: string;
+  downloadUrl?: string;
 };
 
 const defaultGuestUser: User = {
@@ -89,6 +92,8 @@ export const normalizeSessionPayload = (raw: any): Session => {
         module: item?.module || '',
         description: item?.description || '',
         durationOrPages: item?.durationOrPages || '',
+        webUrl: item?.webUrl || '',
+        downloadUrl: item?.downloadUrl || '',
         currentVersion: Number(item?.currentVersion || 1),
         versions: Array.isArray(item?.versions) ? item.versions.map((version: any) => ({
           version: Number(version?.version ?? version?.versionNumber ?? 1),
@@ -206,53 +211,53 @@ export const fetchCurrentUser = async (): Promise<User> => {
   }
 };
 
-export const fetchSessions = async (): Promise<Session[]> => {
+const parseApiResponse = async <T>(res: Response): Promise<T> => {
+  const text = await res.text();
+  if (!res.ok) {
+    let message = text;
+    if (text) {
+      try {
+        const json = JSON.parse(text);
+        if (json?.message) message = json.message;
+        else if (json?.error) message = json.error;
+      } catch {
+        // keep raw text
+      }
+    }
+    throw new Error(message || `Request failed with status ${res.status}`);
+  }
+
+  if (!text) {
+    return {} as T;
+  }
+
   try {
-    const res = await fetch('/api/sessions');
-    if (!res.ok) throw new Error('Failed to fetch sessions');
-    const data = await res.json();
-    return Array.isArray(data) ? data.map(normalizeSessionPayload) : [];
-  } catch (err) {
-    console.warn('Sessions API unavailable; returning empty session list', err);
-    return [];
+    return JSON.parse(text) as T;
+  } catch {
+    return text as unknown as T;
   }
 };
 
-export const fetchSessionById = async (id: string): Promise<Session & { studyMaterials: StudyMaterial[]; quizzes: Quiz[]; discussions: DiscussionPost[] }> => {
-  try {
-    const res = await fetch(`/api/sessions/${id}`);
-    if (!res.ok) throw new Error('Session not found');
-    const data = await res.json();
-    const normalized = normalizeSessionPayload(data);
-    return {
-      ...normalized,
-      studyMaterials: normalized.studyMaterials || [],
-      quizzes: normalized.quizzes || [],
-      discussions: []
-    } as Session & { studyMaterials: StudyMaterial[]; quizzes: Quiz[]; discussions: DiscussionPost[] };
-  } catch (err) {
-    console.warn(`Session API unavailable for ${id}; using empty placeholder`, err);
-    const fallback = emptySession(id);
-    return {
-      ...fallback,
-      studyMaterials: [],
-      quizzes: [],
-      discussions: []
-    } as Session & { studyMaterials: StudyMaterial[]; quizzes: Quiz[]; discussions: DiscussionPost[] };
-  }
+export const fetchSessions = async (): Promise<Session[]> => {
+  const res = await fetch('/api/sessions');
+  const data = await parseApiResponse<any>(res);
+  return Array.isArray(data) ? data.map(normalizeSessionPayload) : [];
+};
+
+export const fetchSessionById = async (id: string): Promise<Session & { studyMaterials: StudyMaterial[]; quizzes: Quiz[] }> => {
+  const res = await fetch(`/api/sessions/${id}`);
+  const data = await parseApiResponse<any>(res);
+  const normalized = normalizeSessionPayload(data);
+  return {
+    ...normalized,
+    studyMaterials: normalized.studyMaterials || [],
+    quizzes: normalized.quizzes || []
+  } as Session & { studyMaterials: StudyMaterial[]; quizzes: Quiz[] };
 };
 
 export const fetchStudyMaterialsApi = async (sessionId?: string): Promise<StudyMaterial[]> => {
-  try {
-    const url = sessionId ? `/api/materials?sessionId=${encodeURIComponent(sessionId)}` : '/api/materials';
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed to fetch study materials');
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    console.warn('Falling back to local session material data', err);
-    return [];
-  }
+  const url = sessionId ? `/api/materials?sessionId=${encodeURIComponent(sessionId)}` : '/api/materials';
+  return await parseApiResponse<StudyMaterial[]>(await fetch(url));
 };
 
 export const createSessionApi = async (sessionData: Partial<Session>): Promise<Session> => {
@@ -261,24 +266,22 @@ export const createSessionApi = async (sessionData: Partial<Session>): Promise<S
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(sessionData)
   });
-  return await res.json();
+
+  const data = await parseApiResponse<any>(res);
+  return normalizeSessionPayload(data);
 };
 
-export const uploadStudyMaterialFile = async (file: File): Promise<{ fileName: string; url: string; driveItemId?: string; webUrl?: string; downloadUrl?: string }> => {
+export const uploadStudyMaterialFile = async (file: File, sessionId?: string): Promise<{ fileName: string; url: string; driveItemId?: string; webUrl?: string; downloadUrl?: string }> => {
   const formData = new FormData();
   formData.append('file', file);
+  if (sessionId) formData.append('sessionId', sessionId);
 
   const res = await fetch('/api/materials/files/upload', {
     method: 'POST',
     body: formData
   });
 
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(`File upload failed: ${message}`);
-  }
-
-  return await res.json();
+  return await parseApiResponse<any>(res);
 };
 
 export const createStudyMaterialApi = async (materialData: CreateStudyMaterialPayload): Promise<StudyMaterial> => {
@@ -288,12 +291,7 @@ export const createStudyMaterialApi = async (materialData: CreateStudyMaterialPa
     body: JSON.stringify(materialData)
   });
 
-  if (!res.ok) {
-    const message = await res.text();
-    throw new Error(`Create study material failed: ${message}`);
-  }
-
-  return await res.json();
+  return await parseApiResponse<StudyMaterial>(res);
 };
 
 export const updateSessionApi = async (id: string, sessionData: Partial<Session>): Promise<Session> => {
@@ -302,11 +300,17 @@ export const updateSessionApi = async (id: string, sessionData: Partial<Session>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(sessionData)
   });
-  return await res.json();
+
+  const data = await parseApiResponse<any>(res);
+  return normalizeSessionPayload(data);
 };
 
 export const deleteSessionApi = async (id: string): Promise<void> => {
-  await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+  const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Delete session failed: ${text}`);
+  }
 };
 
 export const submitQuizApi = async (quizId: string, userAnswers: Record<string, any>) => {
@@ -438,32 +442,7 @@ export interface AuthUserDto {
 }
 
 // Registered accounts with password hash / credentials
-export const LOCAL_AUTH_USERS: Record<string, { password: string; role: 'GT' | 'Admin'; firstName: string; lastName: string; avatar: string; batch: string }> = {
-  'sibibharathi.thangaraj@valuemomentum.com': {
-    password: '$NMFeE1998x',
-    role: 'GT',
-    firstName: 'Sibibharathi',
-    lastName: 'Thangaraj',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    batch: 'GT-2026-Batch-01'
-  },
-  'pavithran.sivanandham@valuemomentum.com': {
-    password: '$NMFeE1998x',
-    role: 'GT',
-    firstName: 'Pavithran',
-    lastName: 'Sivanandham',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    batch: 'GT-2026-Batch-01'
-  },
-  'anukraha.magdalene@valuemomentum.com': {
-    password: '$NMFeE1998x',
-    role: 'Admin',
-    firstName: 'Anukraha',
-    lastName: 'Magdalene',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    batch: 'L&D Administration'
-  }
-};
+// Local auth fallbacks removed: use backend auth endpoints only.
 
 export const loginApi = async (email: string, password?: string): Promise<{ success: boolean; data?: AuthUserDto; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
@@ -473,64 +452,18 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, password })
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && data.data) {
-        const localMeta = LOCAL_AUTH_USERS[cleanEmail];
-        return {
-          success: true,
-          data: {
-            token: data.data.token,
-            userId: data.data.userId,
-            email: data.data.email,
-            firstName: data.data.firstName,
-            lastName: data.data.lastName,
-            role: data.data.role === 'Admin' ? 'Admin' : 'GT',
-            avatar: localMeta?.avatar || (data.data.role === 'Admin' ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'),
-            batch: localMeta?.batch || (data.data.role === 'Admin' ? 'L&D Administration' : 'GT-2026-Batch-01')
-          }
-        };
-      }
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      return { success: true, data: data.data };
     }
-  } catch (err) {
-    // API not reachable, fallback to local
+    return { success: false, message: data.message || 'Authentication failed.' };
+  } catch (err: any) {
+    return { success: false, message: `Authentication request failed: ${err?.message || String(err)}` };
   }
-
-  // Fallback to local authentication with RBAC and password verification
-  const user = LOCAL_AUTH_USERS[cleanEmail];
-  if (!user) {
-    return {
-      success: false,
-      message: 'No account found with this email address. Please check your credentials.'
-    };
-  }
-
-  if (password !== user.password) {
-    return {
-      success: false,
-      message: 'Invalid password. Please enter the correct password.'
-    };
-  }
-
-  return {
-    success: true,
-    data: {
-      token: `jwt-auth-token-${Date.now()}`,
-      userId: `user-${cleanEmail}`,
-      email: cleanEmail,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      avatar: user.avatar,
-      batch: user.batch
-    }
-  };
 };
 
 export const forgotPasswordApi = async (email: string): Promise<{ success: boolean; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
-
-  // Try local Express mock server first (primary)
   try {
     const res = await fetch('/api/auth/forgot-password', {
       method: 'POST',
@@ -538,39 +471,15 @@ export const forgotPasswordApi = async (email: string): Promise<{ success: boole
       body: JSON.stringify({ email: cleanEmail })
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data.success) {
-      return { success: true, message: data.message || 'OTP has been sent to your registered email address.' };
-    }
+    if (res.ok && data.success) return { success: true, message: data.message };
     return { success: false, message: data.message || 'Failed to send OTP.' };
-  } catch {
-    // Express server not reachable, try .NET backend
-  }
-
-  try {
-    const res = await fetch('/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.success) {
-      return { success: true, message: data.message };
-    }
-    return { success: false, message: data.message || data.errors?.[0] || 'Failed to send OTP.' };
-  } catch {
-    // .NET backend not reachable either
-    const user = LOCAL_AUTH_USERS[cleanEmail];
-    if (!user) {
-      return { success: false, message: 'No registered account found with this email address.' };
-    }
-    return { success: true, message: 'OTP has been sent to your registered email address.' };
+  } catch (err: any) {
+    return { success: false, message: `Request failed: ${err?.message || String(err)}` };
   }
 };
 
 export const verifyOtpApi = async (email: string, otp: string): Promise<{ success: boolean; resetToken?: string; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
-
-  // Try local Express mock server first
   try {
     const res = await fetch('/api/auth/verify-otp', {
       method: 'POST',
@@ -578,34 +487,15 @@ export const verifyOtpApi = async (email: string, otp: string): Promise<{ succes
       body: JSON.stringify({ email: cleanEmail, otp: otp.trim() })
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data.success) {
-      return { success: true, resetToken: data.data?.resetToken, message: data.message };
-    }
+    if (res.ok && data.success) return { success: true, resetToken: data.data?.resetToken, message: data.message };
     return { success: false, message: data.message || 'Invalid OTP code.' };
-  } catch {
-    // Express server not reachable, try .NET backend
-  }
-
-  try {
-    const res = await fetch('/api/auth/verify-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, otp: otp.trim() })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.success) {
-      return { success: true, resetToken: data.data?.resetToken, message: data.message };
-    }
-    return { success: false, message: data.message || data.errors?.[0] || 'Invalid OTP code.' };
-  } catch {
-    return { success: false, message: 'Verification failed. Please ensure the backend is reachable.' };
+  } catch (err: any) {
+    return { success: false, message: `Request failed: ${err?.message || String(err)}` };
   }
 };
 
 export const resetPasswordApi = async (email: string, resetToken: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
-
-  // Try local Express mock server first
   try {
     const res = await fetch('/api/auth/reset-password', {
       method: 'POST',
@@ -613,37 +503,10 @@ export const resetPasswordApi = async (email: string, resetToken: string, newPas
       body: JSON.stringify({ email: cleanEmail, resetToken, newPassword })
     });
     const data = await res.json().catch(() => ({}));
-    if (res.ok && data.success) {
-      if (LOCAL_AUTH_USERS[cleanEmail]) {
-        LOCAL_AUTH_USERS[cleanEmail].password = newPassword;
-      }
-      return { success: true, message: data.message };
-    }
+    if (res.ok && data.success) return { success: true, message: data.message };
     return { success: false, message: data.message || 'Failed to reset password.' };
-  } catch {
-    // Express server not reachable, try .NET backend
-  }
-
-  try {
-    const res = await fetch('/api/auth/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, resetToken, newPassword })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.success) {
-      if (LOCAL_AUTH_USERS[cleanEmail]) {
-        LOCAL_AUTH_USERS[cleanEmail].password = newPassword;
-      }
-      return { success: true, message: data.message };
-    }
-    return { success: false, message: data.message || data.errors?.[0] || 'Failed to reset password.' };
-  } catch {
-    if (LOCAL_AUTH_USERS[cleanEmail]) {
-      LOCAL_AUTH_USERS[cleanEmail].password = newPassword;
-      return { success: true, message: 'Password has been reset successfully.' };
-    }
-    return { success: false, message: 'Failed to reset password.' };
+  } catch (err: any) {
+    return { success: false, message: `Request failed: ${err?.message || String(err)}` };
   }
 };
 
@@ -655,36 +518,12 @@ export const changePasswordApi = async (email: string, currentPassword: string, 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, currentPassword, newPassword })
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) {
-        if (LOCAL_AUTH_USERS[cleanEmail]) {
-          LOCAL_AUTH_USERS[cleanEmail].password = newPassword;
-        }
-        return { success: true, message: 'Password changed successfully.' };
-      } else {
-        return { success: false, message: data.errors?.[0] || data.message || 'Failed to change password.' };
-      }
-    }
-  } catch (err) {
-    // API not reachable, fallback to local
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) return { success: true, message: data.message };
+    return { success: false, message: data.message || 'Failed to change password.' };
+  } catch (err: any) {
+    return { success: false, message: `Request failed: ${err?.message || String(err)}` };
   }
-
-  const user = LOCAL_AUTH_USERS[cleanEmail];
-  if (!user) {
-    return { success: false, message: 'Account not found.' };
-  }
-
-  if (user.password !== currentPassword) {
-    return { success: false, message: 'Current password does not match.' };
-  }
-
-  if (newPassword.length < 8) {
-    return { success: false, message: 'New password must be at least 8 characters long.' };
-  }
-
-  user.password = newPassword;
-  return { success: true, message: 'Password changed successfully in your profile.' };
 };
 
 
