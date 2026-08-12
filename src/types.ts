@@ -129,6 +129,8 @@ export interface StudyMaterial {
   fileSize?: string;
   webUrl?: string;
   downloadUrl?: string;
+  /** Key of the stored object, returned by the upload endpoint. */
+  driveItemId?: string;
   course?: string;
   module?: string;
   description: string;

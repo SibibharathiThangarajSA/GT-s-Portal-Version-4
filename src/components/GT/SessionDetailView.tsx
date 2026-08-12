@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Session, StudyMaterial, Quiz, PersonalNote } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
-import { fetchStudyMaterialsApi, summarizeMaterialAiApi } from '../../services/api';
+import { fetchStudyMaterialsApi, summarizeMaterialAiApi, uploadStudyMaterialFile } from '../../services/api';
 import {
   ArrowLeft,
   BookOpen,
@@ -1065,10 +1065,18 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     <input
                       type="file"
                       accept="video/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setSelectedVideoFileName(e.target.files[0].name);
-                          setVideoInputUrl(URL.createObjectURL(e.target.files[0]));
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setSelectedVideoFileName(file.name);
+                        // Uploaded rather than turned into an object URL, so the video survives the
+                        // page and is playable by everyone else on the session.
+                        try {
+                          const uploadResult = await uploadStudyMaterialFile(file, session.id);
+                          setVideoInputUrl(uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '');
+                        } catch (error: any) {
+                          console.error('Video upload failed', error);
+                          setSelectedVideoFileName('');
                         }
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer"

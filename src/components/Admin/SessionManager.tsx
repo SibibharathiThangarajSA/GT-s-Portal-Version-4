@@ -64,6 +64,10 @@ const deriveEditingSessionMaterials = (session: Partial<Session>): Partial<Sessi
   };
 };
 
+// Referenced by the session list below but never defined here, so rendering a session with no
+// thumbnail threw a ReferenceError. Same image the other views fall back to.
+const DEFAULT_SESSION_THUMBNAIL = 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop&q=80';
+
 export const SessionManager: React.FC<SessionManagerProps> = ({
   sessions,
   onSaveSession,
@@ -486,10 +490,19 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       type="file"
                       accept="video/*"
                       className="hidden"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          setEditingSession({ ...editingSession, videoUrl: URL.createObjectURL(file) });
+                        if (!file) return;
+                        // The file has to reach the bucket: an object URL only resolves inside this
+                        // tab, so saving one gives every other viewer a dead video.
+                        try {
+                          const uploadResult = await uploadStudyMaterialFile(file, editingSession?.id);
+                          setEditingSession({
+                            ...editingSession,
+                            videoUrl: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || ''
+                          });
+                        } catch (error: any) {
+                          console.error('Video upload failed', error);
                         }
                       }}
                     />
@@ -1139,16 +1152,22 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                             type="file"
                             accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip"
                             className="hidden"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files?.[0];
-                              if (file) {
+                              if (!file) return;
+                              // Same reason as the overview video: the attachment has to be stored
+                              // server-side or trainees open a link that only ever worked here.
+                              try {
+                                const uploadResult = await uploadStudyMaterialFile(file, editingSession?.id);
                                 const list = [...(editingSession.assignments || [])];
                                 list[aIdx] = {
                                   ...list[aIdx],
-                                  attachmentName: file.name,
-                                  attachmentUrl: URL.createObjectURL(file)
+                                  attachmentName: uploadResult.fileName || file.name,
+                                  attachmentUrl: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || ''
                                 };
                                 setEditingSession({ ...editingSession, assignments: list });
+                              } catch (error: any) {
+                                console.error('Assignment attachment upload failed', error);
                               }
                             }}
                           />
