@@ -1265,20 +1265,51 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       ))}
                     </div>
 
+                    {/* Picked from the options rather than typed. A typed answer only had to differ
+                        by a character or a stray space to mark every trainee wrong, and the author
+                        had no way to see that it did not match. */}
                     <div className="flex items-center gap-3 pt-2">
                       <span className="text-slate-700 font-bold">Correct Answer:</span>
-                      <input
-                        type="text"
-                        value={Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : q.correctAnswer}
-                        onChange={(e) => {
+                      {(() => {
+                        const options = (q.options || []).filter((option) => option?.toString().trim());
+                        const selected = Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer;
+                        const setAnswer = (value: string) => {
                           const currentQuizzes = [...(editingSession.quizzes || [])];
                           if (currentQuizzes[0]) {
-                            currentQuizzes[0].questions[qIdx].correctAnswer = e.target.value;
+                            currentQuizzes[0].questions[qIdx].correctAnswer = value;
                             setEditingSession({ ...editingSession, quizzes: currentQuizzes });
                           }
-                        }}
-                        className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
-                      />
+                        };
+
+                        // Fill the options in first and this becomes a picker; until then it stays
+                        // typeable so the question is never blocked.
+                        if (options.length === 0) {
+                          return (
+                            <input
+                              type="text"
+                              value={selected || ''}
+                              onChange={(e) => setAnswer(e.target.value)}
+                              placeholder="Add options above to choose from them"
+                              className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
+                            />
+                          );
+                        }
+
+                        return (
+                          <select
+                            value={options.includes(selected as string) ? (selected as string) : ''}
+                            onChange={(e) => setAnswer(e.target.value)}
+                            className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
+                          >
+                            <option value="">Select the correct option</option>
+                            {options.map((option, optIdx) => (
+                              <option key={`${q.id}-answer-${optIdx}`} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

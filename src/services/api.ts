@@ -43,6 +43,28 @@ const emptySession = (id: string): Session => ({
   ratingCount: 0
 });
 
+/**
+ * The API stores a question's answer in correctAnswerJson, which holds JSON: a quoted string for
+ * a single answer, an array for a multi-select. Passing that through untouched put the quotes on
+ * screen ("Focuses on..." instead of Focuses on...) and made every answer compare as wrong.
+ * Values written before this fix, and any plain text that was never encoded, are returned as-is.
+ */
+const parseCorrectAnswer = (value: any): string | string[] => {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value !== 'string') return '';
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.map(String);
+    if (typeof parsed === 'string' || typeof parsed === 'number' || typeof parsed === 'boolean') {
+      return String(parsed);
+    }
+    return value;
+  } catch {
+    return value;
+  }
+};
+
 export const normalizeSessionPayload = (raw: any): Session => {
   const learningObjectives = Array.isArray(raw?.learningObjectives)
     ? raw.learningObjectives.map((item: any) => typeof item === 'string' ? item : item?.objectiveText || item?.text || '')
@@ -121,7 +143,7 @@ export const normalizeSessionPayload = (raw: any): Session => {
           type: question?.type || 'MCQ',
           prompt: question?.prompt || '',
           options: Array.isArray(question?.options) ? question.options : [],
-          correctAnswer: question?.correctAnswer || question?.correctAnswerJson || '',
+          correctAnswer: question?.correctAnswer ?? parseCorrectAnswer(question?.correctAnswerJson),
           explanation: question?.explanation || '',
           points: Number(question?.points || 10),
           codeSnippet: question?.codeSnippet || '',
