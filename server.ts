@@ -1,7 +1,22 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import { GoogleGenAI, Type } from "@google/genai";
+
+/**
+ * This server is a thin BFF, not a data store.
+ *
+ * Everything under /api is proxied to the .NET GTsPortal API, which owns the
+ * PostgreSQL database. The only routes handled locally are /api/ai/*, because the
+ * Gemini API key must stay server-side and never reach the browser.
+ *
+ * It previously served in-memory mock data for sessions, materials, quizzes, notes
+ * and discussions, which is why the UI never reflected the real database.
+ */
+
+// Where the .NET API lives. In Railway, set this to the API service's internal URL.
+const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5000";
 
 // Initialize Gemini Client
 const getGeminiClient = () => {
@@ -30,101 +45,35 @@ async function startServer() {
     server.on('error', (err: any) => reject(err));
   });
 
-  app.use(['/api/materials', '/uploads', '/api/sessions', '/api/quizzes', '/api/analytics'], express.raw({ type: '*/*', limit: '50mb' }));
-  app.use(express.json({ limit: '10mb' }));
+  // --- LOCAL AI ROUTES ---
+  // JSON parsing is scoped to these routes only. Applying it globally would consume
+  // the request body before the proxy could forward it, breaking every POST and PUT.
+  const ai = express.Router();
+  ai.use(express.json({ limit: '10mb' }));
 
-  const BACKEND_API_BASE = process.env.API_BACKEND_URL || 'http://localhost:5000';
-
-  const proxyToBackend = async (req: express.Request, res: express.Response) => {
-    const targetUrl = `${BACKEND_API_BASE}${req.originalUrl}`;
-    const headers = new Headers();
-    Object.entries(req.headers).forEach(([key, value]) => {
-      if (!value || key.toLowerCase() === 'host' || key.toLowerCase() === 'content-length') {
-        return;
-      }
-
-      if (Array.isArray(value)) {
-        headers.set(key, value.join(', '));
-      } else {
-        headers.set(key, value.toString());
-      }
-    });
-
-    const body = req.method === 'GET' || req.method === 'HEAD'
-      ? undefined
-      : req.body && Buffer.isBuffer(req.body)
-        ? req.body
-        : req.body && typeof req.body === 'string'
-          ? req.body
-          : req.body
-            ? JSON.stringify(req.body)
-            : undefined;
-
-    try {
-      const upstreamResponse = await fetch(targetUrl, {
-        method: req.method,
-        headers,
-        body,
-        redirect: 'manual'
-      });
-
-      res.status(upstreamResponse.status);
-      upstreamResponse.headers.forEach((value, key) => {
-        if (key.toLowerCase() === 'transfer-encoding') return;
-        res.setHeader(key, value);
-      });
-
-      const responseBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
-      if (responseBuffer.length) {
-        res.send(responseBuffer);
-      } else {
-        res.end();
-      }
-    } catch (err: any) {
-      console.error(`Proxy failed for ${req.originalUrl}`, err);
-      res.status(502).json({
-        success: false,
-        message: 'Backend proxy failed.',
-        details: err?.message || String(err)
-      });
-    }
-  };
-
-  // --- API ROUTES ---
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  ai.get("/health", (_req, res) => {
+    res.json({ status: "ok", apiBaseUrl: API_BASE_URL, timestamp: new Date().toISOString() });
   });
-
-  // Auth/profile routes are proxied to the backend in development.
-
-  // Proxy backend routes for materials, sessions, quizzes, analytics, and uploads.
-  app.use(['/api/materials', '/uploads', '/api/sessions', '/api/quizzes', '/api/analytics'], async (req, res) => {
-    await proxyToBackend(req, res);
-  });
-
-  // Local mock fallback routes for auth, profile, notes, and AI remain available.
-
-  // --- GEMINI AI ENDPOINTS ---
 
   // AI Chat Tutor
-  app.post("/api/ai/chat", async (req, res) => {
-    const { message, context, chatHistory } = req.body;
-    const ai = getGeminiClient();
+  ai.post("/chat", async (req, res) => {
+    const { message, context } = req.body;
+    const client = getGeminiClient();
 
-    if (!ai) {
+    if (!client) {
       return res.json({
         reply: `[AI Assistant Mode]: As your Graduate Trainee mentor for "${context?.sessionName || 'the portal'}", here is an answer to your question: "${message}". \n\nKey Concept Breakdown:\n1. Ensure strict type signatures in C# and TypeScript.\n2. Handle exception boundaries with Global Exception Middleware or try-catch blocks.\n3. Always write unit tests before pushing code to production.`
       });
     }
 
     try {
-      const response = await ai.models.generateContent({
+      const response = await client.models.generateContent({
         model: "gemini-3.6-flash",
         contents: [
           {
             role: 'user',
             parts: [{
-              text: `Context: You are an enterprise L&D AI Tutor for Graduate Trainees (GTs). 
+              text: `Context: You are an enterprise L&D AI Tutor for Graduate Trainees (GTs).
 Session Context: ${JSON.stringify(context || {})}
 User Query: ${message}`
             }]
@@ -143,18 +92,18 @@ User Query: ${message}`
   });
 
   // AI Document / Notes Summarizer
-  app.post("/api/ai/summarize", async (req, res) => {
+  ai.post("/summarize", async (req, res) => {
     const { title, content } = req.body;
-    const ai = getGeminiClient();
+    const client = getGeminiClient();
 
-    if (!ai) {
+    if (!client) {
       return res.json({
         summary: `### AI Summary of ${title}\n\n- **Core Theme**: High performance enterprise system architecture.\n- **Key Takeaway**: Apply SOLID principles, proper indexing in SQL databases, and async/await non-blocking I/O.\n- **Action Item**: Review the code examples and complete the topic quiz.`
       });
     }
 
     try {
-      const response = await ai.models.generateContent({
+      const response = await client.models.generateContent({
         model: "gemini-3.6-flash",
         contents: `Summarize the following study material or note titled "${title}":\n\n${content}`,
         config: {
@@ -169,11 +118,11 @@ User Query: ${message}`
   });
 
   // AI Practice Quiz Generator
-  app.post("/api/ai/generate-quiz", async (req, res) => {
+  ai.post("/generate-quiz", async (req, res) => {
     const { topicName, textContent } = req.body;
-    const ai = getGeminiClient();
+    const client = getGeminiClient();
 
-    if (!ai) {
+    if (!client) {
       return res.json({
         quizTitle: `AI Generated Practice Quiz: ${topicName || 'General Tech'}`,
         questions: [
@@ -195,7 +144,7 @@ User Query: ${message}`
     }
 
     try {
-      const response = await ai.models.generateContent({
+      const response = await client.models.generateContent({
         model: "gemini-3.6-flash",
         contents: `Generate 3 high quality multiple choice practice questions for GTs on the topic "${topicName}". Source Material: ${textContent || 'General enterprise topic'}`,
         config: {
@@ -232,6 +181,30 @@ User Query: ${message}`
     }
   });
 
+  app.use("/api/ai", ai);
+
+  // --- PROXY EVERYTHING ELSE TO THE .NET API ---
+  // pathFilter keeps the original /api prefix intact, which is what the .NET routes
+  // expect ([Route("api/sessions")] and friends).
+  app.use(
+    createProxyMiddleware({
+      target: API_BASE_URL,
+      changeOrigin: true,
+      pathFilter: (pathname) => pathname.startsWith('/api') && !pathname.startsWith('/api/ai'),
+      on: {
+        error: (err, _req, res) => {
+          console.error(`[proxy] ${API_BASE_URL} unreachable:`, err.message);
+          if (res && 'writeHead' in res && !res.headersSent) {
+            res.writeHead(502, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              message: 'The API is unavailable. Check that the .NET service is running and API_BASE_URL is correct.'
+            }));
+          }
+        },
+      },
+    })
+  );
+
   // Vite Middleware in Dev or Static Serve in Prod
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -242,7 +215,7 @@ User Query: ${message}`
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
@@ -263,6 +236,7 @@ User Query: ${message}`
   }
 
   console.log(`Server running on http://localhost:${activePort}`);
+  console.log(`Proxying /api -> ${API_BASE_URL}`);
 }
 
 startServer();
