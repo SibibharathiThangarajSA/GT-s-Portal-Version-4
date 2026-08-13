@@ -224,6 +224,7 @@ export interface Session {
   trainerName?: string;
   status?: 'Published' | 'Draft' | 'Archived' | 'Publish' | 'Archive';
   videoUrl?: string;
+  featuredVideoUrl?: string;
 }
 
 export interface PersonalNote {
