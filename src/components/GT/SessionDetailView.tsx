@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Session, StudyMaterial, Quiz, PersonalNote, DiscussionPost } from '../../types';
+import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote, DiscussionPost } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
-import { fetchStudyMaterialsApi, summarizeMaterialAiApi } from '../../services/api';
+import { fetchStudyMaterialsApi, fetchAssignmentsApi, fetchQuizzesApi, createStudyMaterialApi, uploadMaterialFileApi, summarizeMaterialAiApi } from '../../services/api';
 import {
   ArrowLeft,
   BookOpen,
@@ -722,83 +722,41 @@ const getMaterialDisplayType = (material: Partial<StudyMaterial> & { type?: stri
   return 'Notes / Guide';
 };
 
-const getMaterialCategory = (material: Partial<StudyMaterial> & { materialCategory?: string; materialType?: string; category?: string }) => {
-  const categoryValue = (material.materialType || material.materialCategory || material.category || 'Provided').toString().toLowerCase();
-  return categoryValue === 'additional' ? 'Additional' : 'Provided';
-};
+const mapStudyMaterialToCustomItem = (material: StudyMaterial, idx: number): CustomMaterialItem => ({
+  id: material.id || `mat-${idx}`,
+  title: material.title,
+  type: getMaterialDisplayType(material),
+  url: material.url || '',
+  file: material.file,
+  fileName: material.fileName,
+  fileType: material.fileType,
+  description: material.description || (material.materialCategory === 'Additional' ? 'Supplementary reference material for this session.' : 'Official study material provided for this session.'),
+  updatedAt: material.versions?.[0]?.updatedAt || 'Live from portal',
+  sourceOrAuthor: material.versions?.[0]?.updatedBy || 'Portal',
+  tags: material.tags && material.tags.length > 0 ? material.tags : [material.materialCategory || 'Provided'],
+  fileSizeOrDuration: material.durationOrPages || (material.fileSize ? material.fileSize : 'Live file')
+});
 
-const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?: StudyMaterial[]; providedMaterials?: StudyMaterial[]; additionalMaterials?: StudyMaterial[]; assignments?: any[] }) => {
-  const studyMaterials = [...(sessionData.studyMaterials || [])];
-  const providedItems = [
-    ...(sessionData.providedMaterials || []).map((material, idx) => ({
-      id: `prov-session-${idx}`,
-      title: material.title,
-      type: getMaterialDisplayType(material),
-      url: material.url || '',
-      file: material.file,
-      fileName: material.fileName,
-      fileType: material.fileType,
-      description: material.description || 'Official study material provided for this session.',
-      updatedAt: material.versions?.[0]?.updatedAt || 'Live from portal',
-      sourceOrAuthor: material.versions?.[0]?.updatedBy || 'Portal',
-      tags: material.tags || ['Official'],
-      fileSizeOrDuration: material.durationOrPages || 'Live file'
-    })),
-    ...studyMaterials.filter(material => getMaterialCategory(material) === 'Provided').map((material, idx) => ({
-      id: `prov-study-${idx}`,
-      title: material.title,
-      type: getMaterialDisplayType(material),
-      url: material.url || '',
-      file: material.file,
-      fileName: material.fileName,
-      fileType: material.fileType,
-      description: material.description || 'Official study material provided for this session.',
-      updatedAt: material.versions?.[0]?.updatedAt || 'Live from portal',
-      sourceOrAuthor: material.versions?.[0]?.updatedBy || 'Portal',
-      tags: material.tags || ['Official'],
-      fileSizeOrDuration: material.durationOrPages || 'Live file'
-    })),
-    ...(sessionData.assignments || []).filter((assignment: any) => assignment?.attachmentUrl).map((assignment: any, idx: number) => ({
-      id: `prov-assign-${idx}`,
-      title: `${assignment.title} (Assignment Attachment)`,
-      type: 'Doc (PDF/Word)' as CustomMaterialItem['type'],
-      url: assignment.attachmentUrl || '#',
-      description: assignment.instructions || 'Assignment attachment file',
-      updatedAt: assignment.dueDate || 'Assignment',
-      tags: ['Assignment'],
-      fileSizeOrDuration: 'Attached File'
-    }))
-  ];
+const buildMaterialItemsFromSession = (sessionData: Session) => {
+  let providedSources: StudyMaterial[] = [];
+  let additionalSources: StudyMaterial[] = [];
 
-  const additionalItems = [
-    ...(sessionData.additionalMaterials || []).map((material, idx) => ({
-      id: `add-session-${idx}`,
-      title: material.title,
-      type: getMaterialDisplayType(material),
-      url: material.url || '',
-      file: material.file,
-      fileName: material.fileName,
-      fileType: material.fileType,
-      description: material.description || 'Supplementary reference material for this session.',
-      updatedAt: material.versions?.[0]?.updatedAt || 'Live from portal',
-      sourceOrAuthor: material.versions?.[0]?.updatedBy || 'Portal',
-      tags: material.tags || ['Reference'],
-      fileSizeOrDuration: material.durationOrPages || 'Live file'
-    })),
-    ...studyMaterials.filter(material => getMaterialCategory(material) === 'Additional').map((material, idx) => ({
-      id: `add-study-${idx}`,
-      title: material.title,
-      type: getMaterialDisplayType(material),
-      url: material.url || '#',
-      description: material.description || 'Supplementary reference material for this session.',
-      updatedAt: material.versions?.[0]?.updatedAt || 'Live from portal',
-      sourceOrAuthor: material.versions?.[0]?.updatedBy || 'Portal',
-      tags: material.tags || ['Reference'],
-      fileSizeOrDuration: material.durationOrPages || 'Live file'
-    }))
-  ];
+  if (sessionData.providedMaterials && sessionData.providedMaterials.length > 0) {
+    providedSources = sessionData.providedMaterials;
+  } else if (sessionData.studyMaterials && sessionData.studyMaterials.length > 0) {
+    providedSources = sessionData.studyMaterials.filter(m => (m.materialCategory || m.materialType || 'Provided').toLowerCase() !== 'additional');
+  }
 
-  return { provided: providedItems, additional: additionalItems };
+  if (sessionData.additionalMaterials && sessionData.additionalMaterials.length > 0) {
+    additionalSources = sessionData.additionalMaterials;
+  } else if (sessionData.studyMaterials && sessionData.studyMaterials.length > 0) {
+    additionalSources = sessionData.studyMaterials.filter(m => (m.materialCategory || m.materialType || '').toLowerCase() === 'additional');
+  }
+
+  return {
+    provided: providedSources.map((m, idx) => mapStudyMaterialToCustomItem(m, idx)),
+    additional: additionalSources.map((m, idx) => mapStudyMaterialToCustomItem(m, idx))
+  };
 };
 
 export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
@@ -846,50 +804,41 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
   const [isMaterialsLoading, setIsMaterialsLoading] = useState(true);
 
-  // Provided Materials List
+  // Independent Content Types State
   const [providedMaterialsList, setProvidedMaterialsList] = useState<CustomMaterialItem[]>(() => {
     const initialMaterials = buildMaterialItemsFromSession(session);
     return initialMaterials.provided;
   });
 
-  // Additional Materials List
   const [additionalMaterialsList, setAdditionalMaterialsList] = useState<CustomMaterialItem[]>(() => {
     const initialMaterials = buildMaterialItemsFromSession(session);
     return initialMaterials.additional;
   });
 
+  const [assignmentsList, setAssignmentsList] = useState<SessionAssignment[]>(session.assignments || []);
+  const [quizzesList, setQuizzesList] = useState<Quiz[]>(session.quizzes || []);
+
   useEffect(() => {
     let isActive = true;
 
-    const loadMaterials = async () => {
+    const loadSessionContent = async () => {
       setIsMaterialsLoading(true);
       try {
-        const apiMaterials = await fetchStudyMaterialsApi(session.id);
-        const mergedMaterials = [
-          ...(apiMaterials || []),
-          ...(session.studyMaterials || []),
-          ...(session.providedMaterials || []),
-          ...(session.additionalMaterials || [])
-        ];
-
-        const normalizedMaterials = buildMaterialItemsFromSession({
-          ...session,
-          studyMaterials: mergedMaterials,
-          providedMaterials: session.providedMaterials || [],
-          additionalMaterials: session.additionalMaterials || []
-        });
+        const [prov, add, assigns, qz] = await Promise.all([
+          fetchStudyMaterialsApi(session.id, 'Provided').catch(() => []),
+          fetchStudyMaterialsApi(session.id, 'Additional').catch(() => []),
+          fetchAssignmentsApi(session.id).catch(() => []),
+          fetchQuizzesApi(session.id).catch(() => [])
+        ]);
 
         if (!isActive) return;
 
-        setProvidedMaterialsList(normalizedMaterials.provided);
-        setAdditionalMaterialsList(normalizedMaterials.additional);
+        setProvidedMaterialsList(prov.map((m, idx) => mapStudyMaterialToCustomItem(m, idx)));
+        setAdditionalMaterialsList(add.map((m, idx) => mapStudyMaterialToCustomItem(m, idx)));
+        setAssignmentsList(assigns || []);
+        setQuizzesList(qz || []);
       } catch (error) {
-        console.error('Failed to load study materials', error);
-        if (isActive) {
-          const fallbackMaterials = buildMaterialItemsFromSession(session);
-          setProvidedMaterialsList(fallbackMaterials.provided);
-          setAdditionalMaterialsList(fallbackMaterials.additional);
-        }
+        console.error('Failed to load session content from API', error);
       } finally {
         if (isActive) {
           setIsMaterialsLoading(false);
@@ -897,12 +846,12 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       }
     };
 
-    loadMaterials();
+    loadSessionContent();
 
     return () => {
       isActive = false;
     };
-  }, [session.id, session.studyMaterials, session.providedMaterials, session.additionalMaterials]);
+  }, [session.id]);
 
   // Modals for Uploading Materials
   const [isUploadProvidedModalOpen, setIsUploadProvidedModalOpen] = useState(false);
@@ -928,9 +877,9 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
 
   const selectedTopic = (session?.topics || []).find(t => t.id === selectedTopicId) || (session?.topics || [])[0];
-  const activeQuiz = (session?.quizzes || [])[0];
-  const assignmentsCount = (session?.assignments || []).length;
-  const quizzesCount = (session?.quizzes || []).length;
+  const activeQuiz = quizzesList[0] || (session?.quizzes || [])[0];
+  const assignmentsCount = assignmentsList.length;
+  const quizzesCount = quizzesList.length;
 
   const handleSummarize = async (matId: string, title: string, desc: string) => {
     setSummarizingId(matId);
@@ -957,47 +906,103 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     setSelectedVideoFileName('');
   };
 
-  const handleAddProvidedMaterial = (e: React.FormEvent) => {
+  const handleAddProvidedMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!matTitle.trim()) return;
-    const newItem: CustomMaterialItem = {
-      id: `prov-new-${Date.now()}`,
-      title: matTitle,
-      type: matType,
-      url: '',
-      file: matFile || undefined,
-      fileName: matFileName || matFile?.name,
-      fileType: matFile?.type,
-      fileSizeOrDuration: matFileName ? `Uploaded: ${matFileName}` : 'Uploaded Document',
-      description: matDesc || 'Uploaded organization study material.',
-      updatedAt: 'Just now',
-      tags: matTags ? matTags.split(',').map(t => t.trim()) : ['Provided', 'Official']
-    };
-    setProvidedMaterialsList([newItem, ...providedMaterialsList]);
-    setIsUploadProvidedModalOpen(false);
-    resetMatForm();
+    try {
+      let fileUrl = '';
+      if (matFile) {
+        try {
+          const up = await uploadMaterialFileApi(matFile);
+          fileUrl = up.url || up.webUrl || '';
+        } catch (err) {
+          console.warn('File upload warning', err);
+        }
+      }
+      const created = await createStudyMaterialApi({
+        sessionId: session.id,
+        title: matTitle,
+        materialCategory: 'Provided',
+        materialType: 'Provided',
+        type: matType === 'Doc (PDF/Word)' ? 'PDF' : matType === 'PowerPoint Presentation' ? 'PowerPoint' : matType === 'Spreadsheet' ? 'Excel' : matType.includes('Video') ? 'Video' : 'Notes',
+        url: fileUrl,
+        fileName: matFileName || matFile?.name,
+        description: matDesc || 'Official session guide or slide deck.',
+        tags: matTags ? matTags.split(',').map(t => t.trim()) : ['Provided', 'Official']
+      });
+
+      const newItem = mapStudyMaterialToCustomItem(created, 0);
+      setProvidedMaterialsList([newItem, ...providedMaterialsList]);
+    } catch (err) {
+      console.error('Failed to create provided material via API', err);
+      const newItem: CustomMaterialItem = {
+        id: `prov-new-${Date.now()}`,
+        title: matTitle,
+        type: matType,
+        url: '',
+        file: matFile || undefined,
+        fileName: matFileName || matFile?.name,
+        fileType: matFile?.type,
+        fileSizeOrDuration: matFileName ? `Uploaded: ${matFileName}` : 'Uploaded Document',
+        description: matDesc || 'Uploaded organization study material.',
+        updatedAt: 'Just now',
+        tags: matTags ? matTags.split(',').map(t => t.trim()) : ['Provided', 'Official']
+      };
+      setProvidedMaterialsList([newItem, ...providedMaterialsList]);
+    } finally {
+      setIsUploadProvidedModalOpen(false);
+      resetMatForm();
+    }
   };
 
-  const handleAddAdditionalMaterial = (e: React.FormEvent) => {
+  const handleAddAdditionalMaterial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!matTitle.trim()) return;
-    const newItem: CustomMaterialItem = {
-      id: `add-new-${Date.now()}`,
-      title: matTitle,
-      type: matType,
-      url: '',
-      file: matFile || undefined,
-      fileName: matFileName || matFile?.name,
-      fileType: matFile?.type,
-      description: matDesc || 'User uploaded additional reference material.',
-      sourceOrAuthor: matSource || 'GT Trainee',
-      updatedAt: 'Just now',
-      tags: matTags ? matTags.split(',').map(t => t.trim()) : ['Additional', 'Reference'],
-      fileSizeOrDuration: matFileName ? `Uploaded: ${matFileName}` : 'Uploaded Document'
-    };
-    setAdditionalMaterialsList([newItem, ...additionalMaterialsList]);
-    setIsUploadAdditionalModalOpen(false);
-    resetMatForm();
+    try {
+      let fileUrl = '';
+      if (matFile) {
+        try {
+          const up = await uploadMaterialFileApi(matFile);
+          fileUrl = up.url || up.webUrl || '';
+        } catch (err) {
+          console.warn('File upload warning', err);
+        }
+      }
+      const created = await createStudyMaterialApi({
+        sessionId: session.id,
+        title: matTitle,
+        materialCategory: 'Additional',
+        materialType: 'Additional',
+        type: matType === 'Doc (PDF/Word)' ? 'PDF' : matType === 'PowerPoint Presentation' ? 'PowerPoint' : matType === 'Spreadsheet' ? 'Excel' : matType.includes('Video') ? 'Video' : 'Notes',
+        url: fileUrl,
+        fileName: matFileName || matFile?.name,
+        description: matDesc || 'User uploaded additional reference material.',
+        tags: matTags ? matTags.split(',').map(t => t.trim()) : ['Additional', 'Reference']
+      });
+
+      const newItem = mapStudyMaterialToCustomItem(created, 0);
+      setAdditionalMaterialsList([newItem, ...additionalMaterialsList]);
+    } catch (err) {
+      console.error('Failed to create additional material via API', err);
+      const newItem: CustomMaterialItem = {
+        id: `add-new-${Date.now()}`,
+        title: matTitle,
+        type: matType,
+        url: '',
+        file: matFile || undefined,
+        fileName: matFileName || matFile?.name,
+        fileType: matFile?.type,
+        description: matDesc || 'User uploaded additional reference material.',
+        sourceOrAuthor: matSource || 'GT Trainee',
+        updatedAt: 'Just now',
+        tags: matTags ? matTags.split(',').map(t => t.trim()) : ['Additional', 'Reference'],
+        fileSizeOrDuration: matFileName ? `Uploaded: ${matFileName}` : 'Uploaded Document'
+      };
+      setAdditionalMaterialsList([newItem, ...additionalMaterialsList]);
+    } finally {
+      setIsUploadAdditionalModalOpen(false);
+      resetMatForm();
+    }
   };
 
   const resetMatForm = () => {
@@ -1528,9 +1533,9 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
             <p className="text-slate-600 text-sm">Review required tasks, attached resources, due dates, and submission guidance for this session.</p>
           </div>
 
-          {session.assignments && session.assignments.length > 0 ? (
+          {assignmentsList && assignmentsList.length > 0 ? (
             <div className="space-y-4">
-              {session.assignments.map((assignment, idx) => (
+              {assignmentsList.map((assignment, idx) => (
                 <div key={assignment.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="space-y-2">

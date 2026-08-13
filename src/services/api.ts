@@ -1,4 +1,6 @@
-import { Session, StudyMaterial, Quiz, PersonalNote, DiscussionPost, User } from '../types';
+import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote, DiscussionPost, User } from '../types';
+
+const isGuid = (val?: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val || '');
 
 /**
  * All requests go to relative /api/* paths. The Node server proxies them to the .NET
@@ -134,13 +136,14 @@ export const updateSessionApi = async (id: string, sessionData: Partial<Session>
 export const deleteSessionApi = async (id: string): Promise<void> =>
   apiFetch<void>(`/api/sessions/${id}`, { method: 'DELETE' });
 
-// --- STUDY MATERIALS ---
+// --- STUDY MATERIALS (Provided & Additional) ---
 
-export const fetchStudyMaterialsApi = async (sessionId?: string): Promise<StudyMaterial[]> => {
-  const url = sessionId
-    ? `/api/materials?sessionId=${encodeURIComponent(sessionId)}`
-    : '/api/materials';
-  return apiFetch<StudyMaterial[]>(url);
+export const fetchStudyMaterialsApi = async (sessionId?: string, category?: string): Promise<StudyMaterial[]> => {
+  const params = new URLSearchParams();
+  if (sessionId) params.append('sessionId', sessionId);
+  if (category) params.append('category', category);
+  const qs = params.toString();
+  return apiFetch<StudyMaterial[]>(qs ? `/api/materials?${qs}` : '/api/materials');
 };
 
 export const createStudyMaterialApi = async (material: Partial<StudyMaterial>): Promise<StudyMaterial> =>
@@ -148,6 +151,33 @@ export const createStudyMaterialApi = async (material: Partial<StudyMaterial>): 
     method: 'POST',
     body: JSON.stringify(material)
   });
+
+export const updateStudyMaterialApi = async (id: string, material: Partial<StudyMaterial>): Promise<StudyMaterial> =>
+  apiFetch<StudyMaterial>(`/api/materials/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(material)
+  });
+
+export const deleteStudyMaterialApi = async (id: string): Promise<void> =>
+  apiFetch<void>(`/api/materials/${id}`, { method: 'DELETE' });
+
+export const uploadMaterialFileApi = async (file: File): Promise<{ fileName: string; url: string; driveItemId?: string; webUrl?: string; downloadUrl?: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = getAuthToken();
+  const headers = new Headers();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const res = await fetch('/api/materials/files/upload', {
+    method: 'POST',
+    headers,
+    body: formData
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    throw new ApiError(errorBody?.message || 'File upload failed.', res.status);
+  }
+  return await res.json();
+};
 
 export const addMaterialVersionApi = async (
   materialId: string,
@@ -158,6 +188,33 @@ export const addMaterialVersionApi = async (
     body: JSON.stringify(payload)
   });
 
+// --- ASSIGNMENTS ---
+
+export const fetchAssignmentsApi = async (sessionId?: string): Promise<SessionAssignment[]> => {
+  const url = sessionId
+    ? `/api/assignments?sessionId=${encodeURIComponent(sessionId)}`
+    : '/api/assignments';
+  return apiFetch<SessionAssignment[]>(url);
+};
+
+export const fetchAssignmentById = async (id: string): Promise<SessionAssignment> =>
+  apiFetch<SessionAssignment>(`/api/assignments/${id}`);
+
+export const createAssignmentApi = async (assignment: Partial<SessionAssignment>): Promise<SessionAssignment> =>
+  apiFetch<SessionAssignment>('/api/assignments', {
+    method: 'POST',
+    body: JSON.stringify(assignment)
+  });
+
+export const updateAssignmentApi = async (id: string, assignment: Partial<SessionAssignment>): Promise<SessionAssignment> =>
+  apiFetch<SessionAssignment>(`/api/assignments/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(assignment)
+  });
+
+export const deleteAssignmentApi = async (id: string): Promise<void> =>
+  apiFetch<void>(`/api/assignments/${id}`, { method: 'DELETE' });
+
 // --- QUIZZES ---
 
 export const fetchQuizzesApi = async (sessionId?: string): Promise<Quiz[]> => {
@@ -167,11 +224,204 @@ export const fetchQuizzesApi = async (sessionId?: string): Promise<Quiz[]> => {
   return apiFetch<Quiz[]>(url);
 };
 
+export const fetchQuizById = async (id: string): Promise<Quiz> =>
+  apiFetch<Quiz>(`/api/quizzes/${id}`);
+
+export const createQuizApi = async (quiz: Partial<Quiz>): Promise<Quiz> =>
+  apiFetch<Quiz>('/api/quizzes', {
+    method: 'POST',
+    body: JSON.stringify(quiz)
+  });
+
+export const updateQuizApi = async (id: string, quiz: Partial<Quiz>): Promise<Quiz> =>
+  apiFetch<Quiz>(`/api/quizzes/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(quiz)
+  });
+
+export const deleteQuizApi = async (id: string): Promise<void> =>
+  apiFetch<void>(`/api/quizzes/${id}`, { method: 'DELETE' });
+
 export const submitQuizApi = async (quizId: string, userAnswers: Record<string, any>, timeTakenSeconds?: number) =>
   apiFetch<any>(`/api/quizzes/${quizId}/submit`, {
     method: 'POST',
     body: JSON.stringify({ userAnswers, timeTakenSeconds })
   });
+
+// --- SAVE FULL SESSION ORCHESTRATOR ---
+
+export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise<Session> => {
+  // 1. Persist Session core
+  let savedSession: Session;
+  const isExisting = sessionData.id && isGuid(sessionData.id);
+
+  const sessionPayload = {
+    name: sessionData.name || 'Untitled Session',
+    category: sessionData.category || '.NET',
+    description: sessionData.description || '',
+    thumbnailUrl: sessionData.thumbnail || '',
+    trainerName: sessionData.trainerName || 'Lead Trainer',
+    durationHours: Number(sessionData.durationHours) || 10,
+    difficulty: sessionData.difficulty || 'Intermediate',
+    status: sessionData.status || 'Draft',
+    isPublished: !!sessionData.isPublished,
+    sortOrder: 999,
+    featuredVideoUrl: sessionData.videoUrl || null,
+    topics: (sessionData.topics || []).map((t, tIdx) => ({
+      id: isGuid(t.id) ? t.id : undefined,
+      title: t.title,
+      description: t.description,
+      orderIndex: tIdx + 1,
+      defaultStatus: t.status || 'Unlocked',
+      videoUrl: t.videoUrl || null,
+      documentUrl: t.documentUrl || null,
+      assignment: t.assignment || null,
+      subtopics: (t.subtopics || []).map((st, stIdx) => ({
+        id: isGuid(st.id) ? st.id : undefined,
+        title: st.title,
+        durationMinutes: Number(st.durationMinutes) || 30,
+        orderIndex: stIdx + 1,
+        defaultStatus: st.status || 'Unlocked',
+        description: st.description || null,
+        videoUrl: st.videoUrl || null,
+        documentUrl: st.documentUrl || null
+      }))
+    }))
+  };
+
+  if (isExisting) {
+    try {
+      savedSession = await updateSessionApi(sessionData.id!, sessionPayload);
+    } catch {
+      savedSession = await createSessionApi({ ...sessionPayload, id: sessionData.id });
+    }
+  } else {
+    savedSession = await createSessionApi(sessionPayload);
+  }
+
+  const targetSessionId = savedSession.id;
+
+  // 2. Persist Provided Materials
+  const providedMaterials = sessionData.providedMaterials || [];
+  for (const mat of providedMaterials) {
+    let fileUrl = mat.url || '';
+    if (mat.file) {
+      try {
+        const uploadResult = await uploadMaterialFileApi(mat.file);
+        fileUrl = uploadResult.url || uploadResult.webUrl || fileUrl;
+      } catch (err) {
+        console.warn('File upload failed for provided material, preserving local reference', err);
+      }
+    }
+
+    const payload: Partial<StudyMaterial> = {
+      sessionId: targetSessionId,
+      title: mat.title || 'Official Provided Material',
+      materialCategory: 'Provided',
+      materialType: 'Provided',
+      type: mat.type || 'PDF',
+      url: fileUrl,
+      description: mat.description || '',
+      durationOrPages: mat.durationOrPages || '',
+      fileName: mat.fileName || (mat.file ? mat.file.name : undefined),
+      tags: mat.tags || ['Provided', 'Official']
+    };
+
+    if (mat.id && isGuid(mat.id)) {
+      await updateStudyMaterialApi(mat.id, payload).catch(err => console.warn('Failed to update provided material', err));
+    } else {
+      await createStudyMaterialApi(payload).catch(err => console.warn('Failed to create provided material', err));
+    }
+  }
+
+  // 3. Persist Additional Materials
+  const additionalMaterials = sessionData.additionalMaterials || [];
+  for (const mat of additionalMaterials) {
+    let fileUrl = mat.url || '';
+    if (mat.file) {
+      try {
+        const uploadResult = await uploadMaterialFileApi(mat.file);
+        fileUrl = uploadResult.url || uploadResult.webUrl || fileUrl;
+      } catch (err) {
+        console.warn('File upload failed for additional material, preserving local reference', err);
+      }
+    }
+
+    const payload: Partial<StudyMaterial> = {
+      sessionId: targetSessionId,
+      title: mat.title || 'Supplementary Material',
+      materialCategory: 'Additional',
+      materialType: 'Additional',
+      type: mat.type || 'External',
+      url: fileUrl,
+      description: mat.description || '',
+      durationOrPages: mat.durationOrPages || '',
+      fileName: mat.fileName || (mat.file ? mat.file.name : undefined),
+      tags: mat.tags || ['Additional', 'Reference']
+    };
+
+    if (mat.id && isGuid(mat.id)) {
+      await updateStudyMaterialApi(mat.id, payload).catch(err => console.warn('Failed to update additional material', err));
+    } else {
+      await createStudyMaterialApi(payload).catch(err => console.warn('Failed to create additional material', err));
+    }
+  }
+
+  // 4. Persist Assignments
+  const assignments = sessionData.assignments || [];
+  for (const assign of assignments) {
+    const payload: Partial<SessionAssignment> = {
+      sessionId: targetSessionId,
+      title: assign.title || 'Session Assignment',
+      description: assign.description || '',
+      dueDate: assign.dueDate || undefined,
+      totalPoints: Number(assign.totalPoints) || 100,
+      instructions: assign.instructions || '',
+      submissionFormat: assign.submissionFormat || 'URL / File',
+      attachmentName: assign.attachmentName || undefined,
+      attachmentUrl: assign.attachmentUrl || undefined
+    };
+
+    if (assign.id && isGuid(assign.id)) {
+      await updateAssignmentApi(assign.id, payload).catch(err => console.warn('Failed to update assignment', err));
+    } else {
+      await createAssignmentApi(payload).catch(err => console.warn('Failed to create assignment', err));
+    }
+  }
+
+  // 5. Persist Quizzes
+  const quizzes = sessionData.quizzes || [];
+  for (const quiz of quizzes) {
+    const formattedQuestions = (quiz.questions || []).map((q, idx) => ({
+      id: isGuid(q.id) ? q.id : undefined,
+      type: q.type || 'MCQ',
+      prompt: q.prompt || '',
+      options: q.options || ['True', 'False'],
+      correctAnswerJson: typeof q.correctAnswer === 'string' ? q.correctAnswer : JSON.stringify(q.correctAnswer || ''),
+      explanation: q.explanation || '',
+      points: Number(q.points) || 10,
+      orderIndex: idx + 1
+    }));
+
+    const payload: any = {
+      sessionId: targetSessionId,
+      title: quiz.title || `${sessionData.name} Assessment`,
+      description: quiz.description || '',
+      passingScorePercent: Number(quiz.passingScorePercent) || 80,
+      timeLimitMinutes: Number(quiz.timeLimitMinutes) || 15,
+      questions: formattedQuestions
+    };
+
+    if (quiz.id && isGuid(quiz.id)) {
+      await updateQuizApi(quiz.id, payload).catch(err => console.warn('Failed to update quiz', err));
+    } else {
+      await createQuizApi(payload).catch(err => console.warn('Failed to create quiz', err));
+    }
+  }
+
+  // 6. Reload fresh persisted session from backend
+  return await fetchSessionById(targetSessionId);
+};
 
 // --- PERSONAL NOTES ---
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Session, Quiz, RoadmapTopic, StudyMaterial } from './types';
 import { mockUser, mockSessions } from './data/mockData';
-import { fetchSessionsApi, logActivityApi } from './services/api';
+import { fetchSessionsApi, logActivityApi, saveFullSessionApi, deleteSessionApi } from './services/api';
 import { Header } from './components/Header';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
@@ -337,29 +337,48 @@ export function App() {
     }
   }, [sessions, activePortal, activeAdminSession]);
 
-  const handleSaveAdminSession = (sessionData: Partial<Session>) => {
-    if (!sessionData.id) return;
-    setSessions(prev => {
-      const exists = prev.some(s => s.id === sessionData.id);
-      if (exists) {
-        addToast('success', 'Session updated successfully');
-        return prev.map(s => s.id === sessionData.id ? { ...s, ...sessionData } as Session : s);
-      } else {
-        addToast('success', 'New session created successfully');
-        return [sessionData as Session, ...prev];
+  const handleSaveAdminSession = async (sessionData: Partial<Session>) => {
+    try {
+      addToast('info', 'Saving session and content to database...');
+      const saved = await saveFullSessionApi(sessionData);
+      const allSessions = await fetchSessionsApi();
+      setSessions(allSessions && allSessions.length > 0 ? allSessions : [saved]);
+      if (activeAdminSession && (activeAdminSession.id === sessionData.id || activeAdminSession.id === saved.id)) {
+        setActiveAdminSession(saved);
       }
-    });
+      addToast('success', `Session "${saved.name}" saved to PostgreSQL successfully!`);
+    } catch (err: any) {
+      console.error('Failed to save session to PostgreSQL', err);
+      addToast('error', `Save failed: ${err.message || 'Check database connection'}`);
+    }
   };
 
-  const handleDeleteAdminSession = (sessionId: string) => {
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
-    addToast('info', 'Session deleted');
+  const handleDeleteAdminSession = async (sessionId: string) => {
+    try {
+      await deleteSessionApi(sessionId);
+      const allSessions = await fetchSessionsApi();
+      setSessions(allSessions);
+      if (activeAdminSession?.id === sessionId) {
+        setActiveAdminSession(null);
+      }
+      addToast('info', 'Session deleted from database');
+    } catch (err: any) {
+      console.error('Failed to delete session', err);
+      addToast('error', `Delete failed: ${err.message}`);
+    }
   };
 
   const rawSelectedSession = sessions.find(s => s.id === selectedSessionId);
   const selectedSession = rawSelectedSession ? {
     ...rawSelectedSession,
     studyMaterials: rawSelectedSession.studyMaterials || [],
+    providedMaterials: (rawSelectedSession.providedMaterials && rawSelectedSession.providedMaterials.length > 0)
+      ? rawSelectedSession.providedMaterials
+      : (rawSelectedSession.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || 'Provided').toLowerCase() !== 'additional'),
+    additionalMaterials: (rawSelectedSession.additionalMaterials && rawSelectedSession.additionalMaterials.length > 0)
+      ? rawSelectedSession.additionalMaterials
+      : (rawSelectedSession.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || '').toLowerCase() === 'additional'),
+    assignments: rawSelectedSession.assignments || [],
     quizzes: rawSelectedSession.quizzes || [],
     discussions: []
   } : undefined;

@@ -262,6 +262,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       sessionId: editingSession.id || '',
       title: 'New Provided Material',
       type: 'PDF',
+      materialCategory: 'Provided',
+      materialType: 'Provided',
       url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
       description: 'Official session guide or slide deck.',
       durationOrPages: '10 Pages',
@@ -281,6 +283,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       sessionId: editingSession.id || '',
       title: 'New Additional Material',
       type: 'External',
+      materialCategory: 'Additional',
+      materialType: 'Additional',
       url: 'https://example.com',
       description: 'Supplementary reading material or video link.',
       currentVersion: 1,
@@ -1316,7 +1320,19 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    setEditingSession(session);
+                    const provided = session.providedMaterials && session.providedMaterials.length > 0
+                      ? session.providedMaterials
+                      : (session.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || 'Provided').toLowerCase() !== 'additional');
+                    const additional = session.additionalMaterials && session.additionalMaterials.length > 0
+                      ? session.additionalMaterials
+                      : (session.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || '').toLowerCase() === 'additional');
+                    setEditingSession({
+                      ...session,
+                      providedMaterials: provided,
+                      additionalMaterials: additional,
+                      assignments: session.assignments || [],
+                      quizzes: session.quizzes || []
+                    });
                     setActiveTab('overview');
                   }}
                   style={{
