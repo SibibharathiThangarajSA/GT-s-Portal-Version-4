@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Session, CategoryType, RoadmapTopic, SubTopic, StudyMaterial, SessionAssignment, PersonalNote, Quiz, QuizQuestion } from '../../types';
 import { SessionTracker } from './SessionTracker';
 import { useFileUpload } from '../../hooks/useFileUpload';
@@ -227,6 +227,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       type: 'PDF',
       url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
       urlType: 'Website',
+      materialCategory: 'Provided',
+      materialType: 'Provided',
       description: 'Official session guide or slide deck.',
       durationOrPages: '10 Pages',
       currentVersion: 1,
@@ -247,6 +249,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       type: 'External',
       url: 'https://example.com',
       urlType: 'Website',
+      materialCategory: 'Additional',
+      materialType: 'Additional',
       description: 'Supplementary reading material or video link.',
       currentVersion: 1,
       versions: [],
@@ -1214,7 +1218,58 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 </div>
               </div>
 
-              {/* Add button moved below the question form so admins can fill fields then click Add */}
+              {/* Quiz Metadata Config Controls */}
+              {(() => {
+                const currentQuiz = editingSession.quizzes?.[0] || {
+                  id: `quiz-${Date.now()}`,
+                  sessionId: editingSession.id || '',
+                  title: `${editingSession.name || 'Session'} Assessment`,
+                  description: `Assessment quiz for ${editingSession.name || 'Session'}`,
+                  passingScorePercent: 80,
+                  timeLimitMinutes: 15,
+                  questions: []
+                };
+
+                const updateQuizMetadata = (fields: Partial<Quiz>) => {
+                  const updatedQuiz = { ...currentQuiz, ...fields };
+                  setEditingSession({ ...editingSession, quizzes: [updatedQuiz] });
+                };
+
+                return (
+                  <div className="bg-white/90 backdrop-blur-sm border border-slate-200/90 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 shadow-sm">
+                    <div className="space-y-1">
+                      <label className="text-slate-700 font-bold block">Quiz Title</label>
+                      <input
+                        type="text"
+                        value={currentQuiz.title || ''}
+                        onChange={(e) => updateQuizMetadata({ title: e.target.value })}
+                        placeholder="Quiz Title"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-700 font-bold block">Time Limit (Minutes)</label>
+                      <input
+                        type="number"
+                        value={currentQuiz.timeLimitMinutes || 15}
+                        onChange={(e) => updateQuizMetadata({ timeLimitMinutes: Number(e.target.value) })}
+                        placeholder="15"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-700 font-bold block">Passing Score (%)</label>
+                      <input
+                        type="number"
+                        value={currentQuiz.passingScorePercent || 80}
+                        onChange={(e) => updateQuizMetadata({ passingScorePercent: Number(e.target.value) })}
+                        placeholder="80"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
 
               {((editingSession.quizzes?.[0]?.questions) || []).map((q, qIdx) => (
                 <div key={q.id || qIdx} className="bg-white/90 backdrop-blur-sm border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-sm">
@@ -1225,7 +1280,9 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       onClick={() => {
                         const currentQuizzes = [...(editingSession.quizzes || [])];
                         if (currentQuizzes[0]) {
-                          currentQuizzes[0].questions.splice(qIdx, 1);
+                          const updatedQuestions = [...(currentQuizzes[0].questions || [])];
+                          updatedQuestions.splice(qIdx, 1);
+                          currentQuizzes[0] = { ...currentQuizzes[0], questions: updatedQuestions };
                           setEditingSession({ ...editingSession, quizzes: currentQuizzes });
                         }
                       }}
@@ -1237,12 +1294,15 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
 
                   <div className="space-y-3">
                     <input
+                      id={`${q.id}-prompt`}
                       type="text"
                       value={q.prompt}
                       onChange={(e) => {
                         const currentQuizzes = [...(editingSession.quizzes || [])];
                         if (currentQuizzes[0]) {
-                          currentQuizzes[0].questions[qIdx].prompt = e.target.value;
+                          const updatedQuestions = [...(currentQuizzes[0].questions || [])];
+                          updatedQuestions[qIdx] = { ...updatedQuestions[qIdx], prompt: e.target.value };
+                          currentQuizzes[0] = { ...currentQuizzes[0], questions: updatedQuestions };
                           setEditingSession({ ...editingSession, quizzes: currentQuizzes });
                         }
                       }}
@@ -1259,9 +1319,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                           onChange={(e) => {
                             const currentQuizzes = [...(editingSession.quizzes || [])];
                             if (currentQuizzes[0]) {
-                              const opts = [...(currentQuizzes[0].questions[qIdx].options || [])];
+                              const updatedQuestions = [...(currentQuizzes[0].questions || [])];
+                              const opts = [...(updatedQuestions[qIdx].options || [])];
                               opts[oIdx] = e.target.value;
-                              currentQuizzes[0].questions[qIdx].options = opts;
+                              updatedQuestions[qIdx] = { ...updatedQuestions[qIdx], options: opts };
+                              currentQuizzes[0] = { ...currentQuizzes[0], questions: updatedQuestions };
                               setEditingSession({ ...editingSession, quizzes: currentQuizzes });
                             }
                           }}
@@ -1271,9 +1333,6 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       ))}
                     </div>
 
-                    {/* Picked from the options rather than typed. A typed answer only had to differ
-                        by a character or a stray space to mark every trainee wrong, and the author
-                        had no way to see that it did not match. */}
                     <div className="flex items-center gap-3 pt-2">
                       <span className="text-slate-700 font-bold">Correct Answer:</span>
                       {(() => {
@@ -1282,13 +1341,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                         const setAnswer = (value: string) => {
                           const currentQuizzes = [...(editingSession.quizzes || [])];
                           if (currentQuizzes[0]) {
-                            currentQuizzes[0].questions[qIdx].correctAnswer = value;
+                            const updatedQuestions = [...(currentQuizzes[0].questions || [])];
+                            updatedQuestions[qIdx] = { ...updatedQuestions[qIdx], correctAnswer: value };
+                            currentQuizzes[0] = { ...currentQuizzes[0], questions: updatedQuestions };
                             setEditingSession({ ...editingSession, quizzes: currentQuizzes });
                           }
                         };
 
-                        // Fill the options in first and this becomes a picker; until then it stays
-                        // typeable so the question is never blocked.
                         if (options.length === 0) {
                           return (
                             <input
@@ -1325,11 +1384,12 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      const currentQuizzes = editingSession.quizzes || [];
-                      const defaultQuiz = currentQuizzes[0] || {
+                      const currentQuizzes = [...(editingSession.quizzes || [])];
+                      const defaultQuiz = currentQuizzes[0] ? { ...currentQuizzes[0] } : {
                         id: `quiz-${Date.now()}`,
                         sessionId: editingSession.id || '',
                         title: `${editingSession.name || 'Session'} Assessment`,
+                        description: `Assessment quiz for ${editingSession.name || 'Session'}`,
                         passingScorePercent: 80,
                         timeLimitMinutes: 15,
                         questions: []
@@ -1346,7 +1406,6 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       defaultQuiz.questions = [...(defaultQuiz.questions || []), newQ];
                       setEditingSession({ ...editingSession, quizzes: [defaultQuiz] });
 
-                      // UX: after adding, scroll to and focus the newly created question prompt input
                       setTimeout(() => {
                         const el = document.getElementById(`${newQ.id}-prompt`);
                         if (el) {

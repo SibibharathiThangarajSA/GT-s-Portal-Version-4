@@ -105,8 +105,8 @@ export const normalizeSessionPayload = (raw: any): Session => {
         type: item?.type || 'PDF',
         url: item?.url || '',
         urlType: item?.urlType || 'Website',
-        materialCategory: item?.materialCategory || 'Provided',
-        materialType: item?.materialType || 'Provided',
+        materialCategory: item?.materialCategory || item?.materialType || 'Provided',
+        materialType: item?.materialType || item?.materialCategory || 'Provided',
         fileName: item?.fileName || '',
         fileType: item?.fileType || '',
         fileSize: item?.fileSize || '',
@@ -152,14 +152,14 @@ export const normalizeSessionPayload = (raw: any): Session => {
       }))
     : [];
 
-  const providedMaterials = studyMaterials.filter((item) => {
-    const category = (item.materialCategory || item.materialType || '').toString().toLowerCase();
-    return category === 'provided' || category === 'official';
-  });
-
   const additionalMaterials = studyMaterials.filter((item) => {
     const category = (item.materialCategory || item.materialType || '').toString().toLowerCase();
-    return category === 'additional' || category === 'extra';
+    return category === 'additional' || category === 'extra' || category === 'external';
+  });
+
+  const providedMaterials = studyMaterials.filter((item) => {
+    const category = (item.materialCategory || item.materialType || '').toString().toLowerCase();
+    return category !== 'additional' && category !== 'extra' && category !== 'external';
   });
 
   const assignments = Array.isArray(raw?.assignments)

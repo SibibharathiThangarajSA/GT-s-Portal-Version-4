@@ -522,17 +522,29 @@ export function App() {
         passingScorePercent: Number(item?.passingScorePercent || 70),
         timeLimitMinutes: Number(item?.timeLimitMinutes || 15),
         questions: Array.isArray(item?.questions)
-          ? item.questions.map((question: any, qIdx: number) => ({
-              id: isValidGuid(question?.id) ? question.id : undefined,
-              type: question?.type || 'MCQ',
-              prompt: question?.prompt || '',
-              options: Array.isArray(question?.options) ? question.options : [],
-              correctAnswerJson: JSON.stringify(question?.correctAnswer ?? question?.correctAnswerJson ?? ''),
-              explanation: question?.explanation || '',
-              points: Number(question?.points || 10),
-              codeSnippet: question?.codeSnippet || '',
-              orderIndex: Number(question?.orderIndex ?? qIdx + 1)
-            }))
+          ? item.questions.map((question: any, qIdx: number) => {
+              const rawAnswer = question?.correctAnswer;
+              let answerJson = '';
+              if (rawAnswer !== undefined && rawAnswer !== null && rawAnswer !== '') {
+                answerJson = typeof rawAnswer === 'string' ? JSON.stringify(rawAnswer) : JSON.stringify(rawAnswer);
+              } else if (typeof question?.correctAnswerJson === 'string') {
+                answerJson = question.correctAnswerJson;
+              } else {
+                answerJson = JSON.stringify(question?.correctAnswerJson ?? '');
+              }
+
+              return {
+                id: isValidGuid(question?.id) ? question.id : undefined,
+                type: question?.type || 'MCQ',
+                prompt: question?.prompt || '',
+                options: Array.isArray(question?.options) ? question.options : [],
+                correctAnswerJson: answerJson,
+                explanation: question?.explanation || '',
+                points: Number(question?.points || 10),
+                codeSnippet: question?.codeSnippet || '',
+                orderIndex: Number(question?.orderIndex ?? qIdx + 1)
+              };
+            })
           : []
       }));
     };
@@ -558,11 +570,37 @@ export function App() {
     payload.learningObjectives = normalizeLearningObjectives(payload.learningObjectives);
     payload.topics = normalizeTopics(payload.topics);
 
-    const combinedMaterials = [
-      ...(Array.isArray(payload.studyMaterials) ? payload.studyMaterials : []),
-      ...(Array.isArray(payload.providedMaterials) ? payload.providedMaterials : []),
-      ...(Array.isArray(payload.additionalMaterials) ? payload.additionalMaterials : [])
-    ];
+    const provided = Array.isArray(payload.providedMaterials)
+      ? payload.providedMaterials.map((m: any) => ({
+          ...m,
+          materialCategory: 'Provided',
+          materialType: 'Provided'
+        }))
+      : [];
+
+    const additional = Array.isArray(payload.additionalMaterials)
+      ? payload.additionalMaterials.map((m: any) => ({
+          ...m,
+          materialCategory: 'Additional',
+          materialType: 'Additional'
+        }))
+      : [];
+
+    let combinedMaterials: any[] = [];
+    if (provided.length > 0 || additional.length > 0) {
+      combinedMaterials = [...provided, ...additional];
+      if (Array.isArray(payload.studyMaterials)) {
+        const existingKeys = new Set(combinedMaterials.map(m => m.id || `${m.title}|${m.url}`));
+        payload.studyMaterials.forEach((m: any) => {
+          const key = m.id || `${m.title}|${m.url}`;
+          if (!existingKeys.has(key)) {
+            combinedMaterials.push(m);
+          }
+        });
+      }
+    } else if (Array.isArray(payload.studyMaterials)) {
+      combinedMaterials = payload.studyMaterials;
+    }
 
     const dedupeMaterials = (materials: any[]): any[] => {
       const getMaterialKey = (material: any): string => {
