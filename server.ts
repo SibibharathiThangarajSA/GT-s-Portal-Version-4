@@ -190,7 +190,7 @@ User Query: ${message}`
     createProxyMiddleware({
       target: API_BASE_URL,
       changeOrigin: true,
-      pathFilter: (pathname) => pathname.startsWith('/api') && !pathname.startsWith('/api/ai'),
+      pathFilter: (pathname) => (pathname.startsWith('/api') || pathname.startsWith('/uploads')) && !pathname.startsWith('/api/ai'),
       on: {
         error: (err, _req, res) => {
           console.error(`[proxy] ${API_BASE_URL} unreachable:`, err.message);

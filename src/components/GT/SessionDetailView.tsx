@@ -935,18 +935,42 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   )}
 
                   {(assignment.attachmentName || assignment.attachmentUrl) && (
-                    <div className="rounded-3xl border border-blue-100 bg-blue-50 p-4 text-sm text-slate-700 flex flex-col gap-2">
-                      <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-blue-700 font-bold">
-                        <FileText className="w-4 h-4" /> Attached Resource
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0 shadow-xs">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700 font-mono">Attached Resource Document</div>
+                          <div className="text-sm font-bold text-slate-900 truncate max-w-md">
+                            {assignment.attachmentName || (assignment.attachmentUrl?.split('/').pop()) || 'Assignment Document'}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-slate-800">
-                        {assignment.attachmentName ? assignment.attachmentName : assignment.attachmentUrl}
+
+                      <div className="flex items-center gap-2">
+                        {assignment.attachmentUrl && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const docUrl = assignment.attachmentUrl!;
+                              window.open(docUrl, '_blank', 'noopener,noreferrer');
+                            }}
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-blue-200 flex items-center gap-2 transition-colors shadow-xs"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-blue-600" /> View
+                          </button>
+                        )}
+                        {assignment.attachmentUrl && (
+                          <a
+                            href={assignment.attachmentUrl}
+                            download={assignment.attachmentName || 'assignment-document'}
+                            className="bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 flex items-center gap-2 transition-colors shadow-xs"
+                          >
+                            <Download className="w-3.5 h-3.5 text-slate-600" /> Download
+                          </a>
+                        )}
                       </div>
-                      {assignment.attachmentUrl && assignment.attachmentUrl.startsWith('http') && (
-                        <a href={assignment.attachmentUrl} target="_blank" rel="noreferrer" className="text-blue-700 font-bold text-sm">
-                          Open Resource
-                        </a>
-                      )}
                     </div>
                   )}
 

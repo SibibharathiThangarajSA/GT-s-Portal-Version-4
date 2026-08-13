@@ -23,6 +23,11 @@ export default defineConfig(() => {
           changeOrigin: true,
           secure: false,
         },
+        '/uploads': {
+          target: process.env.API_BASE_URL || 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
   };
