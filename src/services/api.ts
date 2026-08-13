@@ -1,4 +1,4 @@
-import { Session, StudyMaterial, Quiz, PersonalNote, User } from '../types';
+import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote, User } from '../types';
 
 type CreateStudyMaterialPayload = Partial<StudyMaterial> & {
   versionNote?: string;
@@ -277,9 +277,122 @@ export const fetchSessionById = async (id: string): Promise<Session & { studyMat
   } as Session & { studyMaterials: StudyMaterial[]; quizzes: Quiz[] };
 };
 
-export const fetchStudyMaterialsApi = async (sessionId?: string): Promise<StudyMaterial[]> => {
-  const url = sessionId ? `/api/materials?sessionId=${encodeURIComponent(sessionId)}` : '/api/materials';
+export const fetchStudyMaterialsApi = async (sessionId?: string, category?: string): Promise<StudyMaterial[]> => {
+  const params = new URLSearchParams();
+  if (sessionId) params.append('sessionId', sessionId);
+  if (category) params.append('category', category);
+  const qs = params.toString();
+  const url = qs ? `/api/materials?${qs}` : '/api/materials';
   return await parseApiResponse<StudyMaterial[]>(await fetch(url));
+};
+
+export const updateStudyMaterialApi = async (id: string, materialData: CreateStudyMaterialPayload): Promise<StudyMaterial> => {
+  const res = await fetch(`/api/materials/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(materialData)
+  });
+  return await parseApiResponse<StudyMaterial>(res);
+};
+
+export const deleteStudyMaterialApi = async (id: string): Promise<void> => {
+  const res = await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Delete material failed: ${text}`);
+  }
+};
+
+export const uploadMaterialFileApi = async (file: File): Promise<{ fileName: string; url: string; driveItemId?: string; webUrl?: string; downloadUrl?: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/materials/files/upload', {
+    method: 'POST',
+    body: formData
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    throw new Error(errorBody?.message || 'File upload failed.');
+  }
+  return await res.json();
+};
+
+// --- ASSIGNMENTS ---
+
+export const fetchAssignmentsApi = async (sessionId?: string): Promise<SessionAssignment[]> => {
+  const url = sessionId ? `/api/assignments?sessionId=${encodeURIComponent(sessionId)}` : '/api/assignments';
+  const res = await fetch(url);
+  return await parseApiResponse<SessionAssignment[]>(res);
+};
+
+export const fetchAssignmentById = async (id: string): Promise<SessionAssignment> => {
+  const res = await fetch(`/api/assignments/${id}`);
+  return await parseApiResponse<SessionAssignment>(res);
+};
+
+export const createAssignmentApi = async (assignment: Partial<SessionAssignment>): Promise<SessionAssignment> => {
+  const res = await fetch('/api/assignments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(assignment)
+  });
+  return await parseApiResponse<SessionAssignment>(res);
+};
+
+export const updateAssignmentApi = async (id: string, assignment: Partial<SessionAssignment>): Promise<SessionAssignment> => {
+  const res = await fetch(`/api/assignments/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(assignment)
+  });
+  return await parseApiResponse<SessionAssignment>(res);
+};
+
+export const deleteAssignmentApi = async (id: string): Promise<void> => {
+  const res = await fetch(`/api/assignments/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Delete assignment failed: ${text}`);
+  }
+};
+
+// --- QUIZZES ---
+
+export const fetchQuizzesApi = async (sessionId?: string): Promise<Quiz[]> => {
+  const url = sessionId ? `/api/quizzes?sessionId=${encodeURIComponent(sessionId)}` : '/api/quizzes';
+  const res = await fetch(url);
+  return await parseApiResponse<Quiz[]>(res);
+};
+
+export const fetchQuizById = async (id: string): Promise<Quiz> => {
+  const res = await fetch(`/api/quizzes/${id}`);
+  return await parseApiResponse<Quiz>(res);
+};
+
+export const createQuizApi = async (quiz: Partial<Quiz>): Promise<Quiz> => {
+  const res = await fetch('/api/quizzes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(quiz)
+  });
+  return await parseApiResponse<Quiz>(res);
+};
+
+export const updateQuizApi = async (id: string, quiz: Partial<Quiz>): Promise<Quiz> => {
+  const res = await fetch(`/api/quizzes/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(quiz)
+  });
+  return await parseApiResponse<Quiz>(res);
+};
+
+export const deleteQuizApi = async (id: string): Promise<void> => {
+  const res = await fetch(`/api/quizzes/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Delete quiz failed: ${text}`);
+  }
 };
 
 export const createSessionApi = async (sessionData: Partial<Session>): Promise<Session> => {
@@ -293,13 +406,6 @@ export const createSessionApi = async (sessionData: Partial<Session>): Promise<S
   return normalizeSessionPayload(data);
 };
 
-/**
- * Uploads a file and reports how far it has got.
- *
- * XMLHttpRequest rather than fetch, because fetch cannot report upload progress: it resolves
- * only once the whole body has been sent. A session video can be hundreds of megabytes, so
- * without progress the UI has nothing to show for minutes and looks frozen.
- */
 export const uploadStudyMaterialFile = (
   file: File,
   sessionId?: string,
@@ -314,7 +420,6 @@ export const uploadStudyMaterialFile = (
     request.open('POST', '/api/materials/files/upload');
 
     request.upload.onprogress = (event) => {
-      // Servers do not always report a total; without one a percentage would be meaningless.
       if (event.lengthComputable && onProgress) {
         onProgress(Math.round((event.loaded / event.total) * 100));
       }
@@ -334,7 +439,6 @@ export const uploadStudyMaterialFile = (
       try {
         message = JSON.parse(request.responseText)?.message || message;
       } catch {
-        /* a non-JSON error body is not worth surfacing verbatim */
       }
       reject(new Error(message));
     };
@@ -382,6 +486,181 @@ export const submitQuizApi = async (quizId: string, userAnswers: Record<string, 
     body: JSON.stringify({ userAnswers })
   });
   return await res.json();
+};
+
+const isGuid = (val?: string) => typeof val === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
+
+export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise<Session> => {
+  // 1. Persist Session core
+  let savedSession: Session;
+  const isExisting = sessionData.id && isGuid(sessionData.id);
+
+  const sessionPayload = {
+    name: sessionData.name || 'Untitled Session',
+    category: sessionData.category || '.NET',
+    description: sessionData.description || '',
+    thumbnailUrl: sessionData.thumbnail || '',
+    trainerName: sessionData.trainerName || 'Lead Trainer',
+    durationHours: Number(sessionData.durationHours) || 10,
+    difficulty: sessionData.difficulty || 'Intermediate',
+    status: sessionData.status || 'Draft',
+    isPublished: !!sessionData.isPublished,
+    sortOrder: 999,
+    featuredVideoUrl: sessionData.videoUrl || null,
+    topics: (sessionData.topics || []).map((t, tIdx) => ({
+      id: isGuid(t.id) ? t.id : undefined,
+      title: t.title,
+      description: t.description,
+      orderIndex: tIdx + 1,
+      defaultStatus: t.status || 'Unlocked',
+      videoUrl: t.videoUrl || null,
+      documentUrl: t.documentUrl || null,
+      assignment: t.assignment || null,
+      subtopics: (t.subtopics || []).map((st, stIdx) => ({
+        id: isGuid(st.id) ? st.id : undefined,
+        title: st.title,
+        durationMinutes: Number(st.durationMinutes) || 30,
+        orderIndex: stIdx + 1,
+        defaultStatus: st.status || 'Unlocked',
+        description: st.description || null,
+        videoUrl: st.videoUrl || null,
+        documentUrl: st.documentUrl || null
+      }))
+    }))
+  };
+
+  if (isExisting) {
+    try {
+      savedSession = await updateSessionApi(sessionData.id!, sessionPayload);
+    } catch {
+      savedSession = await createSessionApi({ ...sessionPayload, id: sessionData.id });
+    }
+  } else {
+    savedSession = await createSessionApi(sessionPayload);
+  }
+
+  const targetSessionId = savedSession.id;
+
+  // 2. Persist Provided Materials
+  const providedMaterials = sessionData.providedMaterials || [];
+  for (const mat of providedMaterials) {
+    let fileUrl = mat.url || '';
+    if (mat.file) {
+      try {
+        const uploadResult = await uploadMaterialFileApi(mat.file);
+        fileUrl = uploadResult.url || uploadResult.webUrl || fileUrl;
+      } catch (err) {
+        console.warn('File upload failed for provided material', err);
+      }
+    }
+
+    const payload: Partial<StudyMaterial> = {
+      sessionId: targetSessionId,
+      title: mat.title || 'Official Provided Material',
+      materialCategory: 'Provided',
+      materialType: 'Provided',
+      type: mat.type || 'PDF',
+      url: fileUrl,
+      description: mat.description || '',
+      durationOrPages: mat.durationOrPages || '',
+      fileName: mat.fileName || (mat.file ? mat.file.name : undefined),
+      tags: mat.tags || ['Provided', 'Official']
+    };
+
+    if (mat.id && isGuid(mat.id)) {
+      await updateStudyMaterialApi(mat.id, payload).catch(err => console.warn('Failed to update provided material', err));
+    } else {
+      await createStudyMaterialApi(payload).catch(err => console.warn('Failed to create provided material', err));
+    }
+  }
+
+  // 3. Persist Additional Materials
+  const additionalMaterials = sessionData.additionalMaterials || [];
+  for (const mat of additionalMaterials) {
+    let fileUrl = mat.url || '';
+    if (mat.file) {
+      try {
+        const uploadResult = await uploadMaterialFileApi(mat.file);
+        fileUrl = uploadResult.url || uploadResult.webUrl || fileUrl;
+      } catch (err) {
+        console.warn('File upload failed for additional material', err);
+      }
+    }
+
+    const payload: Partial<StudyMaterial> = {
+      sessionId: targetSessionId,
+      title: mat.title || 'Supplementary Material',
+      materialCategory: 'Additional',
+      materialType: 'Additional',
+      type: mat.type || 'External',
+      url: fileUrl,
+      description: mat.description || '',
+      durationOrPages: mat.durationOrPages || '',
+      fileName: mat.fileName || (mat.file ? mat.file.name : undefined),
+      tags: mat.tags || ['Additional', 'Reference']
+    };
+
+    if (mat.id && isGuid(mat.id)) {
+      await updateStudyMaterialApi(mat.id, payload).catch(err => console.warn('Failed to update additional material', err));
+    } else {
+      await createStudyMaterialApi(payload).catch(err => console.warn('Failed to create additional material', err));
+    }
+  }
+
+  // 4. Persist Assignments
+  const assignments = sessionData.assignments || [];
+  for (const assign of assignments) {
+    const payload: Partial<SessionAssignment> = {
+      sessionId: targetSessionId,
+      title: assign.title || 'Session Assignment',
+      description: assign.description || '',
+      dueDate: assign.dueDate || undefined,
+      totalPoints: Number(assign.totalPoints) || 100,
+      instructions: assign.instructions || '',
+      submissionFormat: assign.submissionFormat || 'URL / File',
+      attachmentName: assign.attachmentName || undefined,
+      attachmentUrl: assign.attachmentUrl || undefined
+    };
+
+    if (assign.id && isGuid(assign.id)) {
+      await updateAssignmentApi(assign.id, payload).catch(err => console.warn('Failed to update assignment', err));
+    } else {
+      await createAssignmentApi(payload).catch(err => console.warn('Failed to create assignment', err));
+    }
+  }
+
+  // 5. Persist Quizzes
+  const quizzes = sessionData.quizzes || [];
+  for (const quiz of quizzes) {
+    const formattedQuestions = (quiz.questions || []).map((q, idx) => ({
+      id: isGuid(q.id) ? q.id : undefined,
+      type: q.type || 'MCQ',
+      prompt: q.prompt || '',
+      options: q.options || ['True', 'False'],
+      correctAnswerJson: typeof q.correctAnswer === 'string' ? q.correctAnswer : JSON.stringify(q.correctAnswer || ''),
+      explanation: q.explanation || '',
+      points: Number(q.points) || 10,
+      orderIndex: idx + 1
+    }));
+
+    const payload: any = {
+      sessionId: targetSessionId,
+      title: quiz.title || `${sessionData.name} Assessment`,
+      description: quiz.description || '',
+      passingScorePercent: Number(quiz.passingScorePercent) || 80,
+      timeLimitMinutes: Number(quiz.timeLimitMinutes) || 15,
+      questions: formattedQuestions
+    };
+
+    if (quiz.id && isGuid(quiz.id)) {
+      await updateQuizApi(quiz.id, payload).catch(err => console.warn('Failed to update quiz', err));
+    } else {
+      await createQuizApi(payload).catch(err => console.warn('Failed to create quiz', err));
+    }
+  }
+
+  // 6. Reload fresh persisted session from backend
+  return await fetchSessionById(targetSessionId);
 };
 
 export const sendAiChatMessageApi = async (message: string, context?: any, chatHistory?: any[]) => {

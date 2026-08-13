@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Session, Quiz, RoadmapTopic, StudyMaterial } from './types';
-import { fetchSessionsApi, createSessionApi, updateSessionApi, deleteSessionApi, logActivityApi } from './services/api';
+import { fetchSessionsApi, createSessionApi, updateSessionApi, deleteSessionApi, saveFullSessionApi, logActivityApi } from './services/api';
 
 const defaultGuestUser: User = {
   id: 'guest-user',
@@ -644,10 +644,8 @@ export function App() {
 
   const handleSaveAdminSession = async (sessionData: Partial<Session>) => {
     try {
-      const payload = prepareSessionPayload(sessionData);
-      const savedSession = sessionData.id && isValidGuid(sessionData.id)
-        ? await updateSessionApi(sessionData.id, payload)
-        : await createSessionApi(payload);
+      addToast('info', 'Saving session and content to database...');
+      const savedSession = await saveFullSessionApi(sessionData);
 
       setSessions(prev => {
         const exists = prev.some(s => s.id === savedSession.id);
@@ -658,7 +656,7 @@ export function App() {
       });
 
       setActiveAdminSession(savedSession);
-      addToast('success', sessionData.id && isValidGuid(sessionData.id) ? 'Session updated successfully' : 'New session created successfully');
+      addToast('success', `Session "${savedSession.name}" saved to PostgreSQL successfully!`);
       await refreshSessions();
     } catch (err: any) {
       console.error('Failed to save session', err);
@@ -688,6 +686,13 @@ export function App() {
   const selectedSession = rawSelectedSession ? {
     ...rawSelectedSession,
     studyMaterials: rawSelectedSession.studyMaterials || [],
+    providedMaterials: (rawSelectedSession.providedMaterials && rawSelectedSession.providedMaterials.length > 0)
+      ? rawSelectedSession.providedMaterials
+      : (rawSelectedSession.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || 'Provided').toLowerCase() !== 'additional'),
+    additionalMaterials: (rawSelectedSession.additionalMaterials && rawSelectedSession.additionalMaterials.length > 0)
+      ? rawSelectedSession.additionalMaterials
+      : (rawSelectedSession.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || '').toLowerCase() === 'additional'),
+    assignments: rawSelectedSession.assignments || [],
     quizzes: rawSelectedSession.quizzes || []
   } : undefined;
 
