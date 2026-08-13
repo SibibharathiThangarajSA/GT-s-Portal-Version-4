@@ -504,9 +504,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                         try {
                           const uploadResult = await uploadFile(file, editingSession?.id);
                                     if (!uploadResult) return;
+                          const uploadedUrl = uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '';
                           setEditingSession({
                             ...editingSession,
-                            videoUrl: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || ''
+                            videoUrl: uploadedUrl,
+                            featuredVideoUrl: uploadedUrl
                           });
                         } catch (error: any) {
                           console.error('Video upload failed', error);

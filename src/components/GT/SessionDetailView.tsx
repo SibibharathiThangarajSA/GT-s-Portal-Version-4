@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
-import { fetchStudyMaterialsApi, fetchAssignmentsApi, fetchQuizzesApi, createStudyMaterialApi, summarizeMaterialAiApi } from '../../services/api';
+import { fetchStudyMaterialsApi, fetchAssignmentsApi, fetchQuizzesApi, createStudyMaterialApi, summarizeMaterialAiApi, fetchSessionById } from '../../services/api';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { UploadProgressOverlay } from '../UploadProgressOverlay';
 import {
@@ -210,7 +210,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const { isUploading, progress, uploadingFileName, uploadFile } = useFileUpload();
 
   // Overview Video State
-  const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>(session.videoUrl || '');
+  const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>((session as any).videoUrl || (session as any).featuredVideoUrl || '');
   const [overviewVideoTitle, setOverviewVideoTitle] = useState<string>('Final overview');
   const [overviewVideoDesc, setOverviewVideoDesc] = useState<string>(
     `Comprehensive attendee video walkthrough covering key architectural concepts, trainer expectations, and session prerequisites for ${session.name}.`
@@ -246,8 +246,11 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const [quizzesList, setQuizzesList] = useState<Quiz[]>(session.quizzes || []);
 
   useEffect(() => {
-    setOverviewVideoUrl(session.videoUrl || '');
-  }, [session.id, session.videoUrl]);
+    const vid = (session as any).videoUrl || (session as any).featuredVideoUrl || '';
+    if (vid) {
+      setOverviewVideoUrl(vid);
+    }
+  }, [session.id, (session as any).videoUrl, (session as any).featuredVideoUrl]);
 
   useEffect(() => {
     let isActive = true;
@@ -255,7 +258,8 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     const loadSessionContent = async () => {
       setIsMaterialsLoading(true);
       try {
-        const [prov, add, assigns, qz] = await Promise.all([
+        const [freshSession, prov, add, assigns, qz] = await Promise.all([
+          fetchSessionById(session.id).catch(() => null),
           fetchStudyMaterialsApi(session.id, 'Provided').catch(() => []),
           fetchStudyMaterialsApi(session.id, 'Additional').catch(() => []),
           fetchAssignmentsApi(session.id).catch(() => []),
@@ -263,6 +267,13 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         ]);
 
         if (!isActive) return;
+
+        if (freshSession) {
+          const freshVid = (freshSession as any).videoUrl || (freshSession as any).featuredVideoUrl || '';
+          if (freshVid) {
+            setOverviewVideoUrl(freshVid);
+          }
+        }
 
         const mapMaterial = (material: StudyMaterial, idx: number): CustomMaterialItem => ({
           id: material.id || `mat-${idx}`,

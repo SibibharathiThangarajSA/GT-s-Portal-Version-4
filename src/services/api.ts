@@ -507,7 +507,7 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
     status: sessionData.status || 'Draft',
     isPublished: !!sessionData.isPublished,
     sortOrder: 999,
-    featuredVideoUrl: sessionData.videoUrl || null,
+    featuredVideoUrl: sessionData.videoUrl || (sessionData as any).featuredVideoUrl || null,
     topics: (sessionData.topics || []).map((t, tIdx) => ({
       id: isGuid(t.id) ? t.id : undefined,
       title: t.title,
