@@ -171,6 +171,22 @@ const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?:
   return { provided: providedItems, additional: additionalItems };
 };
 
+const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'html5'; embedUrl: string } => {
+  if (!url) return { type: 'html5', embedUrl: '' };
+
+  const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (ytMatch && ytMatch[1]) {
+    return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0` };
+  }
+
+  const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/i);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return { type: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+  }
+
+  return { type: 'html5', embedUrl: url };
+};
+
 export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   session,
   onBack,
@@ -536,33 +552,49 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       {/* ======================================================== */}
       {/* SESSION OVERVIEW VIDEO SECTION                           */}
       {/* ======================================================== */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-lg space-y-4 relative overflow-hidden">
+      <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-md space-y-4 relative overflow-hidden">
         <div className="space-y-1.5 pb-3 border-b border-slate-100">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-mono font-bold">
             <Video className="w-3.5 h-3.5 text-blue-600" />
-            <span>Session Overview</span>
+            <span>Session Overview Video</span>
           </div>
           <h2 className="text-lg md:text-xl font-extrabold text-slate-900">{session.name}</h2>
           <p className="text-xs text-slate-600 font-medium leading-relaxed">{overviewVideoDesc}</p>
         </div>
 
         {/* Video Player Box - Fills available area in 16:9 aspect ratio */}
-        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-md flex items-center justify-center">
-          {overviewVideoUrl ? (
-            <video
-              controls
-              src={overviewVideoUrl}
-              className="w-full h-full object-cover"
-              poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=80"
-            >
-              Your browser does not support HTML5 video streaming.
-            </video>
-          ) : (
-            // Saying there is no video is more honest than playing an unrelated one.
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-200/90 shadow-md flex items-center justify-center">
+          {overviewVideoUrl ? (() => {
+            const videoInfo = getEmbedUrl(overviewVideoUrl);
+            if (videoInfo.type === 'youtube' || videoInfo.type === 'vimeo') {
+              return (
+                <iframe
+                  src={videoInfo.embedUrl}
+                  title="Session Overview Video"
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              );
+            }
+            return (
+              <video
+                controls
+                playsInline
+                key={overviewVideoUrl}
+                src={overviewVideoUrl}
+                className="w-full h-full object-contain bg-black"
+                poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=80"
+              >
+                <source src={overviewVideoUrl} type="video/mp4" />
+                Your browser does not support HTML5 video streaming.
+              </video>
+            );
+          })() : (
             <div className="text-center space-y-2 px-6">
-              <Video className="w-10 h-10 text-slate-600 mx-auto" />
-              <p className="text-sm font-bold text-slate-300">No overview video yet</p>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+              <Video className="w-10 h-10 text-slate-500 mx-auto" />
+              <p className="text-sm font-bold text-slate-200">No overview video yet</p>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto font-medium">
                 Once an overview video is uploaded for this session, it plays here.
               </p>
             </div>
@@ -936,35 +968,59 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       {/* Quiz Tab */}
       {activeTab === 'quiz' && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="bg-blue-50/70 border border-blue-200 rounded-3xl p-5 shadow-sm space-y-3">
-            <h3 className="text-base font-extrabold text-slate-900">Session Quiz ({quizzesCount})</h3>
-            <p className="text-slate-600 text-sm">Review the current quiz assessment and start when ready.</p>
+          <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-6 shadow-md space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold font-mono">
+              <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
+              <span>Official Session Assessment</span>
+            </div>
+            <h3 className="text-lg font-extrabold text-slate-900">Session Quiz ({quizzesCount})</h3>
+            <p className="text-slate-600 text-xs font-medium">
+              Complete the session assessment to validate your understanding and earn XP points.
+            </p>
           </div>
 
           {activeQuiz ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-sm max-w-full">
-              <div className="space-y-5">
+            <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-md max-w-full space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg">
+                    Assessment Module
+                  </span>
+                  <span className="text-[11px] font-mono font-semibold text-slate-500">
+                    {activeQuiz.questions?.length || 0} Questions Total
+                  </span>
+                </div>
                 <div>
-                  <h4 className="text-2xl font-extrabold text-slate-900 dark:text-white leading-tight">{activeQuiz.title}</h4>
-                  <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                  <h4 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-tight">
+                    {activeQuiz.title}
+                  </h4>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600 font-medium">
                     {activeQuiz.description || 'Complete the assessment to check your understanding.'}
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-base font-medium text-slate-900 dark:text-white">Questions: {activeQuiz.questions.length}</p>
+                <div className="pt-4 border-t border-slate-100 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-slate-800">
+                      Total Questions: <span className="font-mono text-blue-600">{activeQuiz.questions?.length || 0}</span>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-xs text-slate-500 font-medium font-mono">
+                      Passing Grade: 70%
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => onStartQuiz(activeQuiz)}
-                    className="w-full sm:w-[160px] h-12 rounded-[14px] bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/20 transition-all"
+                    className="w-full sm:w-auto px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/20 transition-all hover:-translate-y-0.5"
                   >
-                    Start Quiz
+                    Start Quiz Assessment →
                   </button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm text-slate-600 text-sm">
+            <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-6 shadow-md text-slate-600 text-sm font-medium">
               No quiz has been configured for this session yet. Ask your facilitator to add an assessment to the session.
             </div>
           )}

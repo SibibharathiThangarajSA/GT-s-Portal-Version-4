@@ -15,18 +15,18 @@ export const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
   onSelectTopic
 }) => {
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-lg space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+    <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-md space-y-6">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+            <Layers className="w-5 h-5 text-blue-600" />
             <span>Interactive Learning Roadmap</span>
           </h3>
-          <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
+          <p className="text-slate-600 text-xs mt-0.5 font-medium">
             Click any module header to expand or collapse subtopics
           </p>
         </div>
-        <span className="text-xs font-mono font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800">
+        <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-3.5 py-1.5 rounded-xl border border-blue-200 shadow-xs">
           {(topics || []).length} Modules Total
         </span>
       </div>
@@ -44,8 +44,8 @@ export const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
                 onClick={() => onSelectTopic(topic.id)}
                 className={`p-4.5 rounded-2xl border transition-all duration-300 flex items-center justify-between cursor-pointer select-none ${
                   isSelected
-                    ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/20 shadow-md translate-x-1'
-                    : 'bg-slate-50/80 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/30'
+                    ? 'bg-blue-50/90 border-blue-500 ring-2 ring-blue-500/20 shadow-md translate-x-1'
+                    : 'bg-white hover:bg-blue-50/40 border-slate-200/90 hover:border-blue-300 shadow-sm'
                 }`}
                 data-inspect-id="SessionCard"
               >
@@ -55,7 +55,7 @@ export const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
                     className={`w-9 h-9 rounded-2xl font-mono font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-sm transition-all ${
                       isSelected
                         ? 'bg-blue-600 text-white ring-4 ring-blue-600/20 shadow-blue-500/30'
-                        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                        : 'bg-slate-100 text-slate-700 border border-slate-200'
                     }`}
                   >
                     {isSelected ? '●' : '○'}
@@ -63,28 +63,28 @@ export const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono font-bold tracking-wider text-blue-600 dark:text-blue-400 uppercase">
+                      <span className="text-[10px] font-mono font-bold tracking-wider text-blue-600 uppercase">
                         Module {index + 1}
                       </span>
                     </div>
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 mt-0.5">
+                    <h4 className="font-bold text-sm text-slate-900 mt-0.5">
                       {topic.title}
                     </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                    <p className="text-xs text-slate-600 line-clamp-1 mt-0.5 font-medium">
                       {topic.description}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-mono font-semibold text-slate-400 dark:text-slate-500 hidden sm:inline">
+                  <span className="text-[11px] font-mono font-semibold text-slate-500 hidden sm:inline">
                     {subtopics.length} Subtopics
                   </span>
                   <motion.div
                     animate={{ rotate: isSelected ? 90 : 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <ChevronRight className={`w-5 h-5 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                    <ChevronRight className={`w-5 h-5 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
                   </motion.div>
                 </div>
               </div>
@@ -101,7 +101,7 @@ export const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
                   >
                     <div className="pt-3 pb-2 pl-6 sm:pl-10 relative space-y-2">
                       {/* Vertical Connector Line from Parent Module */}
-                      <div className="absolute left-4 sm:left-7 top-0 bottom-6 w-0.5 bg-blue-300 dark:bg-blue-700/60 rounded-full" />
+                      <div className="absolute left-4 sm:left-7 top-0 bottom-6 w-0.5 bg-blue-300 rounded-full" />
 
                       {subtopics.map((sub, subIdx) => {
                         const isLast = subIdx === subtopics.length - 1;
@@ -115,20 +115,20 @@ export const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
                             className="relative flex items-start gap-3 group"
                           >
                             {/* Branch Connector Line (├─ or └─) */}
-                            <div className="flex items-center h-9 -ml-6 sm:-ml-9 text-blue-400 dark:text-blue-500 font-mono text-xs select-none">
-                              <span className="font-bold text-blue-500 dark:text-blue-400">
+                            <div className="flex items-center h-9 -ml-6 sm:-ml-9 text-blue-400 font-mono text-xs select-none">
+                              <span className="font-bold text-blue-500">
                                 {isLast ? '└─' : '├─'}
                               </span>
                             </div>
 
                             {/* Subtopic Card Item */}
-                            <div className="flex-1 bg-slate-50/90 dark:bg-slate-800/80 hover:bg-blue-50/60 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-blue-300 dark:hover:border-blue-500 rounded-xl p-3 shadow-xs transition-all flex items-center justify-between gap-3">
+                            <div className="flex-1 bg-white hover:bg-blue-50/60 border border-slate-200/90 hover:border-blue-300 rounded-xl p-3.5 shadow-xs transition-all flex items-center justify-between gap-3">
                               <div>
-                                <h5 className="font-semibold text-xs text-slate-800 dark:text-slate-200 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                                <h5 className="font-bold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">
                                   {sub.title}
                                 </h5>
                                 {sub.description && (
-                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                                  <p className="text-[11px] text-slate-600 line-clamp-1 mt-0.5 font-medium">
                                     {sub.description}
                                   </p>
                                 )}
@@ -148,5 +148,3 @@ export const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
     </div>
   );
 };
-
-
