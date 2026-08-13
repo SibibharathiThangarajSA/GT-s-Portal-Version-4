@@ -435,15 +435,16 @@ export const uploadStudyMaterialFile = (
         return;
       }
 
-      let message = `Upload failed (${request.status}).`;
+      let message = `Upload failed with status ${request.status}.`;
       try {
-        message = JSON.parse(request.responseText)?.message || message;
+        const errorJson = JSON.parse(request.responseText);
+        message = errorJson?.message || errorJson?.error || message;
       } catch {
       }
       reject(new Error(message));
     };
 
-    request.onerror = () => reject(new Error('The upload failed. Check your connection and try again.'));
+    request.onerror = () => reject(new Error('The upload failed. Ensure the backend API server is running on port 5000 and has sufficient storage.'));
     request.onabort = () => reject(new Error('The upload was cancelled.'));
 
     request.send(formData);
