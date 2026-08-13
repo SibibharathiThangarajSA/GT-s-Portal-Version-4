@@ -64,7 +64,9 @@ export interface SubTopic {
   id: string;
   title: string;
   durationMinutes: number;
-  status: RoadmapNodeStatus;
+  status?: RoadmapNodeStatus;
+  defaultStatus?: RoadmapNodeStatus;
+  orderIndex?: number;
   description?: string;
   videoUrl?: string;
   documentUrl?: string;
@@ -77,9 +79,10 @@ export type Subtopic = SubTopic;
 export interface RoadmapTopic {
   id: string;
   title: string;
-  order: number;
+  order?: number;
   orderIndex?: number;
-  status: RoadmapNodeStatus;
+  status?: RoadmapNodeStatus;
+  defaultStatus?: RoadmapNodeStatus;
   description: string;
   subtopics: SubTopic[];
   prerequisites?: string[]; // IDs of required previous topics
