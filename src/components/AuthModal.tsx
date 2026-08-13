@@ -162,7 +162,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       const res = await loginApi(email.trim(), password);
-      setIsLoading(false);
 
       if (!res.success || !res.data) {
         setErrorMsg(res.message || 'Invalid credentials. Please verify your email and password.');
@@ -193,8 +192,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       addToast('success', `Welcome back, ${res.data.firstName || 'User'}! Logged in successfully.`);
     } catch (err: any) {
-      setIsLoading(false);
       setErrorMsg(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 

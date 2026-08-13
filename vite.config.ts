@@ -19,7 +19,7 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       proxy: {
         '/api': {
-          target: 'http://localhost:5001',
+          target: process.env.API_BASE_URL || 'http://localhost:5000',
           changeOrigin: true,
           secure: false,
         },

@@ -787,18 +787,28 @@ export interface AuthUserDto {
 
 export const loginApi = async (email: string, password?: string): Promise<{ success: boolean; data?: AuthUserDto; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, password })
+      body: JSON.stringify({ email: cleanEmail, password }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
       return { success: true, data: data.data };
     }
-    return { success: false, message: data.message || 'Authentication failed.' };
+    return { success: false, message: data.message || data.error || 'Invalid credentials. Please check your email and password.' };
   } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      return { success: false, message: 'Authentication timed out. Ensure the backend API server is running on port 5000.' };
+    }
     return { success: false, message: `Authentication request failed: ${err?.message || String(err)}` };
   }
 };
