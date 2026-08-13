@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Session, StudyMaterial, Quiz, PersonalNote } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
 import { fetchStudyMaterialsApi, summarizeMaterialAiApi } from '../../services/api';
@@ -95,8 +95,12 @@ const getMaterialDisplayType = (material: Partial<StudyMaterial> & { type?: stri
 };
 
 const getMaterialCategory = (material: Partial<StudyMaterial> & { materialCategory?: string; materialType?: string; category?: string }) => {
-  const categoryValue = (material.materialType || material.materialCategory || material.category || 'Provided').toString().toLowerCase();
-  return categoryValue === 'additional' ? 'Additional' : 'Provided';
+  const cat = (material.materialCategory || material.category || '').toString().toLowerCase();
+  const typeVal = (material.materialType || '').toString().toLowerCase();
+  if (cat === 'additional' || cat === 'extra' || cat === 'external' || typeVal === 'additional' || typeVal === 'extra') {
+    return 'Additional';
+  }
+  return 'Provided';
 };
 
 const isValidMaterialUrl = (value?: string) => {
@@ -120,42 +124,31 @@ const normalizeMaterialKey = (material: Partial<StudyMaterial>) => {
 };
 
 const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?: StudyMaterial[]; providedMaterials?: StudyMaterial[]; additionalMaterials?: StudyMaterial[]; assignments?: any[] }) => {
-  const studyMaterials = [...(sessionData.studyMaterials || [])];
+  const allMaterials = [
+    ...(sessionData.studyMaterials || []),
+    ...(sessionData.providedMaterials || []),
+    ...(sessionData.additionalMaterials || [])
+  ];
+
   const providedMap = new Map<string, StudyMaterial>();
   const additionalMap = new Map<string, StudyMaterial>();
 
-  const addToMap = (materials: StudyMaterial[], map: Map<string, StudyMaterial>) => {
-    materials.forEach(material => {
-      const key = normalizeMaterialKey(material);
-      if (!key) return;
-      if (!providedMap.has(key) && !additionalMap.has(key)) {
-        map.set(key, material);
+  allMaterials.forEach(material => {
+    const key = normalizeMaterialKey(material);
+    if (!key) return;
+
+    const cat = getMaterialCategory(material);
+    if (cat === 'Additional') {
+      if (!additionalMap.has(key)) {
+        additionalMap.set(key, material);
       }
-    });
-  };
-
-  addToMap(sessionData.providedMaterials || [], providedMap);
-  addToMap(sessionData.additionalMaterials || [], additionalMap);
-
-  studyMaterials
-    .filter(material => getMaterialCategory(material) === 'Provided')
-    .forEach(material => {
-      const key = normalizeMaterialKey(material);
-      if (!key) return;
+      providedMap.delete(key);
+    } else {
       if (!providedMap.has(key) && !additionalMap.has(key)) {
         providedMap.set(key, material);
       }
-    });
-
-  studyMaterials
-    .filter(material => getMaterialCategory(material) === 'Additional')
-    .forEach(material => {
-      const key = normalizeMaterialKey(material);
-      if (!key) return;
-      if (!additionalMap.has(key) && !providedMap.has(key)) {
-        additionalMap.set(key, material);
-      }
-    });
+    }
+  });
 
   const providedItems = Array.from(providedMap.values()).map((material, idx) => ({
     id: `prov-${material.id || idx}`,
