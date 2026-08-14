@@ -67,7 +67,23 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
   const url = resolveDocumentUrl(record);
   if (!url) return false;
 
-  window.open(url, '_blank', 'noopener,noreferrer');
+  const docTitle =
+    record?.title ||
+    record?.attachmentName ||
+    record?.fileName ||
+    'Document Preview';
+
+  const cleanUrl = url.toLowerCase();
+  const fileType = record?.fileType?.toLowerCase() || '';
+
+  // Route Word (.docx, .doc) files through the in-browser document viewer
+  // so the document opens visually on screen rather than triggering a browser download
+  if (cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || fileType === 'docx' || fileType === 'doc') {
+    const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(url)}&title=${encodeURIComponent(docTitle)}`;
+    window.open(viewerUrl, '_blank', 'noopener,noreferrer');
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
   return true;
 };
 

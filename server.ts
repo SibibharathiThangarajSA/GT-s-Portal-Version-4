@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { GoogleGenAI, Type } from "@google/genai";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 /**
  * This server is a thin BFF, not a data store.
