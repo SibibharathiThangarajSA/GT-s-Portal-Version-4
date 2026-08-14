@@ -143,7 +143,9 @@ export const normalizeSessionPayload = (raw: any): Session => {
           type: question?.type || 'MCQ',
           prompt: question?.prompt || '',
           options: Array.isArray(question?.options) ? question.options : [],
-          correctAnswer: question?.correctAnswer ?? parseCorrectAnswer(question?.correctAnswerJson),
+          correctAnswer: question?.correctAnswer !== undefined && question?.correctAnswer !== null && question?.correctAnswer !== ''
+            ? question.correctAnswer
+            : parseCorrectAnswer(question?.correctAnswerJson ?? question?.CorrectAnswerJson ?? question?.correctAnswer ?? ''),
           explanation: question?.explanation || '',
           points: Number(question?.points || 10),
           codeSnippet: question?.codeSnippet || '',
