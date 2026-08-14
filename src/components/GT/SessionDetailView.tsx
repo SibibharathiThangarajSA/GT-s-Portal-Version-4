@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
 import { fetchStudyMaterialsApi, fetchAssignmentsApi, fetchQuizzesApi, createStudyMaterialApi, summarizeMaterialAiApi, fetchSessionById } from '../../services/api';
@@ -496,7 +496,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         </button>
 
         <span className="text-xs font-mono font-bold text-blue-900 bg-blue-50 px-3.5 py-1.5 rounded-lg border border-blue-200 shadow-sm">
-          Learning Track Ã¢â‚¬Â¢ {session.category}
+          Learning Track – {session.category}
         </span>
       </div>
 
@@ -639,7 +639,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           {/* <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl flex items-center justify-between text-xs"> */}
           {/* <div className="flex items-center gap-2 text-blue-900 font-medium">
               <Layers className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              <span>Interactive Session Roadmap Ã¢â‚¬â€ GTs can view this pathway for structured reference & topic progression.</span>
+              <span>Interactive Session Roadmap — GTs can view this pathway for structured reference & topic progression.</span>
             </div> */}
           {/* <span className="font-mono text-[11px] font-bold text-blue-700 bg-white px-3 py-1 rounded-lg border border-blue-200">
               {(session?.topics || []).length} Topics Total
@@ -727,7 +727,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 </div>
 
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-500 font-mono">Provided by L&D Ã¢â‚¬Â¢ {mat.updatedAt}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">Provided by L&D – {mat.updatedAt}</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -982,7 +982,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     <span className="text-sm font-bold text-slate-800">
                       Total Questions: <span className="font-mono text-blue-600">{activeQuiz.questions?.length || 0}</span>
                     </span>
-                    <span className="text-slate-300">â€¢</span>
+                    <span className="text-slate-300">•</span>
                     <span className="text-xs text-slate-500 font-medium font-mono">
                       Passing Grade: 70%
                     </span>
@@ -992,7 +992,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     onClick={() => onStartQuiz(activeQuiz)}
                     className="w-full sm:w-auto px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/20 transition-all hover:-translate-y-0.5"
                   >
-                    Start Quiz Assessment â†’
+                    Start Quiz Assessment →
                   </button>
                 </div>
               </div>
@@ -1112,7 +1112,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     />
                   </div>
 
-                  <div className="text-center text-[10px] text-slate-400 font-mono">Ã¢â‚¬â€ OR PASTE VIDEO URL Ã¢â‚¬â€</div>
+                  <div className="text-center text-[10px] text-slate-400 font-mono">— OR PASTE VIDEO URL —</div>
 
                   <input
                     type="url"

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Session, StudyMaterial, MaterialVersion } from '../../types';
 import { ArrowLeft, Plus, FileText, Upload, Save, Trash2, History, ExternalLink, Sparkles } from 'lucide-react';
 import { createStudyMaterialApi } from '../../services/api';
@@ -274,7 +274,7 @@ export const MaterialUploader: React.FC<MaterialUploaderProps> = ({ session, onS
           disabled={isProcessing}
           className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md"
         >
-          {isProcessing ? 'Uploadingâ€¦' : 'Add Material to Session'}
+          {isProcessing ? 'Uploading…' : 'Add Material to Session'}
         </button>
       </div>
 
@@ -285,7 +285,7 @@ export const MaterialUploader: React.FC<MaterialUploaderProps> = ({ session, onS
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[10px] font-mono font-bold text-blue-400 uppercase bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                  {mat.type} â€¢ v{mat.currentVersion}
+                  {mat.type} • v{mat.currentVersion}
                 </span>
                 <h4 className="font-bold text-white text-base mt-1">{mat.title}</h4>
                 <p className="text-slate-400 text-xs mt-0.5">{mat.description}</p>
@@ -306,7 +306,7 @@ export const MaterialUploader: React.FC<MaterialUploaderProps> = ({ session, onS
               </span>
               {mat.versions.map((ver, i) => (
                 <div key={i} className="flex items-center justify-between text-slate-300 text-[11px]">
-                  <span>v{ver.version} â€” {ver.changeLog}</span>
+                  <span>v{ver.version} — {ver.changeLog}</span>
                   <span className="font-mono text-slate-500">{ver.updatedAt}</span>
                 </div>
               ))}
