@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Session, CategoryType, RoadmapTopic, SubTopic, StudyMaterial, SessionAssignment, PersonalNote, Quiz, QuizQuestion } from '../../types';
 import { SessionTracker } from './SessionTracker';
 import { useFileUpload } from '../../hooks/useFileUpload';
+import { useToast } from '../../context/ToastContext';
+import { deleteStudyMaterialApi, deleteAssignmentApi } from '../../services/api';
 import { UploadProgressOverlay } from '../UploadProgressOverlay';
 import { 
   Plus, 
@@ -69,6 +71,13 @@ const deriveEditingSessionMaterials = (session: Partial<Session>): Partial<Sessi
 // thumbnail threw a ReferenceError. Same image the other views fall back to.
 const DEFAULT_SESSION_THUMBNAIL = 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop&q=80';
 
+/**
+ * A record that came back from the API has a real database id. Anything added in the form and not
+ * yet saved has a client-side placeholder, and there is nothing on the server to delete.
+ */
+const isPersistedId = (value?: string): boolean =>
+  !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 export const SessionManager: React.FC<SessionManagerProps> = ({
   sessions,
   onSaveSession,
@@ -76,6 +85,40 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
   onBackToDashboard
 }) => {
   const { isUploading, progress, uploadingFileName, uploadFile } = useFileUpload();
+  const { addToast } = useToast();
+
+  /**
+   * Removing a saved record has to reach the database, and the backend deletes its bucket object
+   * as part of that. Dropping it from React state alone left the row and the file in place, so the
+   * item reappeared on the next refresh.
+   *
+   * An unsaved row has no server record, so it is simply dropped from the form.
+   */
+  const removeChildRecord = async (
+    id: string | undefined,
+    label: string,
+    deleteApi: (id: string) => Promise<void>,
+    dropFromForm: () => void
+  ) => {
+    if (!window.confirm(`Remove ${label}? This deletes it and its uploaded file permanently.`)) {
+      return;
+    }
+
+    if (!isPersistedId(id)) {
+      dropFromForm();
+      return;
+    }
+
+    try {
+      await deleteApi(id!);
+      dropFromForm();
+      addToast('success', `${label} removed.`);
+    } catch (error: any) {
+      // The record is left on screen deliberately: it still exists on the server, and hiding it
+      // would report a deletion that did not happen.
+      addToast('error', error?.message || `Could not remove ${label}. It has not been deleted.`);
+    }
+  };
   const [editingSession, setEditingSession] = useState<Partial<Session> | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'roadmap' | 'provided' | 'additional' | 'assignments' | 'notes' | 'quiz'>('overview');
   const [sessionManagerMode, setSessionManagerMode] = useState<'modules' | 'tracker'>('modules');
@@ -657,11 +700,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       <span className="font-extrabold text-slate-900">Provided Material #{mIdx + 1}</span>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={() => removeChildRecord(mat.id, `provided material "${mat.title || 'Untitled'}"`, deleteStudyMaterialApi, () => {
                           const list = [...(editingSession.providedMaterials || [])];
                           list.splice(mIdx, 1);
                           setEditingSession({ ...editingSession, providedMaterials: list });
-                        }}
+                        })}
                         className="text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Remove
@@ -885,11 +928,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       <span className="font-extrabold text-slate-900">Additional Material #{mIdx + 1}</span>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={() => removeChildRecord(mat.id, `additional material "${mat.title || 'Untitled'}"`, deleteStudyMaterialApi, () => {
                           const list = [...(editingSession.additionalMaterials || [])];
                           list.splice(mIdx, 1);
                           setEditingSession({ ...editingSession, additionalMaterials: list });
-                        }}
+                        })}
                         className="text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Remove
@@ -1113,11 +1156,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       <span className="font-extrabold text-slate-900">Assignment #{aIdx + 1}</span>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={() => removeChildRecord(asgn.id, `assignment "${asgn.title || 'Untitled'}"`, deleteAssignmentApi, () => {
                           const list = [...(editingSession.assignments || [])];
                           list.splice(aIdx, 1);
                           setEditingSession({ ...editingSession, assignments: list });
-                        }}
+                        })}
                         className="text-rose-600 hover:text-rose-700 font-bold flex items-center gap-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Remove

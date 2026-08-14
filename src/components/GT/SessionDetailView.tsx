@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
 import { fetchStudyMaterialsApi, fetchAssignmentsApi, fetchQuizzesApi, createStudyMaterialApi, summarizeMaterialAiApi, fetchSessionById } from '../../services/api';
 import { useFileUpload } from '../../hooks/useFileUpload';
+import { useToast } from '../../context/ToastContext';
+import { openDocument, downloadDocument } from '../../services/documentAccess';
 import { UploadProgressOverlay } from '../UploadProgressOverlay';
 import {
   ArrowLeft,
@@ -124,11 +126,14 @@ const normalizeMaterialKey = (material: Partial<StudyMaterial>) => {
 };
 
 const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?: StudyMaterial[]; providedMaterials?: StudyMaterial[]; additionalMaterials?: StudyMaterial[]; assignments?: any[] }) => {
-  const allMaterials = [
-    ...(sessionData.studyMaterials || []),
-    ...(sessionData.providedMaterials || []),
-    ...(sessionData.additionalMaterials || [])
-  ];
+  // studyMaterials is the authoritative list from the API; providedMaterials and
+  // additionalMaterials are filtered views of that same list, built in normalizeSessionPayload.
+  // Concatenating all three therefore listed every material twice - once from the full list and
+  // once from whichever category view it also belonged to - which is where the duplicate cards
+  // came from. The category split happens below, from this single source.
+  const allMaterials = sessionData.studyMaterials?.length
+    ? sessionData.studyMaterials
+    : [...(sessionData.providedMaterials || []), ...(sessionData.additionalMaterials || [])];
 
   const providedItems = allMaterials
     .filter(m => (m.materialCategory || m.materialType || 'Provided').toLowerCase() !== 'additional')
@@ -208,6 +213,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const [summarizingId, setSummarizingId] = useState<string | null>(null);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const { isUploading, progress, uploadingFileName, uploadFile } = useFileUpload();
+  const { addToast } = useToast();
 
   // Overview Video State
   const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>((session as any).videoUrl || (session as any).featuredVideoUrl || '');
@@ -427,88 +433,22 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     setNewNoteText('');
   };
 
+  // View opens the stored document and does nothing else. It previously opened a blob URL when an
+  // in-memory File was present - unreadable to anyone but the tab that made it - and, when no URL
+  // resolved, generated a text file from the title and description and handed that over, which
+  // reads as a corrupted document rather than a missing one.
   const handleOpenMaterial = (material: CustomMaterialItem) => {
-    if (material.file) {
-      const blobUrl = URL.createObjectURL(material.file);
-      window.open(blobUrl, '_blank', 'noopener,noreferrer');
-      return;
+    if (!openDocument(material)) {
+      addToast('error', `No document is attached to "${material.title}" yet.`);
     }
-
-    const openUrl = resolveMaterialUrl(material);
-    if (openUrl) {
-      window.open(openUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
-
-    const content = [material.title, material.description].filter(Boolean).join('\n\n');
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    link.rel = 'noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
   };
 
+  // Download saves the document, and stays separate from View. A material with nothing attached
+  // reports that rather than producing a text file built from its own description.
   const handleDownloadMaterial = async (material: CustomMaterialItem) => {
-    const baseName = (material.fileName || material.title || 'study-material').replace(/[\\/:*?"<>|]/g, '-');
-    const extension = material.fileName?.split('.').pop() || material.fileType?.split('/')?.pop() || material.url?.split('.').pop() || 'bin';
-    const downloadName = material.fileName ? material.fileName : `${baseName}.${extension}`;
-
-    if (material.file) {
-      const blobUrl = URL.createObjectURL(material.file);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = downloadName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      // revoke after short delay to allow browser to process
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-      return;
+    if (!(await downloadDocument(material))) {
+      addToast('error', `No document is attached to "${material.title}" yet.`);
     }
-
-    const downloadUrl = resolveMaterialUrl(material);
-    if (downloadUrl) {
-      try {
-        const response = await fetch(downloadUrl, { credentials: 'include' });
-        if (!response.ok) throw new Error('Download failed');
-
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = downloadName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-        return;
-      } catch {
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = downloadName;
-        link.rel = 'noopener';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        return;
-      }
-    }
-
-    const content = [material.title, material.description].filter(Boolean).join('\n\n');
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${baseName}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
   // Helper function for material type icon
@@ -556,7 +496,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         </button>
 
         <span className="text-xs font-mono font-bold text-blue-900 bg-blue-50 px-3.5 py-1.5 rounded-lg border border-blue-200 shadow-sm">
-          Learning Track â€¢ {session.category}
+          Learning Track Ã¢â‚¬Â¢ {session.category}
         </span>
       </div>
 
@@ -699,7 +639,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           {/* <div className="bg-blue-50 border border-blue-200 p-4 rounded-2xl flex items-center justify-between text-xs"> */}
           {/* <div className="flex items-center gap-2 text-blue-900 font-medium">
               <Layers className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              <span>Interactive Session Roadmap â€” GTs can view this pathway for structured reference & topic progression.</span>
+              <span>Interactive Session Roadmap Ã¢â‚¬â€ GTs can view this pathway for structured reference & topic progression.</span>
             </div> */}
           {/* <span className="font-mono text-[11px] font-bold text-blue-700 bg-white px-3 py-1 rounded-lg border border-blue-200">
               {(session?.topics || []).length} Topics Total
@@ -787,7 +727,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 </div>
 
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-500 font-mono">Provided by L&D â€¢ {mat.updatedAt}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">Provided by L&D Ã¢â‚¬Â¢ {mat.updatedAt}</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -963,9 +903,12 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                         {assignment.attachmentUrl && (
                           <button
                             type="button"
+                            // Same resolver as the material cards, so an assignment document opens
+                            // exactly the way provided and additional materials do.
                             onClick={() => {
-                              const docUrl = assignment.attachmentUrl!;
-                              window.open(docUrl, '_blank', 'noopener,noreferrer');
+                              if (!openDocument(assignment)) {
+                                addToast('error', `The document attached to "${assignment.title}" is no longer available.`);
+                              }
                             }}
                             className="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-blue-200 flex items-center gap-2 transition-colors shadow-xs"
                           >
@@ -973,13 +916,13 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                           </button>
                         )}
                         {assignment.attachmentUrl && (
-                          <a
-                            href={assignment.attachmentUrl}
-                            download={assignment.attachmentName || 'assignment-document'}
+                          <button
+                            type="button"
+                            onClick={() => downloadDocument(assignment)}
                             className="bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 flex items-center gap-2 transition-colors shadow-xs"
                           >
                             <Download className="w-3.5 h-3.5 text-slate-600" /> Download
-                          </a>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -1039,7 +982,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     <span className="text-sm font-bold text-slate-800">
                       Total Questions: <span className="font-mono text-blue-600">{activeQuiz.questions?.length || 0}</span>
                     </span>
-                    <span className="text-slate-300">•</span>
+                    <span className="text-slate-300">â€¢</span>
                     <span className="text-xs text-slate-500 font-medium font-mono">
                       Passing Grade: 70%
                     </span>
@@ -1049,7 +992,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     onClick={() => onStartQuiz(activeQuiz)}
                     className="w-full sm:w-auto px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/20 transition-all hover:-translate-y-0.5"
                   >
-                    Start Quiz Assessment →
+                    Start Quiz Assessment â†’
                   </button>
                 </div>
               </div>
@@ -1169,7 +1112,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     />
                   </div>
 
-                  <div className="text-center text-[10px] text-slate-400 font-mono">â€” OR PASTE VIDEO URL â€”</div>
+                  <div className="text-center text-[10px] text-slate-400 font-mono">Ã¢â‚¬â€ OR PASTE VIDEO URL Ã¢â‚¬â€</div>
 
                   <input
                     type="url"
