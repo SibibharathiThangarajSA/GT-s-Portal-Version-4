@@ -183,6 +183,76 @@ User Query: ${message}`
 
   app.use("/api/ai", ai);
 
+  // --- DIRECT OBJECT STORAGE (S3/TIGRIS) STREAMING ---
+  // Streams site videos and materials directly from the cloud bucket with full HTTP Range (206) support,
+  // preventing buffering stalls or 502 proxy errors during video playback.
+  const s3Client = new S3Client({
+    endpoint: process.env.S3_ENDPOINT_URL || process.env.AWS_ENDPOINT_URL || 'https://t3.storageapi.dev',
+    region: process.env.S3_REGION || process.env.AWS_REGION || 'us-east-1',
+    credentials: {
+      accessKeyId: process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || 'tid_qJLZlUnpNMISimFhapSl_QhDKMbBumkqfSPqdbFjeAqPVcqSck',
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || 'tsec_DExQt4kUQMFnD-ATXFJKoL+NAbk0SAEZ6ntDiu6z0FxxCV+JIiR-6+m-xiX+q9EW4oNcn1'
+    },
+    forcePathStyle: true
+  });
+  const S3_BUCKET = process.env.S3_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'shelved-trunk-zrxdvpxaih4';
+
+  app.get(['/api/materials/files/*', '/api/materials/files/download/*'], async (req, res, next) => {
+    let filePath = req.params[0] || '';
+    if (!filePath) return next();
+
+    const cleanKey = decodeURIComponent(filePath).replace(/^download\//, '').replace(/^uploads\//, '');
+    const candidates = [
+      cleanKey,
+      cleanKey.replace(/-/g, ' '),
+      cleanKey.replace(/ /g, '-'),
+      `site-assets/videos/${cleanKey}`,
+      `site-assets/videos/${cleanKey.replace(/-/g, ' ')}`
+    ];
+
+    const range = req.headers.range;
+
+    for (const key of candidates) {
+      try {
+        const getCmd = new GetObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: key,
+          Range: range
+        });
+        const s3Response = await s3Client.send(getCmd);
+
+        let contentType = s3Response.ContentType || 'video/mp4';
+        if (key.endsWith('.mp4')) contentType = 'video/mp4';
+        else if (key.endsWith('.pdf')) contentType = 'application/pdf';
+        else if (key.endsWith('.webm')) contentType = 'video/webm';
+
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Type', contentType);
+        if (s3Response.ContentLength !== undefined) {
+          res.setHeader('Content-Length', s3Response.ContentLength.toString());
+        }
+        if (s3Response.ContentRange) {
+          res.setHeader('Content-Range', s3Response.ContentRange);
+          res.status(206);
+        } else {
+          res.status(200);
+        }
+
+        const stream = s3Response.Body as any;
+        if (stream && typeof stream.pipe === 'function') {
+          return stream.pipe(res);
+        }
+      } catch (err: any) {
+        if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+          continue;
+        }
+      }
+    }
+
+    // If not found in S3 bucket, fallback to downstream .NET API proxy
+    next();
+  });
+
   // --- PROXY EVERYTHING ELSE TO THE .NET API ---
   // pathFilter keeps the original /api prefix intact, which is what the .NET routes
   // expect ([Route("api/sessions")] and friends).
