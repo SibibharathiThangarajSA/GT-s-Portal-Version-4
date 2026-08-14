@@ -174,18 +174,27 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
       );
     }
 
+    const totalQuestions = result.totalQuestions ?? (Array.isArray(quiz.questions) ? quiz.questions.length : 0);
+    const correctCount = result.correctCount ?? (result as any).correctAnswers ?? (
+      totalQuestions > 0 ? Math.round(((Number(result.scorePercent) || 0) / 100) * totalQuestions) : 0
+    );
+
     return (
       <div className="max-w-3xl mx-auto space-y-8 animate-fadeIn">
         <button
           onClick={handleBackAttempt}
-          className="inline-flex items-center gap-2 text-xs text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-200"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 bg-white/90 hover:bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         {/* Quiz Score Summary Card */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center space-y-6 shadow-xl relative overflow-hidden">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-600 text-2xl font-bold">
+        <div className="bg-white/90 backdrop-blur-xl border border-slate-200 rounded-3xl p-8 text-center space-y-6 shadow-xl relative overflow-hidden">
+          <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full border-4 text-2xl font-black shadow-inner ${
+            result.passed
+              ? 'bg-emerald-50 border-emerald-400 text-emerald-600'
+              : 'bg-rose-50 border-rose-400 text-rose-600'
+          }`}>
             {result.scorePercent}%
           </div>
 
@@ -193,23 +202,27 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
             <h2 className="text-2xl font-extrabold text-slate-900">
               {result.passed ? '🎉 Quiz Passed Successfully!' : 'Needs Revision — Keep Practicing'}
             </h2>
-            <p className="text-slate-500 text-xs mt-1">
-              You answered {result.correctCount} out of {result.totalQuestions} questions correctly.
+            <p className="text-slate-500 text-xs mt-1 font-medium">
+              You answered <span className="font-bold text-slate-800">{correctCount}</span> out of <span className="font-bold text-slate-800">{totalQuestions}</span> questions correctly.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto pt-2 text-xs text-left">
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <p className="text-slate-500 uppercase tracking-[0.3em] text-[10px]">Your Score</p>
-              <p className="mt-3 text-2xl font-bold text-slate-900">{result.correctCount} / {result.totalQuestions}</p>
+            <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <p className="text-slate-500 font-mono uppercase tracking-widest text-[10px] font-bold">Your Score</p>
+              <p className="mt-2 text-2xl font-black text-slate-900">{correctCount} <span className="text-base font-bold text-slate-400">/ {totalQuestions}</span></p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <p className="text-slate-500 uppercase tracking-[0.3em] text-[10px]">Percentage</p>
-              <p className="mt-3 text-2xl font-bold text-slate-900">{result.scorePercent}%</p>
+            <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <p className="text-slate-500 font-mono uppercase tracking-widest text-[10px] font-bold">Percentage</p>
+              <p className="mt-2 text-2xl font-black text-blue-600">{result.scorePercent}%</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <p className="text-slate-500 uppercase tracking-[0.3em] text-[10px]">Status</p>
-              <p className={`mt-3 text-2xl font-bold ${result.passed ? 'text-emerald-600' : 'text-rose-600'}`}>{result.passed ? 'Passed' : 'Failed'}</p>
+            <div className={`p-5 rounded-2xl border shadow-xs ${
+              result.passed ? 'border-emerald-200 bg-emerald-50/70' : 'border-rose-200 bg-rose-50/70'
+            }`}>
+              <p className="text-slate-500 font-mono uppercase tracking-widest text-[10px] font-bold">Status</p>
+              <p className={`mt-2 text-2xl font-black ${result.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {result.passed ? 'Passed' : 'Failed'}
+              </p>
             </div>
           </div>
 
