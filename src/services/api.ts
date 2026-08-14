@@ -286,6 +286,74 @@ export const fetchStudyMaterialsApi = async (sessionId?: string, category?: stri
   return await parseApiResponse<StudyMaterial[]>(await fetch(url));
 };
 
+export const fetchUserGuideDocumentApi = async (): Promise<StudyMaterial | null> => {
+  const localGuidePath = '/Assets/Videos/user-guide/user-guide.docx';
+  try {
+    const materials = await fetchStudyMaterialsApi().catch(() => []);
+    if (Array.isArray(materials) && materials.length > 0) {
+      const isGuideMatch = (m: StudyMaterial) => {
+        const title = (m.title || '').toLowerCase();
+        const fileName = (m.fileName || '').toLowerCase();
+        const url = (m.url || '').toLowerCase();
+        const category = (m.materialCategory || m.materialType || '').toLowerCase();
+        const tags = (m.tags || []).map((t: string) => (t || '').toLowerCase());
+
+        return (
+          title.includes('user guide') ||
+          title.includes('userguide') ||
+          title.includes('companion guide') ||
+          title.includes('user_guide') ||
+          title.includes('user-guide') ||
+          fileName.includes('user_guide') ||
+          fileName.includes('user-guide') ||
+          fileName.includes('userguide') ||
+          url.includes('user-guide') ||
+          category === 'userguide' ||
+          category === 'guide' ||
+          category === 'documentation' ||
+          tags.includes('user guide') ||
+          tags.includes('user-guide') ||
+          tags.includes('userguide') ||
+          tags.includes('guide')
+        );
+      };
+
+      const guideMaterial = materials.find(isGuideMatch);
+      if (guideMaterial) {
+        return guideMaterial;
+      }
+    }
+
+    // Default to the placed user guide document in the public assets folder
+    return {
+      id: 'local-user-guide',
+      title: 'GT Companion User Guide',
+      type: 'Word',
+      url: localGuidePath,
+      materialCategory: 'Provided',
+      materialType: 'Provided',
+      fileName: 'user-guide.docx',
+      currentVersion: 1,
+      versions: [],
+      tags: ['User Guide', 'Documentation']
+    } as StudyMaterial;
+  } catch (err) {
+    console.error('Failed to fetch user guide document from backend:', err);
+    return {
+      id: 'local-user-guide',
+      title: 'GT Companion User Guide',
+      type: 'Word',
+      url: localGuidePath,
+      materialCategory: 'Provided',
+      materialType: 'Provided',
+      fileName: 'user-guide.docx',
+      currentVersion: 1,
+      versions: [],
+      tags: ['User Guide', 'Documentation']
+    } as StudyMaterial;
+  }
+};
+
 export const updateStudyMaterialApi = async (id: string, materialData: CreateStudyMaterialPayload): Promise<StudyMaterial> => {
   const res = await fetch(`/api/materials/${id}`, {
     method: 'PUT',

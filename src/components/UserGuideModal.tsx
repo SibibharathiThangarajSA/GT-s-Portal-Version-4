@@ -9,9 +9,13 @@ import {
   Info,
   FileText,
   LayoutDashboard,
+  Eye,
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
+import { fetchUserGuideDocumentApi } from '../services/api';
+import { useToast } from '../context/ToastContext';
+import { StudyMaterial } from '../types';
 
 export interface GuideSection {
   id: string;
@@ -376,6 +380,71 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [guideDoc, setGuideDoc] = useState<StudyMaterial | null>(null);
+  const [isLoadingGuide, setIsLoadingGuide] = useState<boolean>(false);
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    setIsLoadingGuide(true);
+    fetchUserGuideDocumentApi()
+      .then((doc) => {
+        if (isMounted) {
+          setGuideDoc(doc);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load user guide document', err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingGuide(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  const handlePreviewGuide = async () => {
+    let currentDoc = guideDoc;
+    if (!currentDoc) {
+      setIsLoadingGuide(true);
+      try {
+        currentDoc = await fetchUserGuideDocumentApi();
+        setGuideDoc(currentDoc);
+      } catch {
+        currentDoc = null;
+      } finally {
+        setIsLoadingGuide(false);
+      }
+    }
+
+    const docUrl = currentDoc?.downloadUrl || currentDoc?.webUrl || currentDoc?.url || '/Assets/Videos/user-guide/user-guide.docx';
+    if (!docUrl || docUrl.trim() === '' || docUrl.trim() === '#') {
+      addToast('info', 'User Guide document is not available.');
+      return;
+    }
+
+    let targetUrl = docUrl.trim();
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://') && !targetUrl.startsWith('/')) {
+      targetUrl = '/' + targetUrl;
+    }
+
+    const docTitle = currentDoc?.title || 'GT Companion User Guide';
+
+    // Route Word (.docx) and local guide documents through the in-browser viewer
+    // to render the document on screen rather than triggering a browser download
+    if (targetUrl.toLowerCase().endsWith('.docx') || targetUrl.toLowerCase().endsWith('.doc') || targetUrl.includes('/user-guide/')) {
+      const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(targetUrl)}&title=${encodeURIComponent(docTitle)}`;
+      window.open(viewerUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   useEffect(() => {
     try {
@@ -544,7 +613,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
               <div>
                 <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span>📖 User Guide</span>
+                  <span>User Guide</span>
 
                   <span className="text-[11px] font-mono font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
                     GT Companion
@@ -558,8 +627,8 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
             </div>
 
-            {/* Search + Close */}
-            <div className="flex items-center gap-3 w-full md:w-auto">
+            {/* Search + Preview (Eye) + Close */}
+            <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
 
               <div className="relative flex-1 md:w-72">
 
@@ -585,6 +654,18 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
                 )}
 
               </div>
+
+              {/* Eye / Preview Button */}
+              <button
+                type="button"
+                onClick={handlePreviewGuide}
+                title="Preview User Guide document (opens in new tab)"
+                aria-label="Preview User Guide document"
+                className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-blue-600 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-slate-200"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Preview</span>
+              </button>
 
               <button
                 onClick={onClose}
