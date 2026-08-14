@@ -198,18 +198,25 @@ User Query: ${message}`
   });
   const S3_BUCKET = process.env.S3_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'shelved-trunk-zrxdvpxaih4';
 
-  app.get(['/api/materials/files/*', '/api/materials/files/download/*'], async (req, res, next) => {
-    let filePath = req.params[0] || '';
-    if (!filePath) return next();
+  const handleS3Stream = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const rawPath = (req.params[0] || req.path || req.url || '').split('?')[0];
+    const cleanKey = decodeURIComponent(rawPath)
+      .replace(/^\/api\/materials\/files\/(download\/)?/, '')
+      .replace(/^download\//, '')
+      .replace(/^uploads\//, '')
+      .replace(/^\/+/, '');
 
-    const cleanKey = decodeURIComponent(filePath).replace(/^download\//, '').replace(/^uploads\//, '');
-    const candidates = [
+    if (!cleanKey) return next();
+
+    const baseName = cleanKey.split('/').pop() || cleanKey;
+    const candidates = Array.from(new Set([
       cleanKey,
+      `site-assets/videos/${baseName}`,
+      `site-assets/videos/${baseName.replace(/-/g, ' ')}`,
+      `site-assets/videos/${baseName.replace(/ /g, '-')}`,
       cleanKey.replace(/-/g, ' '),
-      cleanKey.replace(/ /g, '-'),
-      `site-assets/videos/${cleanKey}`,
-      `site-assets/videos/${cleanKey.replace(/-/g, ' ')}`
-    ];
+      cleanKey.replace(/ /g, '-')
+    ]));
 
     const range = req.headers.range;
 
@@ -239,6 +246,10 @@ User Query: ${message}`
           res.status(200);
         }
 
+        if (req.method === 'HEAD') {
+          return res.end();
+        }
+
         const stream = s3Response.Body as any;
         if (stream && typeof stream.pipe === 'function') {
           return stream.pipe(res);
@@ -252,7 +263,12 @@ User Query: ${message}`
 
     // If not found in S3 bucket, fallback to downstream .NET API proxy
     next();
-  });
+  };
+
+  app.get('/api/materials/files/*', handleS3Stream);
+  app.head('/api/materials/files/*', handleS3Stream);
+  app.get('/api/materials/files/download/*', handleS3Stream);
+  app.head('/api/materials/files/download/*', handleS3Stream);
 
   // --- PROXY EVERYTHING ELSE TO THE .NET API ---
   // pathFilter keeps the original /api prefix intact, which is what the .NET routes
