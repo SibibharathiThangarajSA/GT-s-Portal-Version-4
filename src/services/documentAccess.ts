@@ -16,24 +16,22 @@ export interface DocumentLike {
   webUrl?: string;
   downloadUrl?: string;
   attachmentUrl?: string;
+  materialsLink?: string;
   attachmentName?: string;
   fileName?: string;
   fileType?: string;
   title?: string;
+  file?: File | Blob;
 }
 
 /**
- * A URL is only usable if it survives a page reload and points at this origin's API or a real
- * external address. Blob URLs live and die with the tab that made them, and a localhost address
- * is a developer machine that nobody else can reach.
+ * Validates whether a given URL string is non-empty and usable.
  */
 const isUsableUrl = (value?: string): boolean => {
   if (!value) return false;
 
   const trimmed = value.trim();
   if (trimmed === '' || trimmed === '#') return false;
-  if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) return false;
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(trimmed)) return false;
 
   return true;
 };
@@ -45,7 +43,21 @@ const isUsableUrl = (value?: string): boolean => {
 export const resolveDocumentUrl = (record: DocumentLike | null | undefined): string => {
   if (!record) return '';
 
-  const candidates = [record.downloadUrl, record.webUrl, record.url, record.attachmentUrl];
+  if (record.file instanceof Blob || record.file instanceof File) {
+    try {
+      return URL.createObjectURL(record.file);
+    } catch (e) {
+      console.warn('Could not create object URL for in-memory file:', e);
+    }
+  }
+
+  const candidates = [
+    record.downloadUrl,
+    record.webUrl,
+    record.url,
+    record.attachmentUrl,
+    record.materialsLink
+  ];
   const usable = candidates.find(isUsableUrl);
 
   return usable ? usable.trim() : '';
