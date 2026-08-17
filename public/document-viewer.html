@@ -882,11 +882,25 @@
         }
 
         // ============================================
-        // CASE 1: PDF DOCUMENT
+        // UNIVERSAL DOCUMENT FRAME RENDERER (PDF / PPT / DOC)
         // ============================================
         const isPdf = isPdfMagic || contentType.includes('pdf') || cleanUrl.endsWith('.pdf') || lowerTitle.endsWith('.pdf');
+        const isPptx = cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || lowerTitle.endsWith('.pptx') || lowerTitle.endsWith('.ppt') || contentType.includes('presentation') || contentType.includes('powerpoint');
+        const isDocx = isZipMagic || contentType.includes('word') || contentType.includes('officedocument') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
+
+        // Set document format badge
         if (isPdf) {
           formatBadge.textContent = 'PDF';
+        } else if (isPptx) {
+          formatBadge.textContent = 'PPT';
+        } else if (isDocx) {
+          formatBadge.textContent = 'DOC';
+        } else {
+          formatBadge.textContent = 'DOCUMENT';
+        }
+
+        // 1. Direct High-Resolution Document Frame (Native PDF / Blob Viewer)
+        if (isPdf || isPdfMagic) {
           const blob = new Blob([buffer], { type: 'application/pdf' });
           const blobUrl = URL.createObjectURL(blob);
           loadingState.style.display = 'none';
@@ -898,30 +912,38 @@
           return;
         }
 
-        // ============================================
-        // CASE 2: POWERPOINT PRESENTATION (.pptx, .ppt)
-        // ============================================
-        const isPptx = cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || lowerTitle.endsWith('.pptx') || lowerTitle.endsWith('.ppt') || contentType.includes('presentation') || contentType.includes('powerpoint');
+        // 2. Online Google / Office Document Frame for PPT & DOC
+        if ((isPptx || isDocx) && /^https?:\/\//i.test(safeFetchUrl) && !safeFetchUrl.includes('localhost') && !safeFetchUrl.includes('127.0.0.1')) {
+          loadingState.style.display = 'none';
+          errorState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'block';
+          dynamicTarget.style.display = 'none';
+          pdfTarget.src = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(safeFetchUrl)}`;
+          return;
+        }
+
+        // 3. Modern PPTX Slide Reader / Word DOCX Engine / Native Frame Fallback
         if (isPptx) {
-          const rendered = await renderPptxPresentation(buffer, customTitle);
-          if (rendered) return;
+          // If the buffer is a PDF or can be rendered in PDF iframe, render in native frame
+          try {
+            const blob = new Blob([buffer], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            container.style.display = 'block';
+            pdfTarget.style.display = 'block';
+            dynamicTarget.style.display = 'none';
+            pdfTarget.src = blobUrl;
+            return;
+          } catch (blobErr) {
+            console.warn('PDF Blob failed, falling back to presentation player:', blobErr);
+            const rendered = await renderPptxPresentation(buffer, customTitle);
+            if (rendered) return;
+          }
         }
 
-        // ============================================
-        // CASE 3: EXCEL SPREADSHEET (.xlsx, .xls, .csv)
-        // ============================================
-        const isExcel = cleanUrl.endsWith('.xlsx') || cleanUrl.endsWith('.xls') || cleanUrl.endsWith('.csv') || lowerTitle.endsWith('.xlsx') || lowerTitle.endsWith('.xls') || lowerTitle.endsWith('.csv') || contentType.includes('spreadsheet') || contentType.includes('excel');
-        if (isExcel) {
-          const rendered = await renderExcelWorkbook(buffer, customTitle);
-          if (rendered) return;
-        }
-
-        // ============================================
-        // CASE 4: WORD DOCUMENT (.docx, .doc)
-        // ============================================
-        const isDocx = isZipMagic || contentType.includes('word') || contentType.includes('officedocument') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
         if (isDocx && typeof docx !== 'undefined' && docx.renderAsync) {
-          formatBadge.textContent = 'WORD (DOCX)';
           try {
             await docx.renderAsync(buffer, dynamicTarget, null, {
               className: 'docx-preview',
@@ -944,111 +966,15 @@
           }
         }
 
-        // ============================================
-        // CASE 5: IMAGES (PNG, JPG, JPEG, GIF, SVG, WEBP)
-        // ============================================
-        const isImage = isPngMagic || isJpegMagic || isGifMagic || contentType.startsWith('image/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.gif') || cleanUrl.endsWith('.webp') || cleanUrl.endsWith('.svg');
-        if (isImage) {
-          formatBadge.textContent = 'IMAGE';
-          const mime = isPngMagic ? 'image/png' : isJpegMagic ? 'image/jpeg' : isGifMagic ? 'image/gif' : 'image/png';
-          const blob = new Blob([buffer], { type: mime });
-          const imgUrl = URL.createObjectURL(blob);
-          loadingState.style.display = 'none';
-          errorState.style.display = 'none';
-          container.style.display = 'block';
-          pdfTarget.style.display = 'none';
-          dynamicTarget.style.display = 'block';
-          dynamicTarget.innerHTML = `
-            <div style="display: flex; justify-content: center; align-items: center; min-height: 480px; padding: 24px;">
-              <img src="${imgUrl}" alt="${customTitle}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);" />
-            </div>
-          `;
-          return;
-        }
-
-        // ============================================
-        // CASE 6: VIDEO / AUDIO MEDIA
-        // ============================================
-        const isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.webm') || cleanUrl.endsWith('.ogg') || contentType.startsWith('video/');
-        const isAudio = cleanUrl.endsWith('.mp3') || cleanUrl.endsWith('.wav') || cleanUrl.endsWith('.m4a') || contentType.startsWith('audio/');
-        if (isVideo || isAudio) {
-          formatBadge.textContent = isVideo ? 'VIDEO' : 'AUDIO';
-          const mime = isVideo ? 'video/mp4' : 'audio/mpeg';
-          const blob = new Blob([buffer], { type: mime });
-          const mediaUrl = URL.createObjectURL(blob);
-          loadingState.style.display = 'none';
-          errorState.style.display = 'none';
-          container.style.display = 'block';
-          pdfTarget.style.display = 'none';
-          dynamicTarget.style.display = 'block';
-          dynamicTarget.innerHTML = `
-            <div style="display: flex; justify-content: center; align-items: center; min-height: 480px; padding: 24px;">
-              ${isVideo ? `
-                <video src="${mediaUrl}" controls autoplay style="max-width: 100%; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);"></video>
-              ` : `
-                <audio src="${mediaUrl}" controls style="width: 100%; max-width: 480px;"></audio>
-              `}
-            </div>
-          `;
-          return;
-        }
-
-        // ============================================
-        // CASE 7: CODE & PLAIN TEXT (.txt, .md, .json, .log, etc.)
-        // ============================================
-        const isText = (!isZipMagic && !isPdfMagic && !isPngMagic) && (contentType.startsWith('text/') || cleanUrl.endsWith('.txt') || cleanUrl.endsWith('.md') || cleanUrl.endsWith('.json') || cleanUrl.endsWith('.log') || cleanUrl.endsWith('.sql') || cleanUrl.endsWith('.py') || cleanUrl.endsWith('.js') || cleanUrl.endsWith('.ts') || cleanUrl.endsWith('.cs') || cleanUrl.endsWith('.yaml') || cleanUrl.endsWith('.yml'));
-        if (isText) {
-          formatBadge.textContent = 'CODE / TEXT';
-          const decoder = new TextDecoder('utf-8');
-          const textContent = decoder.decode(buffer);
-          const linesCount = (textContent.match(/\n/g) || []).length + 1;
-
-          loadingState.style.display = 'none';
-          errorState.style.display = 'none';
-          container.style.display = 'block';
-          pdfTarget.style.display = 'none';
-          dynamicTarget.style.display = 'block';
-          dynamicTarget.innerHTML = `
-            <div class="code-card">
-              <div class="code-header">
-                <span>${customTitle} • ${linesCount} Lines</span>
-                <button class="btn" style="padding: 4px 10px; font-size: 11px;" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(textContent)}')).then(() => alert('Content copied to clipboard!'))">
-                  Copy All
-                </button>
-              </div>
-              <div class="code-body">${textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-            </div>
-          `;
-          return;
-        }
-
-        // ============================================
-        // CASE 8: UNIVERSAL FALLBACK FILE CARD
-        // ============================================
-        formatBadge.textContent = 'FILE ATTACHMENT';
-        const fileSizeKb = Math.round(buffer.byteLength / 1024);
-        const ext = cleanUrl.split('.').pop().toUpperCase() || 'FILE';
-
+        // Universal Fallback to PDF Frame
+        const fallbackBlob = new Blob([buffer], { type: 'application/pdf' });
+        const fallbackUrl = URL.createObjectURL(fallbackBlob);
         loadingState.style.display = 'none';
         errorState.style.display = 'none';
         container.style.display = 'block';
-        pdfTarget.style.display = 'none';
-        dynamicTarget.style.display = 'block';
-        dynamicTarget.innerHTML = `
-          <div class="generic-file-card">
-            <div class="file-icon-box">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            </div>
-            <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #f8fafc;">${customTitle}</h3>
-            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 24px;">Format: <strong>${ext}</strong> • Size: <strong>${fileSizeKb} KB</strong></p>
-            <div style="display: flex; gap: 10px; justify-content: center;">
-              <button class="btn btn-emerald" onclick="downloadCurrentFile()" style="padding: 10px 24px; font-size: 13px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download Document
-              </button>
-            </div>
-          </div>
-        `;
+        pdfTarget.style.display = 'block';
+        dynamicTarget.style.display = 'none';
+        pdfTarget.src = fallbackUrl;
       } catch (err) {
         console.error('Failed to preview document:', err);
         loadingState.style.display = 'none';
