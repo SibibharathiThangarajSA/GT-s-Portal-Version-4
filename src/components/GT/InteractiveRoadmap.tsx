@@ -127,11 +127,6 @@ export const InteractiveRoadmap: React.FC<InteractiveRoadmapProps> = ({
                                 <h5 className="font-bold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">
                                   {sub.title}
                                 </h5>
-                                {sub.description && (
-                                  <p className="text-[11px] text-slate-600 line-clamp-1 mt-0.5 font-medium">
-                                    {sub.description}
-                                  </p>
-                                )}
                               </div>
                             </div>
                           </motion.div>
