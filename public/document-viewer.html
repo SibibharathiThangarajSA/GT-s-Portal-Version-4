@@ -818,32 +818,7 @@
       const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
       const lowerTitle = (customTitle || '').toLowerCase();
 
-      const isPdf = cleanUrl.endsWith('.pdf') || lowerTitle.endsWith('.pdf') || cleanUrl.includes('.pdf');
-      const isPptx = cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || lowerTitle.endsWith('.pptx') || lowerTitle.endsWith('.ppt') || cleanUrl.includes('presentation') || cleanUrl.includes('powerpoint');
-      const isDocx = cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
-
-      if (isPdf) {
-        formatBadge.textContent = 'PDF';
-      } else if (isPptx) {
-        formatBadge.textContent = 'PPT';
-      } else if (isDocx) {
-        formatBadge.textContent = 'DOC';
-      } else {
-        formatBadge.textContent = 'DOCUMENT';
-      }
-
-      // CASE A: Blob URLs (from in-memory user uploads)
-      if (safeFetchUrl.startsWith('blob:')) {
-        loadingState.style.display = 'none';
-        errorState.style.display = 'none';
-        container.style.display = 'block';
-        pdfTarget.style.display = 'block';
-        dynamicTarget.style.display = 'none';
-        pdfTarget.src = safeFetchUrl;
-        return;
-      }
-
-      // CASE B: External URLs (prevent CORS fetch errors, embed directly)
+      // CASE A: External Public URLs (Embed via Google Docs / Native)
       if (/^https?:\/\//i.test(safeFetchUrl) && !safeFetchUrl.includes('localhost') && !safeFetchUrl.includes('127.0.0.1')) {
         loadingState.style.display = 'none';
         errorState.style.display = 'none';
@@ -851,25 +826,34 @@
         pdfTarget.style.display = 'block';
         dynamicTarget.style.display = 'none';
 
-        if (isPptx || isDocx) {
+        if (cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || cleanUrl.endsWith('.xlsx')) {
+          formatBadge.textContent = cleanUrl.endsWith('.ppt') || cleanUrl.endsWith('.pptx') ? 'PPT' : cleanUrl.endsWith('.xlsx') ? 'EXCEL' : 'DOC';
           pdfTarget.src = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(safeFetchUrl)}`;
         } else {
+          formatBadge.textContent = 'PDF';
           pdfTarget.src = safeFetchUrl;
         }
         return;
       }
 
-      // CASE C: Local / API / Relative Documents
+      // CASE B: Local Files, API Endpoints, & Blob URLs (from in-memory uploads)
       try {
         const res = await fetch(safeFetchUrl);
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: Could not fetch file.`);
+          throw new Error(`HTTP ${res.status}: Could not load document file.`);
         }
 
         const contentType = (res.headers.get('content-type') || '').toLowerCase();
         const buffer = await res.arrayBuffer();
         activeBuffer = buffer;
         const uint8 = new Uint8Array(buffer);
+
+        // Binary Magic Bytes
+        const isPdfMagic = uint8.length >= 4 && uint8[0] === 0x25 && uint8[1] === 0x50 && uint8[2] === 0x44 && uint8[3] === 0x46;
+        const isZipMagic = uint8.length >= 4 && uint8[0] === 0x50 && uint8[1] === 0x4B && uint8[2] === 0x03 && uint8[3] === 0x04;
+        const isPngMagic = uint8.length >= 4 && uint8[0] === 0x89 && uint8[1] === 0x50 && uint8[2] === 0x4E && uint8[3] === 0x47;
+        const isJpegMagic = uint8.length >= 3 && uint8[0] === 0xFF && uint8[1] === 0xD8 && uint8[2] === 0xFF;
+        const isGifMagic = uint8.length >= 3 && uint8[0] === 0x47 && uint8[1] === 0x49 && uint8[2] === 0x46;
 
         // Check if response is SPA HTML fallback
         const firstChars = new TextDecoder('utf-8').decode(uint8.slice(0, 35)).toLowerCase();
@@ -889,6 +873,7 @@
                 const retryBuffer = await retryRes.arrayBuffer();
                 const blob = new Blob([retryBuffer], { type: 'application/pdf' });
                 const blobUrl = URL.createObjectURL(blob);
+                formatBadge.textContent = 'PDF';
                 loadingState.style.display = 'none';
                 errorState.style.display = 'none';
                 container.style.display = 'block';
@@ -899,29 +884,114 @@
                 return;
               }
             } catch (retryErr) {
-              console.warn('Candidate retry failed:', retryErr);
+              console.warn('Fallback retry failed:', retryErr);
             }
+          }
+          throw new Error('The requested document file was not found on the server.');
+        }
+
+        // 1. PDF Documents
+        const isPdf = isPdfMagic || contentType.includes('pdf') || cleanUrl.endsWith('.pdf') || lowerTitle.endsWith('.pdf');
+        if (isPdf) {
+          formatBadge.textContent = 'PDF';
+          const blob = new Blob([buffer], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+          loadingState.style.display = 'none';
+          errorState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'block';
+          dynamicTarget.style.display = 'none';
+          pdfTarget.src = blobUrl;
+          return;
+        }
+
+        // 2. PowerPoint Presentations (.pptx, .ppt)
+        const isPptx = cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || lowerTitle.endsWith('.pptx') || lowerTitle.endsWith('.ppt') || contentType.includes('presentation') || contentType.includes('powerpoint');
+        if (isPptx || (isZipMagic && !cleanUrl.endsWith('.docx') && !cleanUrl.endsWith('.xlsx') && !lowerTitle.endsWith('.docx') && !lowerTitle.endsWith('.xlsx'))) {
+          const rendered = await renderPptxPresentation(buffer, customTitle);
+          if (rendered) return;
+        }
+
+        // 3. Word Documents (.docx, .doc)
+        const isDocx = isZipMagic || contentType.includes('word') || contentType.includes('officedocument') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
+        if (isDocx && typeof docx !== 'undefined' && docx.renderAsync) {
+          formatBadge.textContent = 'WORD (DOCX)';
+          try {
+            await docx.renderAsync(buffer, dynamicTarget, null, {
+              className: 'docx-preview',
+              inWrapper: true,
+              ignoreWidth: false,
+              ignoreHeight: false,
+              ignoreFonts: false,
+              breakPages: true,
+              experimental: true
+            });
+
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            container.style.display = 'block';
+            dynamicTarget.style.display = 'block';
+            pdfTarget.style.display = 'none';
+            return;
+          } catch (docxErr) {
+            console.warn('Docx renderAsync fallback:', docxErr);
           }
         }
 
-        // Render via native PDF frame
-        const blob = new Blob([buffer], { type: isPdf ? 'application/pdf' : 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
+        // 4. Excel Spreadsheets (.xlsx, .xls, .csv)
+        const isExcel = cleanUrl.endsWith('.xlsx') || cleanUrl.endsWith('.xls') || cleanUrl.endsWith('.csv') || lowerTitle.endsWith('.xlsx') || lowerTitle.endsWith('.xls') || lowerTitle.endsWith('.csv') || contentType.includes('spreadsheet') || contentType.includes('excel');
+        if (isExcel) {
+          const rendered = await renderExcelWorkbook(buffer, customTitle);
+          if (rendered) return;
+        }
+
+        // 5. Images (PNG, JPG, JPEG, GIF, SVG, WEBP)
+        const isImage = isPngMagic || isJpegMagic || isGifMagic || contentType.startsWith('image/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.gif') || cleanUrl.endsWith('.webp') || cleanUrl.endsWith('.svg');
+        if (isImage) {
+          formatBadge.textContent = 'IMAGE';
+          const mime = isPngMagic ? 'image/png' : isJpegMagic ? 'image/jpeg' : isGifMagic ? 'image/gif' : 'image/png';
+          const blob = new Blob([buffer], { type: mime });
+          const imgUrl = URL.createObjectURL(blob);
+          loadingState.style.display = 'none';
+          errorState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'none';
+          dynamicTarget.style.display = 'block';
+          dynamicTarget.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 480px; padding: 24px;">
+              <img src="${imgUrl}" alt="${customTitle}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);" />
+            </div>
+          `;
+          return;
+        }
+
+        // 6. Code & Plain Text & SQL (.sql, .txt, .md, .json, .log, .py, .cs, etc.)
+        formatBadge.textContent = cleanUrl.endsWith('.sql') || lowerTitle.includes('sql') ? 'SQL SCRIPT' : 'TEXT / CODE';
+        const decoder = new TextDecoder('utf-8');
+        const textContent = decoder.decode(buffer);
+        const linesCount = (textContent.match(/\n/g) || []).length + 1;
+
         loadingState.style.display = 'none';
         errorState.style.display = 'none';
         container.style.display = 'block';
-        pdfTarget.style.display = 'block';
-        dynamicTarget.style.display = 'none';
-        pdfTarget.src = blobUrl;
+        pdfTarget.style.display = 'none';
+        dynamicTarget.style.display = 'block';
+        dynamicTarget.innerHTML = `
+          <div class="code-card">
+            <div class="code-header">
+              <span>${customTitle} • ${linesCount} Lines</span>
+              <button class="btn" style="padding: 4px 10px; font-size: 11px;" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(textContent)}')).then(() => alert('Content copied to clipboard!'))">
+                Copy All
+              </button>
+            </div>
+            <div class="code-body">${textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          </div>
+        `;
       } catch (err) {
-        console.warn('Fetch fallback to direct iframe src:', err);
-        // Direct iframe fallback so it NEVER blocks with "Failed to fetch"
+        console.error('Failed to preview document:', err);
         loadingState.style.display = 'none';
-        errorState.style.display = 'none';
-        container.style.display = 'block';
-        pdfTarget.style.display = 'block';
-        dynamicTarget.style.display = 'none';
-        pdfTarget.src = safeFetchUrl;
+        errorState.style.display = 'block';
+        errorMessage.textContent = err.message || 'The requested document could not be rendered.';
       }
     }
 
