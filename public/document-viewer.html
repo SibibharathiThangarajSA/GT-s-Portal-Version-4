@@ -815,6 +815,9 @@
       displayTitle.textContent = customTitle;
       document.title = `${customTitle} - Preview`;
 
+      const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
+      const lowerTitle = (customTitle || '').toLowerCase();
+
       // CASE A: SharePoint / OneDrive Enterprise Presentations & Documents
       if (safeFetchUrl.includes('sharepoint.com') || safeFetchUrl.includes('1drv.ms') || safeFetchUrl.includes('onedrive.live.com')) {
         formatBadge.textContent = 'POWERPOINT (M365)';

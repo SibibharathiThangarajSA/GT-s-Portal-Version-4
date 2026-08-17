@@ -136,14 +136,20 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     safeUrl.includes('youtu.be') ||
     safeUrl.includes('vimeo.com');
 
-  // Video Streaming Links (YouTube / Vimeo) open directly in player
+  // 1. PPT and PPTX: Open SEPARATELY in Microsoft PowerPoint / PowerPoint Online in a new tab (never in document-viewer.html)
+  if (isPowerPoint) {
+    window.open(safeUrl, '_blank', 'noopener,noreferrer');
+    return true;
+  }
+
+  // 2. Video Streaming Links (YouTube / Vimeo) open directly in player
   if (isStreamingVideoUrl) {
     window.open(safeUrl, '_blank', 'noopener,noreferrer');
     return true;
   }
 
-  // ALL documents (PDF, PPT, PPTX, DOC, DOCX, Excel XLSX, Images, Code, SQL, Text)
-  // open in the in-browser Universal Document Viewer for VIEWING (Never auto-download)
+  // 3. ALL other documents (PDF, Word DOC/DOCX, Excel XLSX, Images, Code, SQL, Text)
+  // open in the in-browser Universal Document Viewer for VIEWING
   const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
   window.open(viewerUrl, '_blank', 'noopener,noreferrer');
   return true;
