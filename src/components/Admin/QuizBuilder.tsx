@@ -47,9 +47,19 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ session, onSaveQuiz, o
     setAiGenerating(true);
     try {
       const materialsText = session.studyMaterials?.map(m => m.description).join(' ') || '';
-      const res = await generateAiQuizApi(session.name, materialsText, 4);
-      if (res.quiz && res.quiz.questions) {
-        setQuestions([...questions, ...res.quiz.questions]);
+      const res = await generateAiQuizApi(session.name, materialsText, 5);
+      const incomingQuestions = res?.questions || res?.quiz?.questions || [];
+      if (Array.isArray(incomingQuestions) && incomingQuestions.length > 0) {
+        const formatted = incomingQuestions.map((q: any, idx: number) => ({
+          id: q.id || `ai-q-${Date.now()}-${idx}`,
+          type: q.type || 'MCQ',
+          prompt: q.prompt || '',
+          options: Array.isArray(q.options) && q.options.length > 0 ? q.options : ['True', 'False'],
+          correctAnswer: q.correctAnswer || (q.options?.[0] ?? 'True'),
+          explanation: q.explanation || '',
+          points: Number(q.points) || 10
+        }));
+        setQuestions([...questions, ...formatted]);
       }
     } catch (err) {
       console.error(err);

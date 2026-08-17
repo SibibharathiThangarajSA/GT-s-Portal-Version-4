@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Session, CategoryType, RoadmapTopic, SubTopic, StudyMaterial, SessionAssignment, PersonalNote, Quiz, QuizQuestion } from '../../types';
 import { SessionTracker } from './SessionTracker';
 import { useFileUpload } from '../../hooks/useFileUpload';
@@ -1356,7 +1356,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                     />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {(q.options || ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, oIdx) => (
+                      {(Array.isArray(q.options) && q.options.length > 0 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D']).map((opt, oIdx) => (
                         <input
                           key={oIdx}
                           type="text"
@@ -1365,9 +1365,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                             const currentQuizzes = [...(editingSession.quizzes || [])];
                             if (currentQuizzes[0]) {
                               const updatedQuestions = [...(currentQuizzes[0].questions || [])];
-                              const opts = [...(updatedQuestions[qIdx].options || [])];
-                              opts[oIdx] = e.target.value;
-                              updatedQuestions[qIdx] = { ...updatedQuestions[qIdx], options: opts };
+                              const rawOpts = updatedQuestions[qIdx].options && updatedQuestions[qIdx].options.length > 0
+                                ? [...updatedQuestions[qIdx].options]
+                                : ['Option A', 'Option B', 'Option C', 'Option D'];
+                              rawOpts[oIdx] = e.target.value;
+                              updatedQuestions[qIdx] = { ...updatedQuestions[qIdx], options: rawOpts };
                               currentQuizzes[0] = { ...currentQuizzes[0], questions: updatedQuestions };
                               setEditingSession({ ...editingSession, quizzes: currentQuizzes });
                             }

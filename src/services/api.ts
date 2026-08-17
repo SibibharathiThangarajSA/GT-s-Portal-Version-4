@@ -129,27 +129,32 @@ export const normalizeSessionPayload = (raw: any): Session => {
       }))
     : [];
 
-  const quizzes = Array.isArray(raw?.quizzes)
-    ? raw.quizzes.map((item: any) => ({
-        id: item?.id || `quiz-${Math.random().toString(36).slice(2)}`,
-        sessionId: item?.sessionId || raw?.id || '',
-        topicId: item?.topicId || undefined,
-        title: item?.title || 'Practice Quiz',
-        description: item?.description || '',
-        passingScorePercent: Number(item?.passingScorePercent || 70),
-        timeLimitMinutes: Number(item?.timeLimitMinutes || 15),
-        questions: Array.isArray(item?.questions) ? item.questions.map((question: any) => ({
-          id: question?.id || `question-${Math.random().toString(36).slice(2)}`,
-          type: question?.type || 'MCQ',
-          prompt: question?.prompt || '',
-          options: Array.isArray(question?.options) ? question.options : [],
+  const quizzes = Array.isArray(raw?.quizzes || raw?.Quizzes)
+    ? (raw.quizzes || raw.Quizzes).map((item: any) => ({
+        id: item?.id || item?.Id || `quiz-${Math.random().toString(36).slice(2)}`,
+        sessionId: item?.sessionId || item?.SessionId || raw?.id || raw?.Id || '',
+        topicId: item?.topicId || item?.TopicId || undefined,
+        title: item?.title || item?.Title || 'Practice Quiz',
+        description: item?.description || item?.Description || '',
+        passingScorePercent: Number(item?.passingScorePercent ?? item?.PassingScorePercent ?? 70),
+        timeLimitMinutes: Number(item?.timeLimitMinutes ?? item?.TimeLimitMinutes ?? 15),
+        questions: Array.isArray(item?.questions || item?.Questions) ? (item.questions || item.Questions).map((question: any) => ({
+          id: question?.id || question?.Id || `question-${Math.random().toString(36).slice(2)}`,
+          type: question?.type || question?.Type || 'MCQ',
+          prompt: question?.prompt || question?.Prompt || '',
+          options: Array.isArray(question?.options)
+            ? question.options
+            : (Array.isArray(question?.Options) ? question.Options : []),
           correctAnswer: question?.correctAnswer !== undefined && question?.correctAnswer !== null && question?.correctAnswer !== ''
             ? question.correctAnswer
-            : parseCorrectAnswer(question?.correctAnswerJson ?? question?.CorrectAnswerJson ?? question?.correctAnswer ?? ''),
-          explanation: question?.explanation || '',
-          points: Number(question?.points || 10),
-          codeSnippet: question?.codeSnippet || '',
-          matchPairs: Array.isArray(question?.matchPairs) ? question.matchPairs : []
+            : (question?.CorrectAnswer !== undefined && question?.CorrectAnswer !== null && question?.CorrectAnswer !== ''
+                ? question.CorrectAnswer
+                : parseCorrectAnswer(question?.correctAnswerJson ?? question?.CorrectAnswerJson ?? question?.correctAnswer ?? question?.CorrectAnswer ?? '')),
+          explanation: question?.explanation || question?.Explanation || '',
+          points: Number(question?.points ?? question?.Points ?? 10),
+          codeSnippet: question?.codeSnippet || question?.CodeSnippet || '',
+          orderIndex: Number(question?.orderIndex ?? question?.OrderIndex ?? 1),
+          matchPairs: Array.isArray(question?.matchPairs || question?.MatchPairs) ? (question.matchPairs || question.MatchPairs) : []
         })) : []
       }))
     : [];
@@ -434,7 +439,35 @@ export const deleteAssignmentApi = async (id: string): Promise<void> => {
 export const fetchQuizzesApi = async (sessionId?: string): Promise<Quiz[]> => {
   const url = sessionId ? `/api/quizzes?sessionId=${encodeURIComponent(sessionId)}` : '/api/quizzes';
   const res = await fetch(url);
-  return await parseApiResponse<Quiz[]>(res);
+  const data = await parseApiResponse<any[]>(res);
+  if (!Array.isArray(data)) return [];
+  return data.map((item: any) => ({
+    id: item?.id || item?.Id || `quiz-${Math.random().toString(36).slice(2)}`,
+    sessionId: item?.sessionId || item?.SessionId || '',
+    topicId: item?.topicId || item?.TopicId || undefined,
+    title: item?.title || item?.Title || 'Practice Quiz',
+    description: item?.description || item?.Description || '',
+    passingScorePercent: Number(item?.passingScorePercent ?? item?.PassingScorePercent ?? 70),
+    timeLimitMinutes: Number(item?.timeLimitMinutes ?? item?.TimeLimitMinutes ?? 15),
+    questions: Array.isArray(item?.questions || item?.Questions) ? (item.questions || item.Questions).map((question: any) => ({
+      id: question?.id || question?.Id || `question-${Math.random().toString(36).slice(2)}`,
+      type: question?.type || question?.Type || 'MCQ',
+      prompt: question?.prompt || question?.Prompt || '',
+      options: Array.isArray(question?.options)
+        ? question.options
+        : (Array.isArray(question?.Options) ? question.Options : []),
+      correctAnswer: question?.correctAnswer !== undefined && question?.correctAnswer !== null && question?.correctAnswer !== ''
+        ? question.correctAnswer
+        : (question?.CorrectAnswer !== undefined && question?.CorrectAnswer !== null && question?.CorrectAnswer !== ''
+            ? question.CorrectAnswer
+            : parseCorrectAnswer(question?.correctAnswerJson ?? question?.CorrectAnswerJson ?? question?.correctAnswer ?? question?.CorrectAnswer ?? '')),
+      explanation: question?.explanation || question?.Explanation || '',
+      points: Number(question?.points ?? question?.Points ?? 10),
+      codeSnippet: question?.codeSnippet || question?.CodeSnippet || '',
+      orderIndex: Number(question?.orderIndex ?? question?.OrderIndex ?? 1),
+      matchPairs: Array.isArray(question?.matchPairs || question?.MatchPairs) ? (question.matchPairs || question.MatchPairs) : []
+    })) : []
+  }));
 };
 
 export const fetchQuizById = async (id: string): Promise<Quiz> => {
@@ -713,16 +746,29 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
   // 5. Persist Quizzes
   const quizzes = sessionData.quizzes || [];
   for (const quiz of quizzes) {
-    const formattedQuestions = (quiz.questions || []).map((q, idx) => ({
-      id: isGuid(q.id) ? q.id : undefined,
-      type: q.type || 'MCQ',
-      prompt: q.prompt || '',
-      options: q.options || ['True', 'False'],
-      correctAnswerJson: typeof q.correctAnswer === 'string' ? q.correctAnswer : JSON.stringify(q.correctAnswer || ''),
-      explanation: q.explanation || '',
-      points: Number(q.points) || 10,
-      orderIndex: idx + 1
-    }));
+    const formattedQuestions = (quiz.questions || []).map((q, idx) => {
+      const rawAnswer = q.correctAnswer;
+      let answerJson = '';
+      if (rawAnswer !== undefined && rawAnswer !== null && rawAnswer !== '') {
+        answerJson = typeof rawAnswer === 'string' ? JSON.stringify(rawAnswer) : JSON.stringify(rawAnswer);
+      } else if (typeof (q as any).correctAnswerJson === 'string') {
+        answerJson = (q as any).correctAnswerJson;
+      } else {
+        answerJson = JSON.stringify((q as any).correctAnswerJson ?? '');
+      }
+
+      return {
+        id: isGuid(q.id) ? q.id : undefined,
+        type: q.type || 'MCQ',
+        prompt: q.prompt || '',
+        options: Array.isArray(q.options) && q.options.length > 0 ? q.options : ['True', 'False'],
+        correctAnswerJson: answerJson,
+        explanation: q.explanation || '',
+        points: Number(q.points) || 10,
+        codeSnippet: q.codeSnippet || null,
+        orderIndex: Number(q.orderIndex ?? idx + 1)
+      };
+    });
 
     const payload: any = {
       sessionId: targetSessionId,
@@ -734,9 +780,9 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
     };
 
     if (quiz.id && isGuid(quiz.id)) {
-      await updateQuizApi(quiz.id, payload).catch(err => console.warn('Failed to update quiz', err));
+      await updateQuizApi(quiz.id, payload);
     } else {
-      await createQuizApi(payload).catch(err => console.warn('Failed to create quiz', err));
+      await createQuizApi(payload);
     }
   }
 

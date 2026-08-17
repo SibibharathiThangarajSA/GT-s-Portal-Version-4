@@ -120,7 +120,8 @@ User Query: ${message}`
 
   // AI Practice Quiz Generator
   ai.post("/generate-quiz", async (req, res) => {
-    const { topicName, textContent } = req.body;
+    const { topicName, textContent, numQuestions } = req.body;
+    const requestedCount = Number(numQuestions) > 0 ? Number(numQuestions) : 5;
     const client = getGeminiClient();
 
     if (!client) {
@@ -147,7 +148,7 @@ User Query: ${message}`
     try {
       const response = await client.models.generateContent({
         model: "gemini-3.6-flash",
-        contents: `Generate 3 high quality multiple choice practice questions for GTs on the topic "${topicName}". Source Material: ${textContent || 'General enterprise topic'}`,
+        contents: `Generate ${requestedCount} high quality multiple choice practice questions for GTs on the topic "${topicName}". Source Material: ${textContent || 'General enterprise topic'}`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
