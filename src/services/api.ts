@@ -297,7 +297,7 @@ export const fetchStudyMaterialsApi = async (sessionId?: string, category?: stri
 };
 
 export const fetchUserGuideDocumentApi = async (): Promise<StudyMaterial | null> => {
-  const localGuidePath = '/Assets/Videos/user-guide/user-guide.docx';
+  const localGuidePath = '/Assets/Videos/user-guide/user-guide.pdf';
   try {
     const materials = await fetchStudyMaterialsApi().catch(() => []);
     if (Array.isArray(materials) && materials.length > 0) {
@@ -338,11 +338,11 @@ export const fetchUserGuideDocumentApi = async (): Promise<StudyMaterial | null>
     return {
       id: 'local-user-guide',
       title: 'GT Companion User Guide',
-      type: 'Word',
+      type: 'PDF',
       url: localGuidePath,
       materialCategory: 'Provided',
       materialType: 'Provided',
-      fileName: 'user-guide.docx',
+      fileName: 'user-guide.pdf',
       currentVersion: 1,
       versions: [],
       tags: ['User Guide', 'Documentation']
@@ -352,11 +352,11 @@ export const fetchUserGuideDocumentApi = async (): Promise<StudyMaterial | null>
     return {
       id: 'local-user-guide',
       title: 'GT Companion User Guide',
-      type: 'Word',
+      type: 'PDF',
       url: localGuidePath,
       materialCategory: 'Provided',
       materialType: 'Provided',
-      fileName: 'user-guide.docx',
+      fileName: 'user-guide.pdf',
       currentVersion: 1,
       versions: [],
       tags: ['User Guide', 'Documentation']

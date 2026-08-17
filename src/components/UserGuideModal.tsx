@@ -423,7 +423,7 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
       }
     }
 
-    const docUrl = currentDoc?.downloadUrl || currentDoc?.webUrl || currentDoc?.url || '/Assets/Videos/user-guide/user-guide.docx';
+    const docUrl = currentDoc?.downloadUrl || currentDoc?.webUrl || currentDoc?.url || '/Assets/Videos/user-guide/user-guide.pdf';
     if (!docUrl || docUrl.trim() === '' || docUrl.trim() === '#') {
       addToast('info', 'User Guide document is not available.');
       return;
@@ -436,14 +436,9 @@ export const UserGuideModal: React.FC<UserGuideModalProps> = ({
 
     const docTitle = currentDoc?.title || 'GT Companion User Guide';
 
-    // Route Word (.docx) and local guide documents through the in-browser viewer
-    // to render the document on screen rather than triggering a browser download
-    if (targetUrl.toLowerCase().endsWith('.docx') || targetUrl.toLowerCase().endsWith('.doc') || targetUrl.includes('/user-guide/')) {
-      const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(targetUrl)}&title=${encodeURIComponent(docTitle)}`;
-      window.open(viewerUrl, '_blank', 'noopener,noreferrer');
-    } else {
-      window.open(targetUrl, '_blank', 'noopener,noreferrer');
-    }
+    // Route all User Guide documents (PDF, Word, etc.) through the in-browser viewer screen
+    const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(targetUrl)}&title=${encodeURIComponent(docTitle)}`;
+    window.open(viewerUrl, '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => {

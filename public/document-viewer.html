@@ -369,43 +369,117 @@
 
       try {
         const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
-        const isPdf = cleanUrl.endsWith('.pdf');
-        const isImage = cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.gif') || cleanUrl.endsWith('.webp') || cleanUrl.endsWith('.svg');
-        const isText = cleanUrl.endsWith('.txt') || cleanUrl.endsWith('.md') || cleanUrl.endsWith('.json') || cleanUrl.endsWith('.log') || cleanUrl.endsWith('.csv');
-        const isDocx = cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc');
+        const lowerTitle = (customTitle || '').toLowerCase();
 
+        // 1. Fetch document as ArrayBuffer and inspect response
+        const res = await fetch(safeFetchUrl);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: Document could not be fetched from "${safeFetchUrl}".`);
+        }
+
+        const contentType = (res.headers.get('content-type') || '').toLowerCase();
+        const buffer = await res.arrayBuffer();
+        const uint8 = new Uint8Array(buffer);
+
+        // 2. Binary Magic Bytes Identification
+        // PDF: %PDF (0x25, 0x50, 0x44, 0x46)
+        const isPdfMagic = uint8.length >= 4 && uint8[0] === 0x25 && uint8[1] === 0x50 && uint8[2] === 0x44 && uint8[3] === 0x46;
+        // ZIP/DOCX: PK\x03\x04 (0x50, 0x4B, 0x03, 0x04)
+        const isZipMagic = uint8.length >= 4 && uint8[0] === 0x50 && uint8[1] === 0x4B && uint8[2] === 0x03 && uint8[3] === 0x04;
+        // PNG: \x89PNG (0x89, 0x50, 0x4E, 0x47)
+        const isPngMagic = uint8.length >= 4 && uint8[0] === 0x89 && uint8[1] === 0x50 && uint8[2] === 0x4E && uint8[3] === 0x47;
+        // JPEG: \xFF\xD8\xFF
+        const isJpegMagic = uint8.length >= 3 && uint8[0] === 0xFF && uint8[1] === 0xD8 && uint8[2] === 0xFF;
+        // GIF: GIF8 (0x47, 0x49, 0x46)
+        const isGifMagic = uint8.length >= 3 && uint8[0] === 0x47 && uint8[1] === 0x49 && uint8[2] === 0x46;
+
+        // 3. File Type Classification
+        const isPdf = isPdfMagic || contentType.includes('pdf') || cleanUrl.endsWith('.pdf') || lowerTitle.endsWith('.pdf');
+        const isImage = isPngMagic || isJpegMagic || isGifMagic || contentType.startsWith('image/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.gif') || cleanUrl.endsWith('.webp') || cleanUrl.endsWith('.svg');
+        const isText = (!isPdf && !isZipMagic && !isImage) && (contentType.startsWith('text/') || cleanUrl.endsWith('.txt') || cleanUrl.endsWith('.md') || cleanUrl.endsWith('.json') || cleanUrl.endsWith('.log') || cleanUrl.endsWith('.csv'));
+        const isDocx = isZipMagic || contentType.includes('word') || contentType.includes('officedocument') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
+
+        // Check if response is an SPA HTML fallback (e.g. <!doctype html or <html when file wasn't found)
+        const firstChars = new TextDecoder('utf-8').decode(uint8.slice(0, 30)).toLowerCase();
+        const isHtmlText = contentType.includes('text/html') || firstChars.includes('<html') || firstChars.includes('<!doctype');
+        if (isHtmlText && !cleanUrl.endsWith('.html') && !cleanUrl.endsWith('.htm')) {
+          // File was not found at initial URL and server returned SPA index.html
+          // Try candidate variations (e.g. .docx -> .pdf or user-guide fallback)
+          let fallbackCandidate = '';
+          if (cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc')) {
+            fallbackCandidate = safeFetchUrl.replace(/\.docx?(\?.*)?$/i, '.pdf$1');
+          } else if (cleanUrl.includes('user-guide')) {
+            fallbackCandidate = '/Assets/Videos/user-guide/user-guide.pdf';
+          }
+
+          if (fallbackCandidate && fallbackCandidate !== safeFetchUrl) {
+            try {
+              const retryRes = await fetch(getSafePathUrl(fallbackCandidate));
+              if (retryRes.ok) {
+                const retryBuffer = await retryRes.arrayBuffer();
+                const retryUint8 = new Uint8Array(retryBuffer);
+                const retryIsPdf = retryUint8.length >= 4 && retryUint8[0] === 0x25 && retryUint8[1] === 0x50 && retryUint8[2] === 0x44 && retryUint8[3] === 0x46;
+                if (retryIsPdf) {
+                  formatBadge.textContent = 'PDF';
+                  const blob = new Blob([retryBuffer], { type: 'application/pdf' });
+                  const blobUrl = URL.createObjectURL(blob);
+                  loadingState.style.display = 'none';
+                  errorState.style.display = 'none';
+                  container.style.display = 'block';
+                  pdfTarget.style.display = 'block';
+                  docxTarget.style.display = 'none';
+                  pdfTarget.src = blobUrl;
+                  activeFileUrl = fallbackCandidate;
+                  return;
+                }
+              }
+            } catch (retryErr) {
+              console.warn('Fallback candidate fetch failed:', retryErr);
+            }
+          }
+          throw new Error('The requested document file was not found on the server.');
+        }
+
+        // CASE A: PDF Document (Render via Blob in native iframe)
         if (isPdf) {
           formatBadge.textContent = 'PDF';
+          const blob = new Blob([buffer], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
           loadingState.style.display = 'none';
+          errorState.style.display = 'none';
           container.style.display = 'block';
           pdfTarget.style.display = 'block';
           docxTarget.style.display = 'none';
-          pdfTarget.src = safeFetchUrl;
+          pdfTarget.src = blobUrl;
           return;
         }
 
+        // CASE B: Image File
         if (isImage) {
           formatBadge.textContent = 'Image';
+          const mime = isPngMagic ? 'image/png' : isJpegMagic ? 'image/jpeg' : isGifMagic ? 'image/gif' : 'image/png';
+          const blob = new Blob([buffer], { type: mime });
+          const imgUrl = URL.createObjectURL(blob);
           loadingState.style.display = 'none';
+          errorState.style.display = 'none';
           container.style.display = 'block';
           pdfTarget.style.display = 'none';
           docxTarget.style.display = 'block';
           docxTarget.innerHTML = `
             <div style="display: flex; justify-content: center; align-items: center; min-height: 400px; padding: 24px;">
-              <img src="${safeFetchUrl}" alt="${customTitle}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);" />
+              <img src="${imgUrl}" alt="${customTitle}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);" />
             </div>
           `;
           return;
         }
 
+        // CASE C: Text / Markdown / Code File
         if (isText) {
           formatBadge.textContent = 'Text';
-          const res = await fetch(safeFetchUrl);
-          if (!res.ok) {
-            throw new Error(`HTTP Error ${res.status}: Could not fetch text document.`);
-          }
-          const textContent = await res.text();
+          const decoder = new TextDecoder('utf-8');
+          const textContent = decoder.decode(buffer);
           loadingState.style.display = 'none';
+          errorState.style.display = 'none';
           container.style.display = 'block';
           pdfTarget.style.display = 'none';
           docxTarget.style.display = 'block';
@@ -415,40 +489,41 @@
           return;
         }
 
-        formatBadge.textContent = isDocx ? 'Word Document' : 'Document';
+        // CASE D: Word DOCX Document (Render via docx-preview)
+        if (isDocx && typeof docx !== 'undefined' && docx.renderAsync) {
+          formatBadge.textContent = 'Word Document';
+          try {
+            await docx.renderAsync(buffer, docxTarget, null, {
+              className: 'docx-preview',
+              inWrapper: true,
+              ignoreWidth: false,
+              ignoreHeight: false,
+              ignoreFonts: false,
+              breakPages: true,
+              experimental: true
+            });
 
-        // Fetch docx file as ArrayBuffer
-        const res = await fetch(safeFetchUrl);
-        if (!res.ok) {
-          throw new Error(`HTTP Error ${res.status}: Document could not be fetched from "${safeFetchUrl}".`);
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            container.style.display = 'block';
+            docxTarget.style.display = 'block';
+            pdfTarget.style.display = 'none';
+            return;
+          } catch (docxErr) {
+            console.warn('Docx render failed, attempting fallback to PDF preview:', docxErr);
+          }
         }
 
-        const buffer = await res.arrayBuffer();
-
-        // Render docx directly to target element if docx-preview is loaded
-        if (typeof docx !== 'undefined' && docx.renderAsync) {
-          await docx.renderAsync(buffer, docxTarget, null, {
-            className: 'docx-preview',
-            inWrapper: true,
-            ignoreWidth: false,
-            ignoreHeight: false,
-            ignoreFonts: false,
-            breakPages: true,
-            experimental: true
-          });
-
-          loadingState.style.display = 'none';
-          container.style.display = 'block';
-          docxTarget.style.display = 'block';
-          pdfTarget.style.display = 'none';
-        } else {
-          // Fallback to pdf iframe
-          loadingState.style.display = 'none';
-          container.style.display = 'block';
-          pdfTarget.style.display = 'block';
-          docxTarget.style.display = 'none';
-          pdfTarget.src = safeFetchUrl;
-        }
+        // CASE E: General Fallback (Try PDF Blob Preview or display direct download)
+        formatBadge.textContent = 'Document';
+        const fallbackBlob = new Blob([buffer], { type: 'application/pdf' });
+        const fallbackUrl = URL.createObjectURL(fallbackBlob);
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'block';
+        docxTarget.style.display = 'none';
+        pdfTarget.src = fallbackUrl;
       } catch (err) {
         console.error('Failed to preview document:', err);
         loadingState.style.display = 'none';
