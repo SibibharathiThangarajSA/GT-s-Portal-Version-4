@@ -102,41 +102,19 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     'Document Preview';
 
   const safeUrl = encodeDocumentUrl(url);
-  const cleanUrl = safeUrl.toLowerCase().split('?')[0];
 
-  const isInternalFile =
-    safeUrl.startsWith('/api/') ||
-    safeUrl.startsWith('/uploads/') ||
-    safeUrl.startsWith('/') ||
-    safeUrl.includes('/api/materials/files/');
+  // Check if it's an external video streaming website link (e.g. YouTube, Vimeo)
+  const isStreamingVideoUrl =
+    safeUrl.includes('youtube.com') ||
+    safeUrl.includes('youtu.be') ||
+    safeUrl.includes('vimeo.com');
 
-  const isDocFile =
-    cleanUrl.endsWith('.pdf') ||
-    cleanUrl.endsWith('.docx') ||
-    cleanUrl.endsWith('.doc') ||
-    cleanUrl.endsWith('.pptx') ||
-    cleanUrl.endsWith('.ppt') ||
-    cleanUrl.endsWith('.xlsx') ||
-    cleanUrl.endsWith('.xls') ||
-    cleanUrl.endsWith('.csv') ||
-    cleanUrl.endsWith('.txt') ||
-    cleanUrl.endsWith('.md') ||
-    cleanUrl.endsWith('.json') ||
-    cleanUrl.endsWith('.log') ||
-    cleanUrl.endsWith('.png') ||
-    cleanUrl.endsWith('.jpg') ||
-    cleanUrl.endsWith('.jpeg') ||
-    cleanUrl.endsWith('.webp') ||
-    cleanUrl.endsWith('.svg') ||
-    cleanUrl.endsWith('.mp4') ||
-    cleanUrl.endsWith('.webm') ||
-    cleanUrl.endsWith('.mp3');
-
-  if (isInternalFile || isDocFile) {
+  if (isStreamingVideoUrl) {
+    window.open(safeUrl, '_blank', 'noopener,noreferrer');
+  } else {
+    // All PowerPoint presentations, PDFs, Word docs, Excel sheets, images, and files open universally in the document viewer
     const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
     window.open(viewerUrl, '_blank', 'noopener,noreferrer');
-  } else {
-    window.open(safeUrl, '_blank', 'noopener,noreferrer');
   }
   return true;
 };
