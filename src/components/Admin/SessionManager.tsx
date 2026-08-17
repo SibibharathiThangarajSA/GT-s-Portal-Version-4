@@ -226,7 +226,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       title: 'New Subtopic Node',
       durationMinutes: 30,
       status: 'Unlocked',
-      description: 'Subtopic details and key steps.',
+      description: '',
       videoUrl: '',
       documentUrl: '',
       materialsUrl: '',
