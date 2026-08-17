@@ -815,10 +815,47 @@
       displayTitle.textContent = customTitle;
       document.title = `${customTitle} - Preview`;
 
-      const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
-      const lowerTitle = (customTitle || '').toLowerCase();
+      // CASE A: SharePoint / OneDrive Enterprise Presentations & Documents
+      if (safeFetchUrl.includes('sharepoint.com') || safeFetchUrl.includes('1drv.ms') || safeFetchUrl.includes('onedrive.live.com')) {
+        formatBadge.textContent = 'POWERPOINT (M365)';
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'none';
+        dynamicTarget.style.display = 'block';
 
-      // CASE A: External Public URLs (Embed via Google Docs / Native)
+        // Construct optimal SharePoint embed URL
+        let embedUrl = safeFetchUrl;
+        if (!embedUrl.includes('action=')) {
+          const sep = embedUrl.includes('?') ? '&' : '?';
+          embedUrl = `${embedUrl}${sep}action=embedview`;
+        }
+
+        dynamicTarget.innerHTML = `
+          <div class="presentation-container">
+            <div class="presentation-toolbar" style="background: linear-gradient(135deg, #1e3a8a, #1e293b);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <span style="font-weight: 700; font-size: 14px; color: #f8fafc;">Microsoft 365 / SharePoint Presentation</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" onclick="window.open('${safeFetchUrl}', '_blank', 'noopener,noreferrer')" title="Open in Microsoft PowerPoint Online">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  <span>Open in PowerPoint Online</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- SharePoint / Office Embed Frame with SSO notice -->
+            <div style="position: relative; width: 100%; height: calc(100vh - 180px); background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; box-shadow: 0 16px 40px rgba(0,0,0,0.45);">
+              <iframe id="sharepoint-frame" src="${embedUrl}" style="width: 100%; height: 100%; border: none;" allowfullscreen="true"></iframe>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // CASE B: Other External Public URLs (Google Docs / Native)
       if (/^https?:\/\//i.test(safeFetchUrl) && !safeFetchUrl.includes('localhost') && !safeFetchUrl.includes('127.0.0.1')) {
         loadingState.style.display = 'none';
         errorState.style.display = 'none';
