@@ -3,12 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Document Preview - GT Companion</title>
+  <title>Document Viewer - GT Companion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Core Vendor Parsers -->
   <script src="/vendor/jszip.min.js"></script>
   <script src="/vendor/docx-preview.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -17,24 +20,25 @@
     }
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background-color: #0f172a;
+      background-color: #0b1329;
       color: #334155;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
     }
+    /* Sticky Top Header */
     .header {
       position: sticky;
       top: 0;
       z-index: 50;
-      background: #1e293b;
-      border-bottom: 1px solid #334155;
+      background: #131d38;
+      border-bottom: 1px solid #1e2d52;
       padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
     }
     .header-left {
       display: flex;
@@ -46,14 +50,14 @@
       width: 36px;
       height: 36px;
       border-radius: 10px;
-      background: #2563eb;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
+      font-weight: 800;
       font-size: 14px;
-      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
       flex-shrink: 0;
     }
     .doc-title {
@@ -69,9 +73,10 @@
       background: rgba(59, 130, 246, 0.2);
       color: #93c5fd;
       border: 1px solid rgba(59, 130, 246, 0.3);
-      padding: 2px 8px;
+      padding: 2px 10px;
       border-radius: 9999px;
-      font-weight: 600;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
       margin-left: 8px;
       flex-shrink: 0;
     }
@@ -85,9 +90,9 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: #334155;
+      background: #1e293b;
       color: #f1f5f9;
-      border: 1px solid #475569;
+      border: 1px solid #334155;
       padding: 7px 14px;
       border-radius: 8px;
       font-size: 12px;
@@ -95,11 +100,13 @@
       cursor: pointer;
       transition: all 0.2s ease;
       text-decoration: none;
+      user-select: none;
     }
     .btn:hover {
-      background: #475569;
+      background: #334155;
       color: #ffffff;
-      border-color: #64748b;
+      border-color: #475569;
+      transform: translateY(-1px);
     }
     .btn-primary {
       background: #2563eb;
@@ -122,12 +129,12 @@
       display: flex;
       justify-content: center;
       padding: 24px 16px;
-      background: #0f172a;
+      background: #0b1329;
       overflow-y: auto;
     }
     .viewer-container {
       width: 100%;
-      max-width: 1080px;
+      max-width: 1120px;
       min-height: calc(100vh - 120px);
       transition: transform 0.2s ease;
       transform-origin: top center;
@@ -140,11 +147,11 @@
     .docx-wrapper > section.docx {
       background: white !important;
       color: #1e293b !important;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
-      border-radius: 8px !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+      border-radius: 12px !important;
       margin-bottom: 24px !important;
       padding: 48px 56px !important;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #cbd5e1;
     }
     .docx-wrapper p {
       line-height: 1.65 !important;
@@ -169,20 +176,20 @@
     }
     /* Loading & Error States */
     .state-card {
-      background: #1e293b;
-      border: 1px solid #334155;
+      background: #131d38;
+      border: 1px solid #1e2d52;
       border-radius: 16px;
       padding: 48px 32px;
       text-align: center;
       color: #e2e8f0;
-      max-width: 520px;
+      max-width: 540px;
       margin: 60px auto;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
     }
     .spinner {
       width: 44px;
       height: 44px;
-      border: 4px solid #334155;
+      border: 4px solid #1e293b;
       border-top-color: #3b82f6;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
@@ -199,15 +206,221 @@
       background: white;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     }
+    /* Spreadsheet Excel Styles */
+    .spreadsheet-card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      border: 1px solid #cbd5e1;
+      overflow: hidden;
+    }
+    .sheet-tabs {
+      display: flex;
+      background: #f1f5f9;
+      border-bottom: 1px solid #cbd5e1;
+      padding: 8px 12px 0;
+      gap: 6px;
+      overflow-x: auto;
+    }
+    .sheet-tab {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #e2e8f0;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .sheet-tab.active {
+      background: #ffffff;
+      color: #2563eb;
+      border-color: #cbd5e1;
+      border-bottom: 1px solid #ffffff;
+      margin-bottom: -1px;
+    }
+    .sheet-table-wrapper {
+      padding: 16px;
+      overflow: auto;
+      max-height: calc(100vh - 190px);
+    }
+    .sheet-table-wrapper table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 13px;
+      color: #1e293b;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .sheet-table-wrapper th, .sheet-table-wrapper td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    .sheet-table-wrapper th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #0f172a;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    .sheet-table-wrapper tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    /* Presentation PPTX Styles */
+    .presentation-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .presentation-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #131d38;
+      border: 1px solid #1e2d52;
+      border-radius: 12px;
+      padding: 12px 20px;
+      color: white;
+    }
+    .slide-canvas {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      aspect-ratio: 16/9;
+      padding: 48px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+    }
+    .slide-canvas h2 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #60a5fa;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 12px;
+    }
+    .slide-body {
+      flex: 1;
+      font-size: 16px;
+      line-height: 1.8;
+      color: #e2e8f0;
+      overflow-y: auto;
+    }
+    .slide-body ul {
+      margin-left: 24px;
+      space-y: 8px;
+    }
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 12px;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .deck-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (min-width: 640px) {
+      .deck-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    .deck-card {
+      background: #131d38;
+      border: 1px solid #1e2d52;
+      border-radius: 12px;
+      padding: 20px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .deck-card:hover {
+      border-color: #3b82f6;
+      transform: translateY(-2px);
+    }
+    .deck-card.active-card {
+      border-color: #2563eb;
+      background: #1e293b;
+      box-shadow: 0 0 15px rgba(37,99,235,0.3);
+    }
+    /* Text / Code Styles */
+    .code-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+    .code-header {
+      background: #1e293b;
+      padding: 10px 20px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #94a3b8;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .code-body {
+      padding: 24px;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-x: auto;
+      max-height: calc(100vh - 200px);
+    }
+    /* Universal Fallback Card */
+    .generic-file-card {
+      background: #131d38;
+      border: 1px solid #1e2d52;
+      border-radius: 20px;
+      padding: 48px 32px;
+      text-align: center;
+      color: white;
+      max-width: 580px;
+      margin: 40px auto;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    }
+    .file-icon-box {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
     @media print {
-      .header {
+      .header, .presentation-toolbar, .deck-grid, .btn {
         display: none !important;
       }
       body, .main-content {
         background: white !important;
         padding: 0 !important;
       }
-      .docx-wrapper > section.docx {
+      .docx-wrapper > section.docx, .slide-canvas, .spreadsheet-card, .code-card {
         box-shadow: none !important;
         border: none !important;
         padding: 0 !important;
@@ -218,12 +431,13 @@
 </head>
 <body>
 
+  <!-- Top Navigation Header -->
   <div class="header">
     <div class="header-left">
       <div class="brand-icon">GT</div>
       <div style="min-width: 0;">
         <span class="doc-title" id="display-title">Document Preview</span>
-        <span class="doc-badge" id="format-badge">Document</span>
+        <span class="doc-badge" id="format-badge">DOCUMENT</span>
       </div>
     </div>
     <div class="header-controls">
@@ -238,7 +452,7 @@
       <button class="btn" onclick="resetZoom()" title="Reset Zoom">
         <span>100%</span>
       </button>
-      <button class="btn btn-emerald" id="download-btn" onclick="downloadCurrentFile()" title="Download File">
+      <button class="btn btn-emerald" id="download-btn" onclick="downloadCurrentFile()" title="Download Document">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span>Download</span>
       </button>
@@ -253,13 +467,16 @@
     </div>
   </div>
 
+  <!-- Main Document Container Area -->
   <div class="main-content">
+    <!-- Loading State -->
     <div id="loading-state" class="state-card">
       <div class="spinner"></div>
       <h3 style="font-size: 16px; margin-bottom: 8px; color: #f8fafc;">Opening Document...</h3>
       <p style="font-size: 13px; color: #94a3b8;">Rendering high-resolution formatted preview.</p>
     </div>
 
+    <!-- Error State -->
     <div id="error-state" class="state-card" style="display: none;">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2" style="margin: 0 auto 16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <h3 style="font-size: 16px; margin-bottom: 8px; color: #f8fafc;">Document Unavailable</h3>
@@ -270,8 +487,9 @@
       </div>
     </div>
 
+    <!-- Universal Viewer Canvas -->
     <div id="viewer-container" class="viewer-container" style="display: none;">
-      <div id="docx-target"></div>
+      <div id="dynamic-target"></div>
       <iframe id="pdf-target" class="pdf-frame" style="display: none;"></iframe>
     </div>
   </div>
@@ -280,12 +498,13 @@
     let currentScale = 1.0;
     let activeFileUrl = '';
     let activeFileName = '';
+    let activeBuffer = null;
 
     const container = document.getElementById('viewer-container');
     const loadingState = document.getElementById('loading-state');
     const errorState = document.getElementById('error-state');
     const errorMessage = document.getElementById('error-message');
-    const docxTarget = document.getElementById('docx-target');
+    const dynamicTarget = document.getElementById('dynamic-target');
     const pdfTarget = document.getElementById('pdf-target');
     const displayTitle = document.getElementById('display-title');
     const formatBadge = document.getElementById('format-badge');
@@ -348,6 +567,195 @@
       link.remove();
     }
 
+    // --- PPTX Slide Deck Parser ---
+    async function renderPptxPresentation(buffer, title) {
+      formatBadge.textContent = 'POWERPOINT (PPTX)';
+      try {
+        const zip = await JSZip.loadAsync(buffer);
+        const slideFiles = [];
+        zip.forEach((path, file) => {
+          if (/^ppt\/slides\/slide[0-9]+\.xml$/i.test(path)) {
+            const num = parseInt(path.replace(/[^0-9]/g, ''), 10);
+            slideFiles.push({ path, num, file });
+          }
+        });
+        slideFiles.sort((a, b) => a.num - b.num);
+
+        if (slideFiles.length === 0) {
+          throw new Error('No slides found in PPTX');
+        }
+
+        const slidesData = [];
+        for (const sf of slideFiles) {
+          const xmlText = await sf.file.async('text');
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+          
+          // Extract text runs
+          const textNodes = xmlDoc.getElementsByTagName('a:t');
+          const paragraphs = [];
+          for (let i = 0; i < textNodes.length; i++) {
+            const t = textNodes[i].textContent.trim();
+            if (t) paragraphs.push(t);
+          }
+
+          let slideTitle = `Slide ${sf.num}`;
+          let slidePoints = [];
+          if (paragraphs.length > 0) {
+            slideTitle = paragraphs[0];
+            slidePoints = paragraphs.slice(1);
+          }
+
+          slidesData.push({
+            slideNumber: sf.num,
+            title: slideTitle,
+            points: slidePoints
+          });
+        }
+
+        let currentSlideIdx = 0;
+
+        function updateSlideUI() {
+          const slide = slidesData[currentSlideIdx];
+          const hasPoints = slide.points.length > 0;
+
+          dynamicTarget.innerHTML = `
+            <div class="presentation-container">
+              <div class="presentation-toolbar">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-weight: 700; font-size: 14px; color: #60a5fa;">Slide ${slide.slideNumber} of ${slidesData.length}</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn" id="prev-slide-btn" ${currentSlideIdx === 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                    <span>← Previous</span>
+                  </button>
+                  <button class="btn btn-primary" id="next-slide-btn" ${currentSlideIdx === slidesData.length - 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                    <span>Next →</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="slide-canvas">
+                <h2>${slide.title}</h2>
+                <div class="slide-body">
+                  ${hasPoints ? `
+                    <ul>
+                      ${slide.points.map(pt => `<li>${pt}</li>`).join('')}
+                    </ul>
+                  ` : `
+                    <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #94a3b8; font-style: italic;">
+                      Presentation Slide Content
+                    </div>
+                  `}
+                </div>
+                <div class="slide-footer">
+                  <span>${title}</span>
+                  <span>Slide ${slide.slideNumber} / ${slidesData.length}</span>
+                </div>
+              </div>
+
+              <div style="margin-top: 12px;">
+                <h4 style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Slide Navigation</h4>
+                <div class="deck-grid">
+                  ${slidesData.map((s, idx) => `
+                    <div class="deck-card ${idx === currentSlideIdx ? 'active-card' : ''}" onclick="window.selectSlide(${idx})">
+                      <div style="font-size: 11px; color: #60a5fa; font-weight: 700; margin-bottom: 4px;">Slide ${s.slideNumber}</div>
+                      <div style="font-size: 13px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.title}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+
+          const prevBtn = document.getElementById('prev-slide-btn');
+          const nextBtn = document.getElementById('next-slide-btn');
+          if (prevBtn && currentSlideIdx > 0) {
+            prevBtn.onclick = () => {
+              currentSlideIdx--;
+              updateSlideUI();
+            };
+          }
+          if (nextBtn && currentSlideIdx < slidesData.length - 1) {
+            nextBtn.onclick = () => {
+              currentSlideIdx++;
+              updateSlideUI();
+            };
+          }
+        }
+
+        window.selectSlide = (idx) => {
+          currentSlideIdx = idx;
+          updateSlideUI();
+        };
+
+        updateSlideUI();
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'none';
+        dynamicTarget.style.display = 'block';
+        return true;
+      } catch (err) {
+        console.warn('PPTX parsing fallback:', err);
+        return false;
+      }
+    }
+
+    // --- Excel Spreadsheet Parser ---
+    async function renderExcelWorkbook(buffer, title) {
+      formatBadge.textContent = 'EXCEL SPREADSHEET';
+      try {
+        if (typeof XLSX === 'undefined') {
+          throw new Error('SheetJS library not loaded');
+        }
+
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const sheetNames = workbook.SheetNames;
+        if (!sheetNames || sheetNames.length === 0) {
+          throw new Error('No sheets found in workbook');
+        }
+
+        let activeSheet = sheetNames[0];
+
+        function updateSheetTable() {
+          const worksheet = workbook.Sheets[activeSheet];
+          const htmlTable = XLSX.utils.sheet_to_html(worksheet, { id: 'excel-table' });
+
+          dynamicTarget.innerHTML = `
+            <div class="spreadsheet-card">
+              <div class="sheet-tabs">
+                ${sheetNames.map(name => `
+                  <button class="sheet-tab ${name === activeSheet ? 'active' : ''}" onclick="window.selectSheet('${name}')">
+                    ${name}
+                  </button>
+                `).join('')}
+              </div>
+              <div class="sheet-table-wrapper">
+                ${htmlTable}
+              </div>
+            </div>
+          `;
+        }
+
+        window.selectSheet = (name) => {
+          activeSheet = name;
+          updateSheetTable();
+        };
+
+        updateSheetTable();
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'none';
+        dynamicTarget.style.display = 'block';
+        return true;
+      } catch (err) {
+        console.warn('Excel parsing failed:', err);
+        return false;
+      }
+    }
+
     async function loadDocument() {
       const urlParams = new URLSearchParams(window.location.search);
       let fileUrl = urlParams.get('file') || '';
@@ -371,7 +779,7 @@
         const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
         const lowerTitle = (customTitle || '').toLowerCase();
 
-        // 1. Fetch document as ArrayBuffer and inspect response
+        // 1. Fetch document as ArrayBuffer
         const res = await fetch(safeFetchUrl);
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: Document could not be fetched from "${safeFetchUrl}".`);
@@ -379,12 +787,13 @@
 
         const contentType = (res.headers.get('content-type') || '').toLowerCase();
         const buffer = await res.arrayBuffer();
+        activeBuffer = buffer;
         const uint8 = new Uint8Array(buffer);
 
         // 2. Binary Magic Bytes Identification
         // PDF: %PDF (0x25, 0x50, 0x44, 0x46)
         const isPdfMagic = uint8.length >= 4 && uint8[0] === 0x25 && uint8[1] === 0x50 && uint8[2] === 0x44 && uint8[3] === 0x46;
-        // ZIP/DOCX: PK\x03\x04 (0x50, 0x4B, 0x03, 0x04)
+        // ZIP: PK\x03\x04 (0x50, 0x4B, 0x03, 0x04)
         const isZipMagic = uint8.length >= 4 && uint8[0] === 0x50 && uint8[1] === 0x4B && uint8[2] === 0x03 && uint8[3] === 0x04;
         // PNG: \x89PNG (0x89, 0x50, 0x4E, 0x47)
         const isPngMagic = uint8.length >= 4 && uint8[0] === 0x89 && uint8[1] === 0x50 && uint8[2] === 0x4E && uint8[3] === 0x47;
@@ -393,18 +802,10 @@
         // GIF: GIF8 (0x47, 0x49, 0x46)
         const isGifMagic = uint8.length >= 3 && uint8[0] === 0x47 && uint8[1] === 0x49 && uint8[2] === 0x46;
 
-        // 3. File Type Classification
-        const isPdf = isPdfMagic || contentType.includes('pdf') || cleanUrl.endsWith('.pdf') || lowerTitle.endsWith('.pdf');
-        const isImage = isPngMagic || isJpegMagic || isGifMagic || contentType.startsWith('image/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.gif') || cleanUrl.endsWith('.webp') || cleanUrl.endsWith('.svg');
-        const isText = (!isPdf && !isZipMagic && !isImage) && (contentType.startsWith('text/') || cleanUrl.endsWith('.txt') || cleanUrl.endsWith('.md') || cleanUrl.endsWith('.json') || cleanUrl.endsWith('.log') || cleanUrl.endsWith('.csv'));
-        const isDocx = isZipMagic || contentType.includes('word') || contentType.includes('officedocument') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
-
-        // Check if response is an SPA HTML fallback (e.g. <!doctype html or <html when file wasn't found)
-        const firstChars = new TextDecoder('utf-8').decode(uint8.slice(0, 30)).toLowerCase();
+        // 3. SPA 404 Fallback Check (Prevent HTML code from rendering as document text)
+        const firstChars = new TextDecoder('utf-8').decode(uint8.slice(0, 35)).toLowerCase();
         const isHtmlText = contentType.includes('text/html') || firstChars.includes('<html') || firstChars.includes('<!doctype');
         if (isHtmlText && !cleanUrl.endsWith('.html') && !cleanUrl.endsWith('.htm')) {
-          // File was not found at initial URL and server returned SPA index.html
-          // Try candidate variations (e.g. .docx -> .pdf or user-guide fallback)
           let fallbackCandidate = '';
           if (cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc')) {
             fallbackCandidate = safeFetchUrl.replace(/\.docx?(\?.*)?$/i, '.pdf$1');
@@ -427,7 +828,7 @@
                   errorState.style.display = 'none';
                   container.style.display = 'block';
                   pdfTarget.style.display = 'block';
-                  docxTarget.style.display = 'none';
+                  dynamicTarget.style.display = 'none';
                   pdfTarget.src = blobUrl;
                   activeFileUrl = fallbackCandidate;
                   return;
@@ -440,7 +841,10 @@
           throw new Error('The requested document file was not found on the server.');
         }
 
-        // CASE A: PDF Document (Render via Blob in native iframe)
+        // ============================================
+        // CASE 1: PDF DOCUMENT
+        // ============================================
+        const isPdf = isPdfMagic || contentType.includes('pdf') || cleanUrl.endsWith('.pdf') || lowerTitle.endsWith('.pdf');
         if (isPdf) {
           formatBadge.textContent = 'PDF';
           const blob = new Blob([buffer], { type: 'application/pdf' });
@@ -449,51 +853,37 @@
           errorState.style.display = 'none';
           container.style.display = 'block';
           pdfTarget.style.display = 'block';
-          docxTarget.style.display = 'none';
+          dynamicTarget.style.display = 'none';
           pdfTarget.src = blobUrl;
           return;
         }
 
-        // CASE B: Image File
-        if (isImage) {
-          formatBadge.textContent = 'Image';
-          const mime = isPngMagic ? 'image/png' : isJpegMagic ? 'image/jpeg' : isGifMagic ? 'image/gif' : 'image/png';
-          const blob = new Blob([buffer], { type: mime });
-          const imgUrl = URL.createObjectURL(blob);
-          loadingState.style.display = 'none';
-          errorState.style.display = 'none';
-          container.style.display = 'block';
-          pdfTarget.style.display = 'none';
-          docxTarget.style.display = 'block';
-          docxTarget.innerHTML = `
-            <div style="display: flex; justify-content: center; align-items: center; min-height: 400px; padding: 24px;">
-              <img src="${imgUrl}" alt="${customTitle}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);" />
-            </div>
-          `;
-          return;
+        // ============================================
+        // CASE 2: POWERPOINT PRESENTATION (.pptx, .ppt)
+        // ============================================
+        const isPptx = cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || lowerTitle.endsWith('.pptx') || lowerTitle.endsWith('.ppt') || contentType.includes('presentation') || contentType.includes('powerpoint');
+        if (isPptx) {
+          const rendered = await renderPptxPresentation(buffer, customTitle);
+          if (rendered) return;
         }
 
-        // CASE C: Text / Markdown / Code File
-        if (isText) {
-          formatBadge.textContent = 'Text';
-          const decoder = new TextDecoder('utf-8');
-          const textContent = decoder.decode(buffer);
-          loadingState.style.display = 'none';
-          errorState.style.display = 'none';
-          container.style.display = 'block';
-          pdfTarget.style.display = 'none';
-          docxTarget.style.display = 'block';
-          docxTarget.innerHTML = `
-            <div style="background: white; color: #1e293b; padding: 36px 44px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); font-family: monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">${textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-          `;
-          return;
+        // ============================================
+        // CASE 3: EXCEL SPREADSHEET (.xlsx, .xls, .csv)
+        // ============================================
+        const isExcel = cleanUrl.endsWith('.xlsx') || cleanUrl.endsWith('.xls') || cleanUrl.endsWith('.csv') || lowerTitle.endsWith('.xlsx') || lowerTitle.endsWith('.xls') || lowerTitle.endsWith('.csv') || contentType.includes('spreadsheet') || contentType.includes('excel');
+        if (isExcel) {
+          const rendered = await renderExcelWorkbook(buffer, customTitle);
+          if (rendered) return;
         }
 
-        // CASE D: Word DOCX Document (Render via docx-preview)
+        // ============================================
+        // CASE 4: WORD DOCUMENT (.docx, .doc)
+        // ============================================
+        const isDocx = isZipMagic || contentType.includes('word') || contentType.includes('officedocument') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
         if (isDocx && typeof docx !== 'undefined' && docx.renderAsync) {
-          formatBadge.textContent = 'Word Document';
+          formatBadge.textContent = 'WORD (DOCX)';
           try {
-            await docx.renderAsync(buffer, docxTarget, null, {
+            await docx.renderAsync(buffer, dynamicTarget, null, {
               className: 'docx-preview',
               inWrapper: true,
               ignoreWidth: false,
@@ -506,24 +896,119 @@
             loadingState.style.display = 'none';
             errorState.style.display = 'none';
             container.style.display = 'block';
-            docxTarget.style.display = 'block';
+            dynamicTarget.style.display = 'block';
             pdfTarget.style.display = 'none';
             return;
           } catch (docxErr) {
-            console.warn('Docx render failed, attempting fallback to PDF preview:', docxErr);
+            console.warn('Docx renderAsync failed:', docxErr);
           }
         }
 
-        // CASE E: General Fallback (Try PDF Blob Preview or display direct download)
-        formatBadge.textContent = 'Document';
-        const fallbackBlob = new Blob([buffer], { type: 'application/pdf' });
-        const fallbackUrl = URL.createObjectURL(fallbackBlob);
+        // ============================================
+        // CASE 5: IMAGES (PNG, JPG, JPEG, GIF, SVG, WEBP)
+        // ============================================
+        const isImage = isPngMagic || isJpegMagic || isGifMagic || contentType.startsWith('image/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.gif') || cleanUrl.endsWith('.webp') || cleanUrl.endsWith('.svg');
+        if (isImage) {
+          formatBadge.textContent = 'IMAGE';
+          const mime = isPngMagic ? 'image/png' : isJpegMagic ? 'image/jpeg' : isGifMagic ? 'image/gif' : 'image/png';
+          const blob = new Blob([buffer], { type: mime });
+          const imgUrl = URL.createObjectURL(blob);
+          loadingState.style.display = 'none';
+          errorState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'none';
+          dynamicTarget.style.display = 'block';
+          dynamicTarget.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 480px; padding: 24px;">
+              <img src="${imgUrl}" alt="${customTitle}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);" />
+            </div>
+          `;
+          return;
+        }
+
+        // ============================================
+        // CASE 6: VIDEO / AUDIO MEDIA
+        // ============================================
+        const isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.webm') || cleanUrl.endsWith('.ogg') || contentType.startsWith('video/');
+        const isAudio = cleanUrl.endsWith('.mp3') || cleanUrl.endsWith('.wav') || cleanUrl.endsWith('.m4a') || contentType.startsWith('audio/');
+        if (isVideo || isAudio) {
+          formatBadge.textContent = isVideo ? 'VIDEO' : 'AUDIO';
+          const mime = isVideo ? 'video/mp4' : 'audio/mpeg';
+          const blob = new Blob([buffer], { type: mime });
+          const mediaUrl = URL.createObjectURL(blob);
+          loadingState.style.display = 'none';
+          errorState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'none';
+          dynamicTarget.style.display = 'block';
+          dynamicTarget.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 480px; padding: 24px;">
+              ${isVideo ? `
+                <video src="${mediaUrl}" controls autoplay style="max-width: 100%; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);"></video>
+              ` : `
+                <audio src="${mediaUrl}" controls style="width: 100%; max-width: 480px;"></audio>
+              `}
+            </div>
+          `;
+          return;
+        }
+
+        // ============================================
+        // CASE 7: CODE & PLAIN TEXT (.txt, .md, .json, .log, etc.)
+        // ============================================
+        const isText = (!isZipMagic && !isPdfMagic && !isPngMagic) && (contentType.startsWith('text/') || cleanUrl.endsWith('.txt') || cleanUrl.endsWith('.md') || cleanUrl.endsWith('.json') || cleanUrl.endsWith('.log') || cleanUrl.endsWith('.sql') || cleanUrl.endsWith('.py') || cleanUrl.endsWith('.js') || cleanUrl.endsWith('.ts') || cleanUrl.endsWith('.cs') || cleanUrl.endsWith('.yaml') || cleanUrl.endsWith('.yml'));
+        if (isText) {
+          formatBadge.textContent = 'CODE / TEXT';
+          const decoder = new TextDecoder('utf-8');
+          const textContent = decoder.decode(buffer);
+          const linesCount = (textContent.match(/\n/g) || []).length + 1;
+
+          loadingState.style.display = 'none';
+          errorState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'none';
+          dynamicTarget.style.display = 'block';
+          dynamicTarget.innerHTML = `
+            <div class="code-card">
+              <div class="code-header">
+                <span>${customTitle} • ${linesCount} Lines</span>
+                <button class="btn" style="padding: 4px 10px; font-size: 11px;" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(textContent)}')).then(() => alert('Content copied to clipboard!'))">
+                  Copy All
+                </button>
+              </div>
+              <div class="code-body">${textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            </div>
+          `;
+          return;
+        }
+
+        // ============================================
+        // CASE 8: UNIVERSAL FALLBACK FILE CARD
+        // ============================================
+        formatBadge.textContent = 'FILE ATTACHMENT';
+        const fileSizeKb = Math.round(buffer.byteLength / 1024);
+        const ext = cleanUrl.split('.').pop().toUpperCase() || 'FILE';
+
         loadingState.style.display = 'none';
         errorState.style.display = 'none';
         container.style.display = 'block';
-        pdfTarget.style.display = 'block';
-        docxTarget.style.display = 'none';
-        pdfTarget.src = fallbackUrl;
+        pdfTarget.style.display = 'none';
+        dynamicTarget.style.display = 'block';
+        dynamicTarget.innerHTML = `
+          <div class="generic-file-card">
+            <div class="file-icon-box">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #f8fafc;">${customTitle}</h3>
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 24px;">Format: <strong>${ext}</strong> • Size: <strong>${fileSizeKb} KB</strong></p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+              <button class="btn btn-emerald" onclick="downloadCurrentFile()" style="padding: 10px 24px; font-size: 13px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Document
+              </button>
+            </div>
+          </div>
+        `;
       } catch (err) {
         console.error('Failed to preview document:', err);
         loadingState.style.display = 'none';

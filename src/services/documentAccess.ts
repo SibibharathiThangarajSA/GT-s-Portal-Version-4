@@ -116,13 +116,21 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     cleanUrl.endsWith('.doc') ||
     cleanUrl.endsWith('.pptx') ||
     cleanUrl.endsWith('.ppt') ||
+    cleanUrl.endsWith('.xlsx') ||
+    cleanUrl.endsWith('.xls') ||
+    cleanUrl.endsWith('.csv') ||
     cleanUrl.endsWith('.txt') ||
     cleanUrl.endsWith('.md') ||
+    cleanUrl.endsWith('.json') ||
+    cleanUrl.endsWith('.log') ||
     cleanUrl.endsWith('.png') ||
     cleanUrl.endsWith('.jpg') ||
     cleanUrl.endsWith('.jpeg') ||
     cleanUrl.endsWith('.webp') ||
-    cleanUrl.endsWith('.svg');
+    cleanUrl.endsWith('.svg') ||
+    cleanUrl.endsWith('.mp4') ||
+    cleanUrl.endsWith('.webm') ||
+    cleanUrl.endsWith('.mp3');
 
   if (isInternalFile || isDocFile) {
     const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
