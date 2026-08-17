@@ -117,15 +117,15 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
 
   return (
     <div
-      className="enterprise-hero-card relative overflow-hidden w-full p-7 sm:p-9 lg:p-10 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(15,23,42,0.12)]"
+      className="enterprise-hero-card relative overflow-hidden w-full p-7 sm:p-9 lg:p-10 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(37,99,235,0.12)]"
       style={{
         backgroundImage: `url(${heroBackgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         borderRadius: '30px',
-        border: '1px solid rgba(255, 255, 255, 0.8)',
-        boxShadow: '0 16px 48px rgba(15, 23, 42, 0.08)',
+        border: '1px solid #BFDBFE',
+        boxShadow: '0 16px 48px rgba(37, 99, 235, 0.08)',
         color: '#0F172A'
       }}
     >
@@ -142,24 +142,27 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
         }}
       />
 
-      {/* Soft Left Frosted Gradient Fade (Matches Reference Screenshot): Keeps the left text crisp while keeping the right 65% office background completely clear */}
+      {/* Soothing Light Blue Frosted Gradient Overlay: Eliminates harsh white glare while keeping the background image beautifully visible */}
       <div
-        className="absolute inset-0 z-[1] bg-gradient-to-r from-white/95 via-white/75 via-35% to-white/15 to-80% pointer-events-none"
+        className="absolute inset-0 z-[1] bg-gradient-to-r from-[#DCEBFC]/94 via-[#E6F1FD]/80 via-35% to-[#D4E6FA]/25 to-85% pointer-events-none"
       />
       <div
-        className="absolute inset-0 z-[1] bg-gradient-to-b from-white/50 via-transparent to-transparent pointer-events-none"
+        className="absolute inset-0 z-[1] bg-gradient-to-b from-[#E2F0FE]/50 via-transparent to-[#D8EAFD]/25 pointer-events-none"
       />
 
-      {/* Bottom Right Sparkle Icon from Reference */}
-      <div className="absolute bottom-5 right-6 z-10 text-white/70 pointer-events-none">
-        <Sparkles className="w-5 h-5" />
-      </div>
+      {/* Soft ambient blue lighting highlights */}
+      <div
+        className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-400/20 blur-3xl pointer-events-none z-[1]"
+      />
+      <div
+        className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-indigo-400/15 blur-3xl pointer-events-none z-[1]"
+      />
 
       {/* Hero Top Header Row (Knowledge Repository & Statement in single lines) */}
       <div className="relative z-10 space-y-1.5 mb-6">
         {/* Top Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/90 border border-slate-200/90 text-[#2563EB] text-xs font-semibold select-none w-fit shadow-xs backdrop-blur-md">
-          <BookOpen className="w-3.5 h-3.5 text-[#2563EB]" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#E0EEFE]/90 border border-[#BFDBFE] text-[#1D4ED8] text-xs font-semibold select-none w-fit shadow-xs backdrop-blur-md">
+          <BookOpen className="w-3.5 h-3.5 text-[#1D4ED8]" />
           <span>Resource Center • {modulesCount} Modules</span>
         </div>
 
