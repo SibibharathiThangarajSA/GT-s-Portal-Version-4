@@ -136,30 +136,14 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     safeUrl.includes('youtu.be') ||
     safeUrl.includes('vimeo.com');
 
-  // 1. PPT and PPTX open directly in Microsoft PowerPoint / PowerPoint Online (no custom UI)
-  if (isPowerPoint) {
-    if (/^https?:\/\//i.test(safeUrl)) {
-      window.open(safeUrl, '_blank', 'noopener,noreferrer');
-    } else {
-      const link = document.createElement('a');
-      link.href = safeUrl;
-      link.download = docTitle || 'presentation.pptx';
-      link.target = '_blank';
-      link.rel = 'noopener,noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }
-    return true;
-  }
-
-  // 2. Video Streaming Links
+  // Video Streaming Links (YouTube / Vimeo) open directly in player
   if (isStreamingVideoUrl) {
     window.open(safeUrl, '_blank', 'noopener,noreferrer');
     return true;
   }
 
-  // 3. All other documents (PDFs, Word docs, Excel sheets, Images, Code, SQL) open in the universal document viewer screen
+  // ALL documents (PDF, PPT, PPTX, DOC, DOCX, Excel XLSX, Images, Code, SQL, Text)
+  // open in the in-browser Universal Document Viewer for VIEWING (Never auto-download)
   const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
   window.open(viewerUrl, '_blank', 'noopener,noreferrer');
   return true;
