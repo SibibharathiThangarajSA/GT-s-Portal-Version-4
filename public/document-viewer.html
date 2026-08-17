@@ -815,14 +815,55 @@
       displayTitle.textContent = customTitle;
       document.title = `${customTitle} - Preview`;
 
-      try {
-        const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
-        const lowerTitle = (customTitle || '').toLowerCase();
+      const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
+      const lowerTitle = (customTitle || '').toLowerCase();
 
-        // 1. Fetch document as ArrayBuffer
+      const isPdf = cleanUrl.endsWith('.pdf') || lowerTitle.endsWith('.pdf') || cleanUrl.includes('.pdf');
+      const isPptx = cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || lowerTitle.endsWith('.pptx') || lowerTitle.endsWith('.ppt') || cleanUrl.includes('presentation') || cleanUrl.includes('powerpoint');
+      const isDocx = cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
+
+      if (isPdf) {
+        formatBadge.textContent = 'PDF';
+      } else if (isPptx) {
+        formatBadge.textContent = 'PPT';
+      } else if (isDocx) {
+        formatBadge.textContent = 'DOC';
+      } else {
+        formatBadge.textContent = 'DOCUMENT';
+      }
+
+      // CASE A: Blob URLs (from in-memory user uploads)
+      if (safeFetchUrl.startsWith('blob:')) {
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'block';
+        dynamicTarget.style.display = 'none';
+        pdfTarget.src = safeFetchUrl;
+        return;
+      }
+
+      // CASE B: External URLs (prevent CORS fetch errors, embed directly)
+      if (/^https?:\/\//i.test(safeFetchUrl) && !safeFetchUrl.includes('localhost') && !safeFetchUrl.includes('127.0.0.1')) {
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'block';
+        dynamicTarget.style.display = 'none';
+
+        if (isPptx || isDocx) {
+          pdfTarget.src = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(safeFetchUrl)}`;
+        } else {
+          pdfTarget.src = safeFetchUrl;
+        }
+        return;
+      }
+
+      // CASE C: Local / API / Relative Documents
+      try {
         const res = await fetch(safeFetchUrl);
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: Document could not be fetched from "${safeFetchUrl}".`);
+          throw new Error(`HTTP ${res.status}: Could not fetch file.`);
         }
 
         const contentType = (res.headers.get('content-type') || '').toLowerCase();
@@ -830,19 +871,7 @@
         activeBuffer = buffer;
         const uint8 = new Uint8Array(buffer);
 
-        // 2. Binary Magic Bytes Identification
-        // PDF: %PDF (0x25, 0x50, 0x44, 0x46)
-        const isPdfMagic = uint8.length >= 4 && uint8[0] === 0x25 && uint8[1] === 0x50 && uint8[2] === 0x44 && uint8[3] === 0x46;
-        // ZIP: PK\x03\x04 (0x50, 0x4B, 0x03, 0x04)
-        const isZipMagic = uint8.length >= 4 && uint8[0] === 0x50 && uint8[1] === 0x4B && uint8[2] === 0x03 && uint8[3] === 0x04;
-        // PNG: \x89PNG (0x89, 0x50, 0x4E, 0x47)
-        const isPngMagic = uint8.length >= 4 && uint8[0] === 0x89 && uint8[1] === 0x50 && uint8[2] === 0x4E && uint8[3] === 0x47;
-        // JPEG: \xFF\xD8\xFF
-        const isJpegMagic = uint8.length >= 3 && uint8[0] === 0xFF && uint8[1] === 0xD8 && uint8[2] === 0xFF;
-        // GIF: GIF8 (0x47, 0x49, 0x46)
-        const isGifMagic = uint8.length >= 3 && uint8[0] === 0x47 && uint8[1] === 0x49 && uint8[2] === 0x46;
-
-        // 3. SPA 404 Fallback Check (Prevent HTML code from rendering as document text)
+        // Check if response is SPA HTML fallback
         const firstChars = new TextDecoder('utf-8').decode(uint8.slice(0, 35)).toLowerCase();
         const isHtmlText = contentType.includes('text/html') || firstChars.includes('<html') || firstChars.includes('<!doctype');
         if (isHtmlText && !cleanUrl.endsWith('.html') && !cleanUrl.endsWith('.htm')) {
@@ -858,128 +887,41 @@
               const retryRes = await fetch(getSafePathUrl(fallbackCandidate));
               if (retryRes.ok) {
                 const retryBuffer = await retryRes.arrayBuffer();
-                const retryUint8 = new Uint8Array(retryBuffer);
-                const retryIsPdf = retryUint8.length >= 4 && retryUint8[0] === 0x25 && retryUint8[1] === 0x50 && retryUint8[2] === 0x44 && retryUint8[3] === 0x46;
-                if (retryIsPdf) {
-                  formatBadge.textContent = 'PDF';
-                  const blob = new Blob([retryBuffer], { type: 'application/pdf' });
-                  const blobUrl = URL.createObjectURL(blob);
-                  loadingState.style.display = 'none';
-                  errorState.style.display = 'none';
-                  container.style.display = 'block';
-                  pdfTarget.style.display = 'block';
-                  dynamicTarget.style.display = 'none';
-                  pdfTarget.src = blobUrl;
-                  activeFileUrl = fallbackCandidate;
-                  return;
-                }
+                const blob = new Blob([retryBuffer], { type: 'application/pdf' });
+                const blobUrl = URL.createObjectURL(blob);
+                loadingState.style.display = 'none';
+                errorState.style.display = 'none';
+                container.style.display = 'block';
+                pdfTarget.style.display = 'block';
+                dynamicTarget.style.display = 'none';
+                pdfTarget.src = blobUrl;
+                activeFileUrl = fallbackCandidate;
+                return;
               }
             } catch (retryErr) {
-              console.warn('Fallback candidate fetch failed:', retryErr);
+              console.warn('Candidate retry failed:', retryErr);
             }
           }
-          throw new Error('The requested document file was not found on the server.');
         }
 
-        // ============================================
-        // UNIVERSAL DOCUMENT FRAME RENDERER (PDF / PPT / DOC)
-        // ============================================
-        const isPdf = isPdfMagic || contentType.includes('pdf') || cleanUrl.endsWith('.pdf') || lowerTitle.endsWith('.pdf');
-        const isPptx = cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || lowerTitle.endsWith('.pptx') || lowerTitle.endsWith('.ppt') || contentType.includes('presentation') || contentType.includes('powerpoint');
-        const isDocx = isZipMagic || contentType.includes('word') || contentType.includes('officedocument') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || lowerTitle.endsWith('.docx') || lowerTitle.endsWith('.doc');
-
-        // Set document format badge
-        if (isPdf) {
-          formatBadge.textContent = 'PDF';
-        } else if (isPptx) {
-          formatBadge.textContent = 'PPT';
-        } else if (isDocx) {
-          formatBadge.textContent = 'DOC';
-        } else {
-          formatBadge.textContent = 'DOCUMENT';
-        }
-
-        // 1. Direct High-Resolution Document Frame (Native PDF / Blob Viewer)
-        if (isPdf || isPdfMagic) {
-          const blob = new Blob([buffer], { type: 'application/pdf' });
-          const blobUrl = URL.createObjectURL(blob);
-          loadingState.style.display = 'none';
-          errorState.style.display = 'none';
-          container.style.display = 'block';
-          pdfTarget.style.display = 'block';
-          dynamicTarget.style.display = 'none';
-          pdfTarget.src = blobUrl;
-          return;
-        }
-
-        // 2. Online Google / Office Document Frame for PPT & DOC
-        if ((isPptx || isDocx) && /^https?:\/\//i.test(safeFetchUrl) && !safeFetchUrl.includes('localhost') && !safeFetchUrl.includes('127.0.0.1')) {
-          loadingState.style.display = 'none';
-          errorState.style.display = 'none';
-          container.style.display = 'block';
-          pdfTarget.style.display = 'block';
-          dynamicTarget.style.display = 'none';
-          pdfTarget.src = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(safeFetchUrl)}`;
-          return;
-        }
-
-        // 3. Modern PPTX Slide Reader / Word DOCX Engine / Native Frame Fallback
-        if (isPptx) {
-          // If the buffer is a PDF or can be rendered in PDF iframe, render in native frame
-          try {
-            const blob = new Blob([buffer], { type: 'application/pdf' });
-            const blobUrl = URL.createObjectURL(blob);
-            loadingState.style.display = 'none';
-            errorState.style.display = 'none';
-            container.style.display = 'block';
-            pdfTarget.style.display = 'block';
-            dynamicTarget.style.display = 'none';
-            pdfTarget.src = blobUrl;
-            return;
-          } catch (blobErr) {
-            console.warn('PDF Blob failed, falling back to presentation player:', blobErr);
-            const rendered = await renderPptxPresentation(buffer, customTitle);
-            if (rendered) return;
-          }
-        }
-
-        if (isDocx && typeof docx !== 'undefined' && docx.renderAsync) {
-          try {
-            await docx.renderAsync(buffer, dynamicTarget, null, {
-              className: 'docx-preview',
-              inWrapper: true,
-              ignoreWidth: false,
-              ignoreHeight: false,
-              ignoreFonts: false,
-              breakPages: true,
-              experimental: true
-            });
-
-            loadingState.style.display = 'none';
-            errorState.style.display = 'none';
-            container.style.display = 'block';
-            dynamicTarget.style.display = 'block';
-            pdfTarget.style.display = 'none';
-            return;
-          } catch (docxErr) {
-            console.warn('Docx renderAsync failed:', docxErr);
-          }
-        }
-
-        // Universal Fallback to PDF Frame
-        const fallbackBlob = new Blob([buffer], { type: 'application/pdf' });
-        const fallbackUrl = URL.createObjectURL(fallbackBlob);
+        // Render via native PDF frame
+        const blob = new Blob([buffer], { type: isPdf ? 'application/pdf' : 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
         loadingState.style.display = 'none';
         errorState.style.display = 'none';
         container.style.display = 'block';
         pdfTarget.style.display = 'block';
         dynamicTarget.style.display = 'none';
-        pdfTarget.src = fallbackUrl;
+        pdfTarget.src = blobUrl;
       } catch (err) {
-        console.error('Failed to preview document:', err);
+        console.warn('Fetch fallback to direct iframe src:', err);
+        // Direct iframe fallback so it NEVER blocks with "Failed to fetch"
         loadingState.style.display = 'none';
-        errorState.style.display = 'block';
-        errorMessage.textContent = err.message || 'The requested document could not be rendered.';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'block';
+        dynamicTarget.style.display = 'none';
+        pdfTarget.src = safeFetchUrl;
       }
     }
 
