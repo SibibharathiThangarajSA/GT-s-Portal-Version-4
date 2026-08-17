@@ -243,7 +243,10 @@ const parseApiResponse = async <T>(res: Response): Promise<T> => {
       try {
         const json = JSON.parse(text);
         if (json?.message) message = json.message;
+        else if (json?.Message) message = json.Message;
         else if (json?.error) message = json.error;
+        else if (Array.isArray(json?.errors) && json.errors.length > 0) message = json.errors.join(', ');
+        else if (Array.isArray(json?.Errors) && json.Errors.length > 0) message = json.Errors.join(', ');
       } catch {
         // keep raw text
       }
@@ -564,26 +567,31 @@ const isGuid = (val?: string) => typeof val === 'string' && /^[0-9a-fA-F]{8}-[0-
 export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise<Session> => {
   // 1. Persist Session core
   let savedSession: Session;
-  const isExisting = sessionData.id && isGuid(sessionData.id);
+  const isExisting = !!(sessionData.id && isGuid(sessionData.id));
 
   const sessionPayload = {
     name: sessionData.name || 'Untitled Session',
     category: sessionData.category || '.NET',
     description: sessionData.description || '',
-    thumbnailUrl: sessionData.thumbnail || '',
+    thumbnailUrl: sessionData.thumbnail || sessionData.thumbnailUrl || '',
     trainerName: sessionData.trainerName || 'Lead Trainer',
     durationHours: Number(sessionData.durationHours) || 10,
     difficulty: sessionData.difficulty || 'Intermediate',
     status: sessionData.status || 'Draft',
     isPublished: !!sessionData.isPublished,
-    sortOrder: 999,
+    sortOrder: Number(sessionData.sortOrder) || 999,
     featuredVideoUrl: sessionData.videoUrl || (sessionData as any).featuredVideoUrl || null,
+    learningObjectives: (sessionData.learningObjectives || []).map((obj: any, idx: number) => ({
+      id: isGuid(obj?.id) ? obj.id : undefined,
+      objectiveText: typeof obj === 'string' ? obj : (obj?.objectiveText || obj?.text || ''),
+      orderIndex: Number(obj?.orderIndex ?? idx + 1)
+    })).filter((obj: any) => obj.objectiveText && obj.objectiveText.trim().length > 0),
     topics: (sessionData.topics || []).map((t, tIdx) => ({
       id: isGuid(t.id) ? t.id : undefined,
       title: t.title,
       description: t.description,
-      orderIndex: tIdx + 1,
-      defaultStatus: t.status || 'Unlocked',
+      orderIndex: Number(t.orderIndex ?? t.order ?? tIdx + 1),
+      defaultStatus: t.status || t.defaultStatus || 'Unlocked',
       videoUrl: t.videoUrl || null,
       documentUrl: t.documentUrl || null,
       assignment: t.assignment || null,
@@ -591,8 +599,8 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
         id: isGuid(st.id) ? st.id : undefined,
         title: st.title,
         durationMinutes: Number(st.durationMinutes) || 30,
-        orderIndex: stIdx + 1,
-        defaultStatus: st.status || 'Unlocked',
+        orderIndex: Number(st.orderIndex ?? st.order ?? stIdx + 1),
+        defaultStatus: st.status || st.defaultStatus || 'Unlocked',
         description: st.description || null,
         videoUrl: st.videoUrl || null,
         documentUrl: st.documentUrl || null
@@ -601,11 +609,7 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
   };
 
   if (isExisting) {
-    try {
-      savedSession = await updateSessionApi(sessionData.id!, sessionPayload);
-    } catch {
-      savedSession = await createSessionApi({ ...sessionPayload, id: sessionData.id });
-    }
+    savedSession = await updateSessionApi(sessionData.id!, sessionPayload);
   } else {
     savedSession = await createSessionApi(sessionPayload);
   }
@@ -613,7 +617,10 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
   const targetSessionId = savedSession.id;
 
   // 2. Persist Provided Materials
-  const providedMaterials = sessionData.providedMaterials || [];
+  const providedMaterials = (sessionData.providedMaterials && sessionData.providedMaterials.length > 0)
+    ? sessionData.providedMaterials
+    : (sessionData.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || 'Provided').toLowerCase() !== 'additional');
+
   for (const mat of providedMaterials) {
     let fileUrl = mat.url || '';
     if (mat.file) {
@@ -646,7 +653,10 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
   }
 
   // 3. Persist Additional Materials
-  const additionalMaterials = sessionData.additionalMaterials || [];
+  const additionalMaterials = (sessionData.additionalMaterials && sessionData.additionalMaterials.length > 0)
+    ? sessionData.additionalMaterials
+    : (sessionData.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || '').toLowerCase() === 'additional');
+
   for (const mat of additionalMaterials) {
     let fileUrl = mat.url || '';
     if (mat.file) {
