@@ -136,20 +136,28 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     safeUrl.includes('youtu.be') ||
     safeUrl.includes('vimeo.com');
 
-  // 1. PPT and PPTX: Open SEPARATELY in Microsoft PowerPoint / PowerPoint Online in a new tab (never in document-viewer.html)
-  if (isPowerPoint) {
-    window.open(safeUrl, '_blank', 'noopener,noreferrer');
-    return true;
-  }
-
-  // 2. Video Streaming Links (YouTube / Vimeo) open directly in player
+  // 1. Video Streaming Links (YouTube / Vimeo)
   if (isStreamingVideoUrl) {
     window.open(safeUrl, '_blank', 'noopener,noreferrer');
     return true;
   }
 
-  // 3. ALL other documents (PDF, Word DOC/DOCX, Excel XLSX, Images, Code, SQL, Text)
-  // open in the in-browser Universal Document Viewer for VIEWING
+  // 2. SharePoint / OneDrive PowerPoint Documents: Open directly in Microsoft 365 PowerPoint Web
+  if (safeUrl.includes('sharepoint.com') || safeUrl.includes('1drv.ms') || safeUrl.includes('onedrive.live.com')) {
+    const onlinePptUrl = safeUrl.includes('?') ? `${safeUrl}&web=1` : `${safeUrl}?web=1`;
+    window.open(onlinePptUrl, '_blank', 'noopener,noreferrer');
+    return true;
+  }
+
+  // 3. Public Web PowerPoint Presentations: Open directly in Microsoft Office Online PowerPoint Web Viewer
+  if (isPowerPoint && /^https?:\/\//i.test(safeUrl) && !safeUrl.includes('localhost') && !safeUrl.includes('127.0.0.1')) {
+    const officeViewerUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(safeUrl)}`;
+    window.open(officeViewerUrl, '_blank', 'noopener,noreferrer');
+    return true;
+  }
+
+  // 4. Local / Uploaded PPTX and ALL other documents (PDF, Word DOCX, Excel, Images, Text/Code):
+  // Open in the Universal In-Browser Document Viewer (PowerPoint slides render in-browser with zero auto-download)
   const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
   window.open(viewerUrl, '_blank', 'noopener,noreferrer');
   return true;
