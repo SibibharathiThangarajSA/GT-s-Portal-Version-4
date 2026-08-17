@@ -114,6 +114,21 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     'Document Preview';
 
   const safeUrl = encodeDocumentUrl(url);
+  const cleanUrl = safeUrl.toLowerCase().split('?')[0];
+  const lowerTitle = docTitle.toLowerCase();
+  const lowerType = (record?.fileType || '').toLowerCase();
+
+  // Check if it's a PowerPoint presentation (.ppt, .pptx, SharePoint PPT)
+  const isPowerPoint =
+    cleanUrl.endsWith('.pptx') ||
+    cleanUrl.endsWith('.ppt') ||
+    lowerTitle.endsWith('.pptx') ||
+    lowerTitle.endsWith('.ppt') ||
+    lowerType.includes('powerpoint') ||
+    lowerType.includes('ppt') ||
+    safeUrl.includes('sharepoint.com') ||
+    safeUrl.includes('1drv.ms') ||
+    safeUrl.includes('onedrive.live.com');
 
   // Check if it's an external video streaming website link (e.g. YouTube, Vimeo)
   const isStreamingVideoUrl =
@@ -121,13 +136,32 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     safeUrl.includes('youtu.be') ||
     safeUrl.includes('vimeo.com');
 
+  // 1. PPT and PPTX open directly in Microsoft PowerPoint / PowerPoint Online (no custom UI)
+  if (isPowerPoint) {
+    if (/^https?:\/\//i.test(safeUrl)) {
+      window.open(safeUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      const link = document.createElement('a');
+      link.href = safeUrl;
+      link.download = docTitle || 'presentation.pptx';
+      link.target = '_blank';
+      link.rel = 'noopener,noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+    return true;
+  }
+
+  // 2. Video Streaming Links
   if (isStreamingVideoUrl) {
     window.open(safeUrl, '_blank', 'noopener,noreferrer');
-  } else {
-    // All PowerPoint presentations, PDFs, Word docs, Excel sheets, images, and files open universally in the document viewer
-    const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
-    window.open(viewerUrl, '_blank', 'noopener,noreferrer');
+    return true;
   }
+
+  // 3. All other documents (PDFs, Word docs, Excel sheets, Images, Code, SQL) open in the universal document viewer screen
+  const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
+  window.open(viewerUrl, '_blank', 'noopener,noreferrer');
   return true;
 };
 
