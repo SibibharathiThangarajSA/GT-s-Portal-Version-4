@@ -40,6 +40,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      max-width: 50%;
     }
     .brand-icon {
       width: 36px;
@@ -53,11 +54,15 @@
       font-weight: 700;
       font-size: 14px;
       box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+      flex-shrink: 0;
     }
     .doc-title {
       font-size: 15px;
       font-weight: 600;
       color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .doc-badge {
       font-size: 11px;
@@ -68,11 +73,13 @@
       border-radius: 9999px;
       font-weight: 600;
       margin-left: 8px;
+      flex-shrink: 0;
     }
     .header-controls {
       display: flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
     }
     .btn {
       display: inline-flex;
@@ -102,17 +109,25 @@
       background: #1d4ed8;
       border-color: #2563eb;
     }
+    .btn-emerald {
+      background: #059669;
+      border-color: #10b981;
+    }
+    .btn-emerald:hover {
+      background: #047857;
+      border-color: #059669;
+    }
     .main-content {
       flex: 1;
       display: flex;
       justify-content: center;
-      padding: 32px 16px;
+      padding: 24px 16px;
       background: #0f172a;
       overflow-y: auto;
     }
     .viewer-container {
       width: 100%;
-      max-width: 960px;
+      max-width: 1080px;
       min-height: calc(100vh - 120px);
       transition: transform 0.2s ease;
       transform-origin: top center;
@@ -160,7 +175,7 @@
       padding: 48px 32px;
       text-align: center;
       color: #e2e8f0;
-      max-width: 480px;
+      max-width: 520px;
       margin: 60px auto;
       box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
@@ -178,10 +193,11 @@
     }
     .pdf-frame {
       width: 100%;
-      height: calc(100vh - 100px);
+      height: calc(100vh - 110px);
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       background: white;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     }
     @media print {
       .header {
@@ -205,9 +221,9 @@
   <div class="header">
     <div class="header-left">
       <div class="brand-icon">GT</div>
-      <div>
-        <span class="doc-title" id="display-title">User Guide Document</span>
-        <span class="doc-badge">GT Companion</span>
+      <div style="min-width: 0;">
+        <span class="doc-title" id="display-title">Document Preview</span>
+        <span class="doc-badge" id="format-badge">Document</span>
       </div>
     </div>
     <div class="header-controls">
@@ -221,6 +237,10 @@
       </button>
       <button class="btn" onclick="resetZoom()" title="Reset Zoom">
         <span>100%</span>
+      </button>
+      <button class="btn btn-emerald" id="download-btn" onclick="downloadCurrentFile()" title="Download File">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Download</span>
       </button>
       <button class="btn btn-primary" onclick="window.print()" title="Print or Save as PDF">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -236,15 +256,18 @@
   <div class="main-content">
     <div id="loading-state" class="state-card">
       <div class="spinner"></div>
-      <h3 style="font-size: 16px; margin-bottom: 8px; color: #f8fafc;">Opening User Guide Document...</h3>
-      <p style="font-size: 13px; color: #94a3b8;">Rendering formatted document in high resolution preview.</p>
+      <h3 style="font-size: 16px; margin-bottom: 8px; color: #f8fafc;">Opening Document...</h3>
+      <p style="font-size: 13px; color: #94a3b8;">Rendering high-resolution formatted preview.</p>
     </div>
 
     <div id="error-state" class="state-card" style="display: none;">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2" style="margin: 0 auto 16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <h3 style="font-size: 16px; margin-bottom: 8px; color: #f8fafc;">Document Unavailable</h3>
       <p id="error-message" style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">Could not load the requested document.</p>
-      <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+      <div style="display: flex; gap: 8px; justify-content: center;">
+        <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+        <button class="btn btn-emerald" onclick="downloadCurrentFile()">Download Direct</button>
+      </div>
     </div>
 
     <div id="viewer-container" class="viewer-container" style="display: none;">
@@ -255,6 +278,9 @@
 
   <script>
     let currentScale = 1.0;
+    let activeFileUrl = '';
+    let activeFileName = '';
+
     const container = document.getElementById('viewer-container');
     const loadingState = document.getElementById('loading-state');
     const errorState = document.getElementById('error-state');
@@ -262,6 +288,7 @@
     const docxTarget = document.getElementById('docx-target');
     const pdfTarget = document.getElementById('pdf-target');
     const displayTitle = document.getElementById('display-title');
+    const formatBadge = document.getElementById('format-badge');
 
     function zoomIn() {
       if (currentScale < 1.6) {
@@ -286,53 +313,147 @@
       container.style.transform = `scale(${currentScale})`;
     }
 
+    function getSafePathUrl(rawUrl) {
+      if (!rawUrl) return '';
+      const trimmed = rawUrl.trim();
+      if (/^https?:\/\//i.test(trimmed)) {
+        try {
+          const urlObj = new URL(trimmed);
+          urlObj.pathname = urlObj.pathname
+            .split('/')
+            .map(seg => encodeURIComponent(decodeURIComponent(seg)))
+            .join('/');
+          return urlObj.toString();
+        } catch {
+          return trimmed;
+        }
+      }
+      const [pathPart, ...queryParts] = trimmed.split('?');
+      const safePath = pathPart
+        .split('/')
+        .map(seg => encodeURIComponent(decodeURIComponent(seg)))
+        .join('/');
+      const query = queryParts.length > 0 ? `?${queryParts.join('?')}` : '';
+      return `${safePath}${query}`;
+    }
+
+    function downloadCurrentFile() {
+      if (!activeFileUrl) return;
+      const link = document.createElement('a');
+      link.href = activeFileUrl;
+      link.download = activeFileName || 'document';
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
     async function loadDocument() {
       const urlParams = new URLSearchParams(window.location.search);
-      let fileUrl = urlParams.get('file') || '/Assets/Videos/user-guide/user-guide.docx';
-      const customTitle = urlParams.get('title') || 'GT Companion User Guide';
-      
+      let fileUrl = urlParams.get('file') || '';
+      const customTitle = urlParams.get('title') || 'GT Companion Document';
+
+      if (!fileUrl) {
+        loadingState.style.display = 'none';
+        errorState.style.display = 'block';
+        errorMessage.textContent = 'No file specified for preview.';
+        return;
+      }
+
+      const safeFetchUrl = getSafePathUrl(fileUrl);
+      activeFileUrl = safeFetchUrl;
+      activeFileName = customTitle;
+
       displayTitle.textContent = customTitle;
       document.title = `${customTitle} - Preview`;
 
       try {
-        const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
-        
+        const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
+        const isPdf = cleanUrl.endsWith('.pdf');
+        const isImage = cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.gif') || cleanUrl.endsWith('.webp') || cleanUrl.endsWith('.svg');
+        const isText = cleanUrl.endsWith('.txt') || cleanUrl.endsWith('.md') || cleanUrl.endsWith('.json') || cleanUrl.endsWith('.log') || cleanUrl.endsWith('.csv');
+        const isDocx = cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc');
+
         if (isPdf) {
+          formatBadge.textContent = 'PDF';
           loadingState.style.display = 'none';
           container.style.display = 'block';
           pdfTarget.style.display = 'block';
           docxTarget.style.display = 'none';
-          pdfTarget.src = fileUrl;
+          pdfTarget.src = safeFetchUrl;
           return;
         }
 
+        if (isImage) {
+          formatBadge.textContent = 'Image';
+          loadingState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'none';
+          docxTarget.style.display = 'block';
+          docxTarget.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 400px; padding: 24px;">
+              <img src="${safeFetchUrl}" alt="${customTitle}" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);" />
+            </div>
+          `;
+          return;
+        }
+
+        if (isText) {
+          formatBadge.textContent = 'Text';
+          const res = await fetch(safeFetchUrl);
+          if (!res.ok) {
+            throw new Error(`HTTP Error ${res.status}: Could not fetch text document.`);
+          }
+          const textContent = await res.text();
+          loadingState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'none';
+          docxTarget.style.display = 'block';
+          docxTarget.innerHTML = `
+            <div style="background: white; color: #1e293b; padding: 36px 44px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); font-family: monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">${textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          `;
+          return;
+        }
+
+        formatBadge.textContent = isDocx ? 'Word Document' : 'Document';
+
         // Fetch docx file as ArrayBuffer
-        const res = await fetch(fileUrl);
+        const res = await fetch(safeFetchUrl);
         if (!res.ok) {
-          throw new Error(`HTTP Error ${res.status}: Document could not be fetched from "${fileUrl}".`);
+          throw new Error(`HTTP Error ${res.status}: Document could not be fetched from "${safeFetchUrl}".`);
         }
 
         const buffer = await res.arrayBuffer();
 
-        // Render docx directly to target element
-        await docx.renderAsync(buffer, docxTarget, null, {
-          className: 'docx-preview',
-          inWrapper: true,
-          ignoreWidth: false,
-          ignoreHeight: false,
-          ignoreFonts: false,
-          breakPages: true,
-          experimental: true
-        });
+        // Render docx directly to target element if docx-preview is loaded
+        if (typeof docx !== 'undefined' && docx.renderAsync) {
+          await docx.renderAsync(buffer, docxTarget, null, {
+            className: 'docx-preview',
+            inWrapper: true,
+            ignoreWidth: false,
+            ignoreHeight: false,
+            ignoreFonts: false,
+            breakPages: true,
+            experimental: true
+          });
 
-        loadingState.style.display = 'none';
-        container.style.display = 'block';
-        docxTarget.style.display = 'block';
+          loadingState.style.display = 'none';
+          container.style.display = 'block';
+          docxTarget.style.display = 'block';
+          pdfTarget.style.display = 'none';
+        } else {
+          // Fallback to pdf iframe
+          loadingState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'block';
+          docxTarget.style.display = 'none';
+          pdfTarget.src = safeFetchUrl;
+        }
       } catch (err) {
         console.error('Failed to preview document:', err);
         loadingState.style.display = 'none';
         errorState.style.display = 'block';
-        errorMessage.textContent = err.message || 'The user guide document could not be rendered.';
+        errorMessage.textContent = err.message || 'The requested document could not be rendered.';
       }
     }
 
@@ -340,3 +461,4 @@
   </script>
 </body>
 </html>
+

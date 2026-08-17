@@ -51,17 +51,45 @@ export const resolveDocumentUrl = (record: DocumentLike | null | undefined): str
   return usable ? usable.trim() : '';
 };
 
-export const hasDocument = (record: DocumentLike | null | undefined): boolean =>
-  resolveDocumentUrl(record) !== '';
+/**
+ * Safely encodes URL path segments while preserving slashes, query parameters, and protocol.
+ * This guarantees special characters like '#', '&', '+', spaces, brackets, and parens in file names
+ * are not truncated or misinterpreted by the browser during HTTP requests.
+ */
+export const encodeDocumentUrl = (rawUrl: string): string => {
+  if (!rawUrl) return '';
+  const trimmed = rawUrl.trim();
+
+  // If it's a full absolute external URL:
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const urlObj = new URL(trimmed);
+      urlObj.pathname = urlObj.pathname
+        .split('/')
+        .map((seg) => encodeURIComponent(decodeURIComponent(seg)))
+        .join('/');
+      return urlObj.toString();
+    } catch {
+      return trimmed;
+    }
+  }
+
+  // If it's a relative path:
+  const [pathPart, ...queryParts] = trimmed.split('?');
+  const safePath = pathPart
+    .split('/')
+    .map((seg) => encodeURIComponent(decodeURIComponent(seg)))
+    .join('/');
+  const query = queryParts.length > 0 ? `?${queryParts.join('?')}` : '';
+  return `${safePath}${query}`;
+};
 
 /**
- * View: opens the document for reading and nothing else.
+ * View: opens the document for reading in the unified document viewer screen.
  *
- * The API serves objects with their stored content type and no Content-Disposition, so a PDF
- * renders in the browser's viewer. Returns false when there is no document, which the caller
- * should surface - the previous behaviour generated a text file from the title and description
- * and handed that to the user instead, which looks like a broken document rather than a missing
- * one.
+ * All materials (Provided, Additional, Assignments, PDFs, Word docs, images, text, and stored files)
+ * open in the full-featured in-browser document viewer screen. External non-document web links
+ * open directly in a new tab.
  */
 export const openDocument = (record: DocumentLike | null | undefined): boolean => {
   const url = resolveDocumentUrl(record);
@@ -73,16 +101,34 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     record?.fileName ||
     'Document Preview';
 
-  const cleanUrl = url.toLowerCase();
-  const fileType = record?.fileType?.toLowerCase() || '';
+  const safeUrl = encodeDocumentUrl(url);
+  const cleanUrl = safeUrl.toLowerCase().split('?')[0];
 
-  // Route Word (.docx, .doc) files through the in-browser document viewer
-  // so the document opens visually on screen rather than triggering a browser download
-  if (cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || fileType === 'docx' || fileType === 'doc') {
-    const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(url)}&title=${encodeURIComponent(docTitle)}`;
+  const isInternalFile =
+    safeUrl.startsWith('/api/') ||
+    safeUrl.startsWith('/uploads/') ||
+    safeUrl.startsWith('/') ||
+    safeUrl.includes('/api/materials/files/');
+
+  const isDocFile =
+    cleanUrl.endsWith('.pdf') ||
+    cleanUrl.endsWith('.docx') ||
+    cleanUrl.endsWith('.doc') ||
+    cleanUrl.endsWith('.pptx') ||
+    cleanUrl.endsWith('.ppt') ||
+    cleanUrl.endsWith('.txt') ||
+    cleanUrl.endsWith('.md') ||
+    cleanUrl.endsWith('.png') ||
+    cleanUrl.endsWith('.jpg') ||
+    cleanUrl.endsWith('.jpeg') ||
+    cleanUrl.endsWith('.webp') ||
+    cleanUrl.endsWith('.svg');
+
+  if (isInternalFile || isDocFile) {
+    const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
     window.open(viewerUrl, '_blank', 'noopener,noreferrer');
   } else {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(safeUrl, '_blank', 'noopener,noreferrer');
   }
   return true;
 };
@@ -95,6 +141,7 @@ export const downloadDocument = async (record: DocumentLike | null | undefined):
   const url = resolveDocumentUrl(record);
   if (!url) return false;
 
+  const safeUrl = encodeDocumentUrl(url);
   const suggestedName =
     record?.attachmentName ||
     record?.fileName ||
@@ -103,7 +150,7 @@ export const downloadDocument = async (record: DocumentLike | null | undefined):
   try {
     // Fetched first so the browser saves the bytes under the intended name; a plain anchor to a
     // cross-route URL can navigate instead of downloading.
-    const response = await fetch(url, { credentials: 'include' });
+    const response = await fetch(safeUrl, { credentials: 'include' });
     if (!response.ok) throw new Error(`Request failed with ${response.status}`);
 
     const blobUrl = URL.createObjectURL(await response.blob());
@@ -113,7 +160,7 @@ export const downloadDocument = async (record: DocumentLike | null | undefined):
   } catch {
     // The object may still be reachable directly even when fetch is blocked, so fall back to
     // letting the browser handle it rather than failing the download outright.
-    triggerSave(url, suggestedName);
+    triggerSave(safeUrl, suggestedName);
     return true;
   }
 };

@@ -201,7 +201,14 @@ User Query: ${message}`
 
   const handleS3Stream = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const rawPath = (req.params[0] || req.path || req.url || '').split('?')[0];
-    const cleanKey = decodeURIComponent(rawPath)
+    let decodedPath = rawPath;
+    try {
+      decodedPath = decodeURIComponent(rawPath);
+    } catch {
+      decodedPath = rawPath;
+    }
+
+    const cleanKey = decodedPath
       .replace(/^\/api\/materials\/files\/(download\/)?/, '')
       .replace(/^download\//, '')
       .replace(/^uploads\//, '')
@@ -209,14 +216,23 @@ User Query: ${message}`
 
     if (!cleanKey) return next();
 
+    const rawKey = rawPath
+      .replace(/^\/api\/materials\/files\/(download\/)?/, '')
+      .replace(/^download\//, '')
+      .replace(/^uploads\//, '')
+      .replace(/^\/+/, '');
+
     const baseName = cleanKey.split('/').pop() || cleanKey;
     const candidates = Array.from(new Set([
       cleanKey,
+      rawKey,
       `site-assets/videos/${baseName}`,
       `site-assets/videos/${baseName.replace(/-/g, ' ')}`,
       `site-assets/videos/${baseName.replace(/ /g, '-')}`,
       cleanKey.replace(/-/g, ' '),
-      cleanKey.replace(/ /g, '-')
+      cleanKey.replace(/ /g, '-'),
+      cleanKey.replace(/_/g, ' '),
+      cleanKey.replace(/_/g, '-')
     ]));
 
     const range = req.headers.range;
@@ -230,10 +246,17 @@ User Query: ${message}`
         });
         const s3Response = await s3Client.send(getCmd);
 
-        let contentType = s3Response.ContentType || 'video/mp4';
-        if (key.endsWith('.mp4')) contentType = 'video/mp4';
-        else if (key.endsWith('.pdf')) contentType = 'application/pdf';
-        else if (key.endsWith('.webm')) contentType = 'video/webm';
+        let contentType = s3Response.ContentType || 'application/octet-stream';
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.endsWith('.mp4')) contentType = 'video/mp4';
+        else if (lowerKey.endsWith('.pdf')) contentType = 'application/pdf';
+        else if (lowerKey.endsWith('.webm')) contentType = 'video/webm';
+        else if (lowerKey.endsWith('.docx')) contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        else if (lowerKey.endsWith('.doc')) contentType = 'application/msword';
+        else if (lowerKey.endsWith('.pptx')) contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+        else if (lowerKey.endsWith('.png')) contentType = 'image/png';
+        else if (lowerKey.endsWith('.jpg') || lowerKey.endsWith('.jpeg')) contentType = 'image/jpeg';
+        else if (lowerKey.endsWith('.txt')) contentType = 'text/plain; charset=utf-8';
 
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Content-Type', contentType);
