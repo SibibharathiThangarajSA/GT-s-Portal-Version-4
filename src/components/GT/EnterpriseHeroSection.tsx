@@ -168,7 +168,8 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
 
         {/* Main Heading - Single Line */}
         <h1 className="text-[28px] sm:text-[36px] lg:text-[40px] font-extrabold text-[#0F172A] tracking-tight leading-tight font-sans whitespace-nowrap">
-          Knowledge Repository
+          {/* Knowledge Repository */}
+          Companion Hub
         </h1>
 
         {/* Description Statement - Single Line */}
@@ -315,8 +316,8 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
                       setActiveVideoId(vid.id);
                     }}
                     className={`h-[46px] rounded-xl font-bold text-xs flex items-center justify-center gap-2 px-3 transition-all duration-200 select-none cursor-pointer ${isActive
-                        ? 'bg-gradient-to-r from-[#2563EB] to-[#3B82F6] text-white shadow-md shadow-blue-600/30 border border-blue-400/40 -translate-y-0.5'
-                        : 'bg-white/50 hover:bg-white/80 border border-white/70 text-[#1E293B] backdrop-blur-md hover:-translate-y-0.5 shadow-xs'
+                      ? 'bg-gradient-to-r from-[#2563EB] to-[#3B82F6] text-white shadow-md shadow-blue-600/30 border border-blue-400/40 -translate-y-0.5'
+                      : 'bg-white/50 hover:bg-white/80 border border-white/70 text-[#1E293B] backdrop-blur-md hover:-translate-y-0.5 shadow-xs'
                       }`}
                   >
                     <Play className={`w-3.5 h-3.5 ${isActive ? 'text-white fill-white' : 'text-[#2563EB]'}`} />
