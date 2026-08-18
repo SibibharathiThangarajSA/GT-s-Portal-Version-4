@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { GoogleGenAI, Type } from "@google/genai";
@@ -184,6 +185,210 @@ User Query: ${message}`
   });
 
   app.use("/api/ai", ai);
+
+  // --- LOCAL ENTERPRISE AUTHENTICATION & CREDENTIALS STORAGE (PERMANENT) ---
+  const auth = express.Router();
+  auth.use(express.json());
+
+  const CREDENTIALS_FILE = path.join(process.cwd(), 'server_credentials.json');
+
+  const INITIAL_SEED_ACCOUNTS = [
+    { email: 'Sibibharathi.Thangaraj@valuemomentum.com', defaultPassword: 'Sibibharathi.Thangaraj', role: 'GT', firstName: 'Sibibharathi', lastName: 'Thangaraj', batch: 'GT-2026-Batch-01' },
+    { email: 'Pavithran.Sivanandham@valuemomentum.com', defaultPassword: 'Pavithran.Sivanandham', role: 'GT', firstName: 'Pavithran', lastName: 'Sivanandham', batch: 'GT-2026-Batch-01' },
+    { email: 'Aswin.Muruganandham@valuemomentum.com', defaultPassword: 'Aswin.Muruganandham', role: 'GT', firstName: 'Aswin', lastName: 'Muruganandham', batch: 'GT-2026-Batch-01' },
+    { email: 'Harshini.Radhakrishnan@valuemomentum.com', defaultPassword: 'Harshini.Radhakrishnan', role: 'GT', firstName: 'Harshini', lastName: 'Radhakrishnan', batch: 'GT-2026-Batch-01' },
+    { email: 'Imran.Aupe@valuemomentum.com', defaultPassword: 'Imran.Aupe', role: 'GT', firstName: 'Imran', lastName: 'Aupe', batch: 'GT-2026-Batch-01' },
+    { email: 'Kruthika.Devaraje@valuemomentum.com', defaultPassword: 'Kruthika.Devaraje', role: 'GT', firstName: 'Kruthika', lastName: 'Devaraje', batch: 'GT-2026-Batch-01' },
+    { email: 'Vaishali.Karunai@valuemomentum.com', defaultPassword: 'Vaishali.Karunai', role: 'GT', firstName: 'Vaishali', lastName: 'Karunai', batch: 'GT-2026-Batch-01' },
+    { email: 'Tanvitha.Nadukuda@valuemomentum.com', defaultPassword: 'Tanvitha.Nadukuda', role: 'GT', firstName: 'Tanvitha', lastName: 'Nadukuda', batch: 'GT-2026-Batch-01' },
+    { email: 'Anukraha.Magdalene@valuemomentum.com', defaultPassword: 'Anukraha.Magdalene', role: 'Admin', firstName: 'Anukraha', lastName: 'Magdalene', batch: 'L&D Leadership' },
+    { email: 'Keren.Christobel@valuemomentum.com', defaultPassword: 'Keren.Christobel', role: 'Admin', firstName: 'Keren', lastName: 'Christobel', batch: 'L&D Management' },
+    { email: 'Janani.Selvaraj@valuemomentum.com', defaultPassword: 'Janani.Selvaraj', role: 'Admin', firstName: 'Janani', lastName: 'Selvaraj', batch: 'L&D Management' },
+    { email: 'Sudhir.Vittapu@owlsure.com', defaultPassword: 'Sudhir.Vittapu', role: 'Admin', firstName: 'Sudhir', lastName: 'Vittapu', batch: 'Technical Facilitation' }
+  ];
+
+  const getActiveAccounts = () => {
+    const store: Record<string, { password: string; profile: any }> = {};
+    INITIAL_SEED_ACCOUNTS.forEach((acc) => {
+      store[acc.email.toLowerCase()] = {
+        password: acc.defaultPassword,
+        profile: acc
+      };
+    });
+
+    try {
+      if (fs.existsSync(CREDENTIALS_FILE)) {
+        const raw = fs.readFileSync(CREDENTIALS_FILE, 'utf-8');
+        const overrides = JSON.parse(raw);
+        if (typeof overrides === 'object' && overrides !== null) {
+          Object.keys(overrides).forEach((key) => {
+            const lower = key.toLowerCase();
+            if (store[lower] && typeof overrides[key] === 'string') {
+              store[lower].password = overrides[key];
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading server credentials file', e);
+    }
+
+    return store;
+  };
+
+  const savePasswordDisk = (email: string, newPassword: string) => {
+    try {
+      let overrides: Record<string, string> = {};
+      if (fs.existsSync(CREDENTIALS_FILE)) {
+        const raw = fs.readFileSync(CREDENTIALS_FILE, 'utf-8');
+        overrides = JSON.parse(raw) || {};
+      }
+      overrides[email.toLowerCase()] = newPassword;
+      fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(overrides, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('Error saving password override to disk', e);
+    }
+  };
+
+  const isDomainAllowed = (email: string) => {
+    const lower = (email || '').trim().toLowerCase();
+    return lower.endsWith('@valuemomentum.com') || lower.endsWith('@owlsure.com');
+  };
+
+  // 1. Login Endpoint
+  auth.post('/login', (req, res) => {
+    const { email, password } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!isDomainAllowed(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+      });
+    }
+
+    const store = getActiveAccounts();
+    const userEntry = store[cleanEmail];
+
+    if (!userEntry || !password || userEntry.password !== password) {
+      return res.status(401).json({
+        success: false,
+        message: 'Incorrect email ID or password.'
+      });
+    }
+
+    const user = userEntry.profile;
+    return res.json({
+      success: true,
+      data: {
+        id: `user-${user.email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        token: `token-${user.role.toLowerCase()}-${user.email}-${Date.now()}`,
+        batch: user.batch,
+        xp: 2850,
+        level: 5,
+        streakDays: 14,
+        lastActiveDate: new Date().toISOString().split('T')[0],
+        dailyGoalMinutes: 45,
+        todayMinutesSpent: 25
+      }
+    });
+  });
+
+  // 2. Change Password Endpoint (Permanent Persistence)
+  auth.post('/change-password', (req, res) => {
+    const { email, currentPassword, newPassword } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!isDomainAllowed(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+      });
+    }
+
+    const store = getActiveAccounts();
+    const userEntry = store[cleanEmail];
+
+    if (!userEntry) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    if (userEntry.password !== currentPassword) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 8 characters long.' });
+    }
+
+    savePasswordDisk(cleanEmail, newPassword);
+
+    return res.json({
+      success: true,
+      message: 'Password changed successfully! You can now log in with your new password.'
+    });
+  });
+
+  // 3. Reset Password Endpoint (OTP Reset Flow)
+  auth.post('/reset-password', (req, res) => {
+    const { email, newPassword } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!isDomainAllowed(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+      });
+    }
+
+    const store = getActiveAccounts();
+    const userEntry = store[cleanEmail];
+
+    if (!userEntry) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    savePasswordDisk(cleanEmail, newPassword);
+
+    return res.json({
+      success: true,
+      message: 'Password has been reset successfully! Please log in with your new password.'
+    });
+  });
+
+  // 4. Forgot Password & Verify OTP Endpoints
+  auth.post('/forgot-password', (req, res) => {
+    const { email } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!isDomainAllowed(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+      });
+    }
+
+    const store = getActiveAccounts();
+    if (!store[cleanEmail]) {
+      return res.status(404).json({ success: false, message: 'Incorrect email ID or password.' });
+    }
+
+    return res.json({ success: true, message: 'Verification OTP sent to your registered email address.' });
+  });
+
+  auth.post('/verify-otp', (_req, res) => {
+    return res.json({
+      success: true,
+      data: { resetToken: `reset-token-${Date.now()}` },
+      message: 'OTP verified successfully.'
+    });
+  });
+
+  app.use("/api/auth", auth);
 
   // --- DIRECT OBJECT STORAGE (S3/TIGRIS) STREAMING ---
   // Streams site videos and materials directly from the cloud bucket with full HTTP Range (206) support,

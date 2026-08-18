@@ -928,39 +928,31 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
     };
   }
 
-  // 2. Try Backend API first, with fallback to verified credentials store
+  // 2. Try Server API first
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, password }),
-      signal: controller.signal
-    }).catch(() => null);
-
-    clearTimeout(timeoutId);
-
-    if (res && res.ok) {
-      const data = await res.json().catch(() => ({}));
-      if (data.success && data.data) {
-        return { success: true, data: data.data };
-      }
+      body: JSON.stringify({ email: cleanEmail, password })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success && data.data) {
+      return { success: true, data: data.data };
+    }
+    if (!res.ok && data.message) {
+      return { success: false, message: data.message };
     }
   } catch {
-    // Proceed to verified credentials store
+    // Proceed to verified credentials store fallback
   }
 
-  // 3. Authenticate against official registered credentials store
-  const localAuth = authenticateLocalUser(cleanEmail, password);
-  return localAuth;
+  // 3. Fallback to verified local credentials store
+  return authenticateLocalUser(cleanEmail, password);
 };
 
 export const forgotPasswordApi = async (email: string): Promise<{ success: boolean; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
 
-  // 1. Strict Domain Validation
   if (!isAllowedDomain(cleanEmail)) {
     return {
       success: false,
@@ -968,24 +960,26 @@ export const forgotPasswordApi = async (email: string): Promise<{ success: boole
     };
   }
 
-  // 2. Check if user exists in credentials store
+  try {
+    const res = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      return { success: true, message: data.message };
+    }
+  } catch {
+    // ignore
+  }
+
   const store = getCredentialsStore();
   if (!store[cleanEmail]) {
     return {
       success: false,
       message: 'Incorrect email ID or password.'
     };
-  }
-
-  // Try backend if available
-  try {
-    fetch('/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail })
-    }).catch(() => null);
-  } catch {
-    // ignore
   }
 
   return { success: true, message: 'Verification OTP sent to your registered email address.' };
@@ -1001,7 +995,6 @@ export const verifyOtpApi = async (email: string, otp: string): Promise<{ succes
     };
   }
 
-  // Accept valid 4-digit OTP
   if (otp && otp.trim().length === 4) {
     return {
       success: true,
@@ -1023,21 +1016,25 @@ export const resetPasswordApi = async (email: string, _resetToken: string, newPa
     };
   }
 
-  // Persist password update in credentials store
-  const result = resetUserPassword(cleanEmail, newPassword);
-
-  // Try backend sync if running
   try {
-    fetch('/api/auth/reset-password', {
+    const res = await fetch('/api/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, resetToken: _resetToken, newPassword })
-    }).catch(() => null);
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      resetUserPassword(cleanEmail, newPassword);
+      return { success: true, message: data.message || 'Password has been reset successfully! Please log in with your new password.' };
+    }
+    if (!res.ok && data.message) {
+      return { success: false, message: data.message };
+    }
   } catch {
-    // ignore
+    // fallback
   }
 
-  return result;
+  return resetUserPassword(cleanEmail, newPassword);
 };
 
 export const changePasswordApi = async (email: string, currentPassword: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {
@@ -1050,23 +1047,25 @@ export const changePasswordApi = async (email: string, currentPassword: string, 
     };
   }
 
-  // Verify and persist password update in credentials store
-  const result = changeUserPassword(cleanEmail, currentPassword, newPassword);
-
-  // Try backend sync if running
-  if (result.success) {
-    try {
-      fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, currentPassword, newPassword })
-      }).catch(() => null);
-    } catch {
-      // ignore
+  try {
+    const res = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, currentPassword, newPassword })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      changeUserPassword(cleanEmail, currentPassword, newPassword);
+      return { success: true, message: data.message || 'Password changed successfully! You can now log in with your new password.' };
     }
+    if (!res.ok && data.message) {
+      return { success: false, message: data.message };
+    }
+  } catch {
+    // fallback to local storage
   }
 
-  return result;
+  return changeUserPassword(cleanEmail, currentPassword, newPassword);
 };
 
 // ============================================================================
