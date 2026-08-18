@@ -368,11 +368,12 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const handleAddProvidedMaterial = (e: React.FormEvent) => {
     e.preventDefault();
     if (!matTitle.trim()) return;
+    const resolvedUrl = matFile ? URL.createObjectURL(matFile) : '';
     const newItem: CustomMaterialItem = {
       id: `prov-new-${Date.now()}`,
       title: matTitle,
       type: matType,
-      url: '',
+      url: resolvedUrl,
       file: matFile || undefined,
       fileName: matFileName || matFile?.name,
       fileType: matFile?.type,
@@ -389,11 +390,12 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const handleAddAdditionalMaterial = (e: React.FormEvent) => {
     e.preventDefault();
     if (!matTitle.trim()) return;
+    const resolvedUrl = matFile ? URL.createObjectURL(matFile) : '';
     const newItem: CustomMaterialItem = {
       id: `add-new-${Date.now()}`,
       title: matTitle,
       type: matType,
-      url: '',
+      url: resolvedUrl,
       file: matFile || undefined,
       fileName: matFileName || matFile?.name,
       fileType: matFile?.type,
@@ -536,10 +538,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 src={overviewVideoUrl}
                 className="w-full h-full object-contain bg-black"
                 poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=80"
-              >
-                <source src={overviewVideoUrl} type="video/mp4" />
-                Your browser does not support HTML5 video streaming.
-              </video>
+              />
             );
           })() : (
             <div className="text-center space-y-2 px-6">
@@ -1097,15 +1096,15 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                         const file = e.target.files?.[0];
                         if (!file) return;
                         setSelectedVideoFileName(file.name);
-                        // Uploaded rather than turned into an object URL, so the video survives the
-                        // page and is playable by everyone else on the session.
+                        const localBlob = URL.createObjectURL(file);
+                        setVideoInputUrl(localBlob);
                         try {
                           const uploadResult = await uploadFile(file, session.id);
-                          if (!uploadResult) { setSelectedVideoFileName(''); return; }
-                          setVideoInputUrl(uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '');
+                          if (uploadResult && (uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url)) {
+                            setVideoInputUrl(uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || localBlob);
+                          }
                         } catch (error: any) {
-                          console.error('Video upload failed', error);
-                          setSelectedVideoFileName('');
+                          console.error('Video upload failed, using local preview', error);
                         }
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer"

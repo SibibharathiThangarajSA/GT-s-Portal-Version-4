@@ -1005,6 +1005,36 @@
           return;
         }
 
+        // 6. Video & Audio Media (.mp4, .webm, .ogg, .mov, .m4v, .mp3, .wav)
+        const isVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.webm') || cleanUrl.endsWith('.ogg') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.m4v') || contentType.startsWith('video/') || lowerTitle.endsWith('.mp4') || lowerTitle.endsWith('.webm') || lowerTitle.endsWith('.mov');
+        const isAudio = cleanUrl.endsWith('.mp3') || cleanUrl.endsWith('.wav') || cleanUrl.endsWith('.m4a') || contentType.startsWith('audio/');
+        if (isVideo || isAudio) {
+          formatBadge.textContent = isVideo ? 'VIDEO' : 'AUDIO';
+          const mime = isVideo ? (cleanUrl.endsWith('.webm') ? 'video/webm' : 'video/mp4') : 'audio/mpeg';
+          const blob = new Blob([buffer], { type: mime });
+          const mediaUrl = URL.createObjectURL(blob);
+          loadingState.style.display = 'none';
+          errorState.style.display = 'none';
+          container.style.display = 'block';
+          pdfTarget.style.display = 'none';
+          dynamicTarget.style.display = 'block';
+          dynamicTarget.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 520px; padding: 24px; background: #0f172a; border-radius: 16px;">
+              ${isVideo ? `
+                <div style="width: 100%; max-width: 960px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6); background: #000;">
+                  <video src="${mediaUrl}" controls autoplay playsinline style="width: 100%; max-height: 72vh; display: block;"></video>
+                </div>
+              ` : `
+                <div style="width: 100%; max-width: 520px; padding: 32px; background: #1e293b; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); text-align: center;">
+                  <h4 style="color: #f8fafc; margin-bottom: 16px; font-size: 16px;">${customTitle}</h4>
+                  <audio src="${mediaUrl}" controls style="width: 100%;"></audio>
+                </div>
+              `}
+            </div>
+          `;
+          return;
+        }
+
         // 6. Code & Plain Text & SQL (.sql, .txt, .md, .json, .log, .py, .cs, etc.)
         formatBadge.textContent = cleanUrl.endsWith('.sql') || lowerTitle.includes('sql') ? 'SQL SCRIPT' : 'TEXT / CODE';
         const decoder = new TextDecoder('utf-8');
