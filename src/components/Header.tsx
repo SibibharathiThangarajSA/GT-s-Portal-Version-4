@@ -96,8 +96,8 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     onClick={() => setActivePortal('Admin')}
                     className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activePortal === 'Admin'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
@@ -106,8 +106,8 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     onClick={() => setActivePortal('GT')}
                     className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activePortal === 'GT'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                       }`}
                   >
                     <UserCheck className="w-3.5 h-3.5" />
@@ -148,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => onOpenLogin('GT')}
                 className="h-[42px] px-4 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/20 transition-all flex items-center justify-center cursor-pointer"
               >
-                Associate Login
+                Login
               </button>
               {/* <button
                   onClick={() => onOpenLogin('Admin')}
