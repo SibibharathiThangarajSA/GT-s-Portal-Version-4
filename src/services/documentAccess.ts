@@ -142,22 +142,23 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     return true;
   }
 
-  // 2. SharePoint / OneDrive PowerPoint Documents: Open directly in Microsoft 365 PowerPoint Web
-  if (safeUrl.includes('sharepoint.com') || safeUrl.includes('1drv.ms') || safeUrl.includes('onedrive.live.com')) {
-    const onlinePptUrl = safeUrl.includes('?') ? `${safeUrl}&web=1` : `${safeUrl}?web=1`;
-    window.open(onlinePptUrl, '_blank', 'noopener,noreferrer');
+  // 2. PowerPoint Presentations (.ppt, .pptx, SharePoint PPT):
+  // Always open directly in Web PowerPoint (Microsoft 365 / Office Online Web Viewer) in a new tab (Never in document-viewer.html)
+  if (isPowerPoint) {
+    if (safeUrl.includes('sharepoint.com') || safeUrl.includes('1drv.ms') || safeUrl.includes('onedrive.live.com')) {
+      const onlinePptUrl = safeUrl.includes('?') ? `${safeUrl}&web=1` : `${safeUrl}?web=1`;
+      window.open(onlinePptUrl, '_blank', 'noopener,noreferrer');
+      return true;
+    }
+
+    const fullUrl = safeUrl.startsWith('http') ? safeUrl : `${window.location.origin}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
+    const officeWebPptUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fullUrl)}`;
+    window.open(officeWebPptUrl, '_blank', 'noopener,noreferrer');
     return true;
   }
 
-  // 3. Public Web PowerPoint Presentations: Open directly in Microsoft Office Online PowerPoint Web Viewer
-  if (isPowerPoint && /^https?:\/\//i.test(safeUrl) && !safeUrl.includes('localhost') && !safeUrl.includes('127.0.0.1')) {
-    const officeViewerUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(safeUrl)}`;
-    window.open(officeViewerUrl, '_blank', 'noopener,noreferrer');
-    return true;
-  }
-
-  // 4. Local / Uploaded PPTX and ALL other documents (PDF, Word DOCX, Excel, Images, Text/Code):
-  // Open in the Universal In-Browser Document Viewer (PowerPoint slides render in-browser with zero auto-download)
+  // 3. ALL other documents (PDF, Word DOC/DOCX, Excel XLSX, Images, Code, SQL, Text):
+  // Open in the Universal In-Browser Document Viewer screen
   const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
   window.open(viewerUrl, '_blank', 'noopener,noreferrer');
   return true;
