@@ -1,3 +1,4 @@
+import React, { useState, useRef } from 'react';
 import { SessionTrackerRecord, Session } from '../../types';
 import { mockSessionTrackerRecords } from '../../data/mockData';
 import { 

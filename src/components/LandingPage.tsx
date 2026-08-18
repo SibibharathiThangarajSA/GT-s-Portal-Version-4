@@ -84,10 +84,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
               <button
                 onClick={() => onOpenLogin('GT')}
-                className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+                className="px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
               >
-                <span>Login to Platform</span>
+                <span>Associate Login</span>
                 <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => onOpenLogin('Admin')}
+                className="px-7 py-3.5 rounded-2xl bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-500/30 hover:border-emerald-500 font-bold text-sm shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>L&D Admin Portal</span>
               </button>
             </div>
 

@@ -90,26 +90,45 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Current Active Portal Title Badge (GT Portal or Admin Portal) */}
           {isAuthenticated && (
-            <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 shadow-inner">
-              {activePortal === 'Admin' ? (
-                <span className="text-xs font-bold flex items-center gap-1.5 text-emerald-700">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Admin Portal</span>
-                </span>
+            <div className="flex items-center gap-2">
+              {currentUser.role === 'Admin' ? (
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
+                  <button
+                    onClick={() => setActivePortal('Admin')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      activePortal === 'Admin'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Admin Portal</span>
+                  </button>
+                  <button
+                    onClick={() => setActivePortal('GT')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      activePortal === 'GT'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>GT View</span>
+                  </button>
+                </div>
               ) : (
-                <span className="text-xs font-bold flex items-center gap-1.5 text-blue-700">
-                  <UserCheck className="w-4 h-4" />
-                  <span>GT Portal</span>
-                </span>
+                <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 shadow-inner">
+                  <span className="text-xs font-bold flex items-center gap-1.5 text-blue-700">
+                    <UserCheck className="w-4 h-4" />
+                    <span>GT Portal</span>
+                  </span>
+                </div>
               )}
             </div>
           )}
           {/* Unauthenticated Landing Navigation Links */}
           {!isAuthenticated && (
             <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-600">
-              {/* <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-blue-600 transition-colors">
-                Home
-              </button> */}
             </nav>
           )}
         </div>
@@ -129,9 +148,16 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onOpenLogin('GT')}
-                  className="h-[42px] px-5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/20 transition-all flex items-center justify-center cursor-pointer"
+                  className="h-[42px] px-4 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/20 transition-all flex items-center justify-center cursor-pointer"
                 >
-                  Login
+                  Associate Login
+                </button>
+                <button
+                  onClick={() => onOpenLogin('Admin')}
+                  className="h-[42px] px-4 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all flex items-center gap-1.5 justify-center cursor-pointer shadow-xs"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>L&D Admin</span>
                 </button>
               </div>
             )}
