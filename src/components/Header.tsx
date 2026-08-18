@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ProfileImage from './ProfileImage';
 import { User } from '../types';
-import { 
-  GraduationCap, 
-  ShieldCheck, 
+import {
+  GraduationCap,
+  ShieldCheck,
   UserCheck,
   ArrowLeft,
   LogOut,
@@ -61,17 +61,17 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/80 text-slate-900 transition-all shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        
+
         {/* Brand & Title Box */}
         <div className="flex items-center gap-6">
-          <button 
+          <button
             onClick={() => {
               if (isAuthenticated) {
                 setActivePortal('GT');
               } else {
                 setActivePortal('Landing');
               }
-            }} 
+            }}
             className="flex items-center gap-3 group focus:outline-none"
             data-inspect-id="PrimaryButton"
           >
@@ -95,22 +95,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
                   <button
                     onClick={() => setActivePortal('Admin')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                      activePortal === 'Admin'
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activePortal === 'Admin'
                         ? 'bg-emerald-600 text-white shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                      }`}
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span>Admin Portal</span>
                   </button>
                   <button
                     onClick={() => setActivePortal('GT')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                      activePortal === 'GT'
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activePortal === 'GT'
                         ? 'bg-blue-600 text-white shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                      }`}
                   >
                     <UserCheck className="w-3.5 h-3.5" />
                     <span>GT View</span>
@@ -132,40 +130,40 @@ export const Header: React.FC<HeaderProps> = ({
             </nav>
           )}
         </div>
-          {/* Right Header Actions */}
-          <div className="flex items-center gap-3">
-            {/* User Guide Secondary CTA Button */}
-            <button
-              onClick={onOpenUserGuide}
-              className="h-[42px] px-5 rounded-xl text-xs font-bold bg-white text-[#2563EB] border border-[#D7E7FF] hover:bg-[#F3F8FF] hover:border-[#2563EB] active:bg-[#2563EB] active:text-white transition-all duration-200 shadow-sm flex items-center gap-2 -translate-y-0 hover:-translate-y-0.5 cursor-pointer group select-none"
-              title="Open User Guide (Shortcut: Shift + ?)"
-            >
-              <BookOpen className="w-4 h-4 text-[#2563EB] group-active:text-white transition-colors" />
-              <span>User Guide</span>
-            </button>
+        {/* Right Header Actions */}
+        <div className="flex items-center gap-3">
+          {/* User Guide Secondary CTA Button */}
+          <button
+            onClick={onOpenUserGuide}
+            className="h-[42px] px-5 rounded-xl text-xs font-bold bg-white text-[#2563EB] border border-[#D7E7FF] hover:bg-[#F3F8FF] hover:border-[#2563EB] active:bg-[#2563EB] active:text-white transition-all duration-200 shadow-sm flex items-center gap-2 -translate-y-0 hover:-translate-y-0.5 cursor-pointer group select-none"
+            title="Open User Guide (Shortcut: Shift + ?)"
+          >
+            <BookOpen className="w-4 h-4 text-[#2563EB] group-active:text-white transition-colors" />
+            <span>User Guide</span>
+          </button>
 
-            {!isAuthenticated && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onOpenLogin('GT')}
-                  className="h-[42px] px-4 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/20 transition-all flex items-center justify-center cursor-pointer"
-                >
-                  Associate Login
-                </button>
-                <button
+          {!isAuthenticated && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onOpenLogin('GT')}
+                className="h-[42px] px-4 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/20 transition-all flex items-center justify-center cursor-pointer"
+              >
+                Associate Login
+              </button>
+              {/* <button
                   onClick={() => onOpenLogin('Admin')}
                   className="h-[42px] px-4 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all flex items-center gap-1.5 justify-center cursor-pointer shadow-xs"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                   <span>L&D Admin</span>
-                </button>
-              </div>
-            )}
+                </button> */}
+            </div>
+          )}
 
-            {isAuthenticated && (
+          {isAuthenticated && (
             /* Authenticated Header Tools */
             <div className="flex items-center gap-3">
-              
+
               {/* Back to Login Button */}
               {/* <button
                 onClick={handleBackToLogin}
