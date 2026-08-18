@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { 
+import {
   ArrowRight,
   BookOpen
 } from 'lucide-react';
@@ -17,13 +17,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   return (
     <div className="min-h-screen text-slate-900 flex flex-col justify-between relative overflow-hidden selection:bg-blue-600 selection:text-white">
-      
+
       {/* Background Video */}
-      <video 
-        autoPlay 
-        loop 
-        muted 
-        playsInline 
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
         className="absolute inset-0 w-full h-full object-cover z-0 opacity-100 pointer-events-none"
       >
         <source src="/Assets/Videos/bg-video/premium.mp4" type="video/mp4" />
@@ -38,14 +38,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 relative z-10 flex-1 flex items-center justify-center">
-        
+
         {/* ========================================== */}
         {/* SECTION 1: HERO SECTION                    */}
         {/* ========================================== */}
         <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto py-8">
-          
+
           {/* Centered Hero Content */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -68,7 +68,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   Previous Batches.
                 </span>{' '}
                 <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-emerald-600 bg-clip-text text-transparent">
-                   Share with 
+                  Share with
                 </span>{' '}
                 the Next.
 
@@ -77,7 +77,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Supporting Text */}
             <p className="text-slate-600 text-base sm:text-lg font-normal leading-relaxed max-w-2xl mx-auto">
-             A centralized knowledge hub where Graduate Trainees can discover, access, and share notes, guides, documents, and valuable resources throughout their journey.
+              A centralized knowledge hub where Graduate Trainees can discover, access, and share notes, guides, documents, and valuable resources throughout their journey.
             </p>
 
             {/* Hero CTAs */}
@@ -86,17 +86,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={() => onOpenLogin('GT')}
                 className="px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
               >
-                <span>Associate Login</span>
+                <span>Login to platform</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <button
+              {/* <button
                 onClick={() => onOpenLogin('Admin')}
                 className="px-7 py-3.5 rounded-2xl bg-white hover:bg-emerald-50 text-emerald-800 border-2 border-emerald-500/30 hover:border-emerald-500 font-bold text-sm shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span>L&D Admin Portal</span>
-              </button>
+              </button> */}
             </div>
 
           </motion.div>
