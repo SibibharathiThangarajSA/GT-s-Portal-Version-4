@@ -86,6 +86,26 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
     batch: 'GT-2026-Batch-01',
     avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80'
   },
+  {
+    email: 'Vaishali.Karunai@valuemomentum.com',
+    defaultPassword: 'Vaishali.Karunai',
+    role: 'GT',
+    name: 'Vaishali Karunai',
+    firstName: 'Vaishali',
+    lastName: 'Karunai',
+    batch: 'GT-2026-Batch-01',
+    avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Tanvitha.Nadukuda@valuemomentum.com',
+    defaultPassword: 'Tanvitha.Nadukuda',
+    role: 'GT',
+    name: 'Tanvitha Nadukuda',
+    firstName: 'Tanvitha',
+    lastName: 'Nadukuda',
+    batch: 'GT-2026-Batch-01',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+  },
 
   // ==========================================
   // L&D TEAM (Role: Admin)
