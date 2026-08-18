@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
 import { SessionTrackerRecord, Session } from '../../types';
+import { mockSessionTrackerRecords } from '../../data/mockData';
 import { 
   Table, 
   Plus, 
@@ -34,38 +34,29 @@ interface SessionTrackerProps {
   onDeleteRecord?: (id: string) => void;
 }
 
+const TRACKER_STORAGE_KEY = 'gt_session_tracker_records_manual_v1';
+
 export const SessionTracker: React.FC<SessionTrackerProps> = ({
   sessions = [],
   records: initialRecords,
   onSaveRecord,
   onDeleteRecord
 }) => {
-  // Initialize state with props or build from provided sessions.
+  // Initialize state with manual records only (Never auto-populate from curriculum sessions)
   const [trackerRecords, setTrackerRecords] = useState<SessionTrackerRecord[]>(() => {
     if (initialRecords && initialRecords.length > 0) return initialRecords;
-
-    const base: SessionTrackerRecord[] = [];
-    if (sessions && sessions.length > 0) {
-      sessions.forEach(s => {
-        base.push({
-          id: `track-${s.id}`,
-          sessionCode: `SESS-${String(s.id).toUpperCase().slice(0, 6)}`,
-          sessionName: s.name,
-          category: s.category,
-          trainerName: (s as any).trainerName || 'Assigned Instructor',
-          scheduleDate: new Date().toISOString().split('T')[0],
-          scheduleTime: '10:00 AM - 01:00 PM',
-          durationHours: s.durationHours || 10,
-          status: s.progressPercent === 100 ? 'Completed' : s.progressPercent > 0 ? 'In Progress' : 'Scheduled',
-          enrolledCount: 35,
-          maxCapacity: 40,
-          completionRatePercent: s.progressPercent || 0,
-          notes: s.description || '',
-          lastUpdated: new Date().toISOString().split('T')[0]
-        });
-      });
+    try {
+      const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse tracker records from storage', e);
     }
-    return base;
+    return mockSessionTrackerRecords;
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -146,7 +137,13 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   };
 
   const handleDelete = (id: string) => {
-    setTrackerRecords(prev => prev.filter(r => r.id !== id));
+    setTrackerRecords(prev => {
+      const updated = prev.filter(r => r.id !== id);
+      try {
+        localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     if (onDeleteRecord) onDeleteRecord(id);
   };
 
@@ -175,10 +172,11 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
 
     setTrackerRecords(prev => {
       const exists = prev.some(r => r.id === fullRecord.id);
-      if (exists) {
-        return prev.map(r => r.id === fullRecord.id ? fullRecord : r);
-      }
-      return [fullRecord, ...prev];
+      const updated = exists ? prev.map(r => r.id === fullRecord.id ? fullRecord : r) : [fullRecord, ...prev];
+      try {
+        localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
     });
 
     if (onSaveRecord) onSaveRecord(fullRecord);

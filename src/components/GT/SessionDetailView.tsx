@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote } from '../../types';
+import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote, User } from '../../types';
 import { InteractiveRoadmap } from './InteractiveRoadmap';
-import { fetchStudyMaterialsApi, fetchAssignmentsApi, fetchQuizzesApi, createStudyMaterialApi, summarizeMaterialAiApi, fetchSessionById } from '../../services/api';
+import { fetchStudyMaterialsApi, fetchAssignmentsApi, fetchQuizzesApi, createStudyMaterialApi, summarizeMaterialAiApi, fetchSessionById, fetchUserPersonalNotesApi, saveUserPersonalNotesApi } from '../../services/api';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useToast } from '../../context/ToastContext';
 import { openDocument, downloadDocument } from '../../services/documentAccess';
@@ -36,7 +36,12 @@ import {
   FileCode,
   ShieldCheck,
   ClipboardList,
-  FolderPlus
+  FolderPlus,
+  Lock,
+  Pin,
+  Trash2,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface CustomMaterialItem {
@@ -69,6 +74,7 @@ interface SessionDetailViewProps {
   initialTab?: string;
   initialTopicId?: string;
   onStateChange?: (tab: string, topicId?: string) => void;
+  currentUser?: User;
 }
 
 const providedMaterialMocks: Record<string, CustomMaterialItem[]> = {};
@@ -198,7 +204,8 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   onStartQuiz,
   initialTab,
   initialTopicId,
-  onStateChange
+  onStateChange,
+  currentUser
 }) => {
   // 3 Primary Fields / Tabs: 'roadmap' (Road Map), 'provided-materials' (Provided Materials), 'additional-materials' (Additional Materials)
   const [activeTab, setActiveTab] = useState<'roadmap' | 'provided-materials' | 'additional-materials' | 'assignments' | 'quiz' | 'notes'>(
@@ -331,9 +338,39 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const [matDesc, setMatDesc] = useState('');
   const [matTags, setMatTags] = useState('');
 
-  // Notes state
+  // User Scoping for Private Notes
+  const userKey = (currentUser?.id || currentUser?.email || 'default_associate').trim().toLowerCase();
+  const userName = currentUser?.name || currentUser?.email || 'Associate';
+  const userEmail = currentUser?.email || '';
+
+  // Notes state - Scoped strictly to currentUser and this session
   const [personalNotesList, setPersonalNotesList] = useState<PersonalNote[]>([]);
   const [newNoteText, setNewNoteText] = useState('');
+  const [noteTopicId, setNoteTopicId] = useState<string>(initialTopicId || '');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState<string>('');
+  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
+  const [noteSearchQuery, setNoteSearchQuery] = useState<string>('');
+  const [noteTopicFilter, setNoteTopicFilter] = useState<string>('All');
+
+  // Load user-scoped personal notes on mount and whenever userKey or session.id changes
+  useEffect(() => {
+    let isMounted = true;
+    const loadUserNotes = async () => {
+      try {
+        const stored = await fetchUserPersonalNotesApi(userKey, session.id);
+        if (isMounted) {
+          setPersonalNotesList(stored);
+        }
+      } catch (err) {
+        console.warn('Failed to load notes for user:', userKey, err);
+      }
+    };
+    loadUserNotes();
+    return () => {
+      isMounted = false;
+    };
+  }, [userKey, session.id]);
 
   const selectedTopic = (session?.topics || []).find(t => t.id === selectedTopicId) || (session?.topics || [])[0];
   const activeQuiz = quizzesList[0] || (session?.quizzes || [])[0];
@@ -422,17 +459,84 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
   const handleAddNote = () => {
     if (!newNoteText.trim()) return;
-    const note: PersonalNote = {
-      id: `note-${Date.now()}`,
+    const targetTopicId = noteTopicId || selectedTopicId || (session?.topics || [])[0]?.id || 'general';
+    const targetTopicTitle = (session?.topics || []).find(t => t.id === targetTopicId)?.title || 'General Session Note';
+    const now = new Date();
+    const formattedDate = `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+    const newNote: PersonalNote = {
+      id: `note-${userKey}-${session.id}-${Date.now()}`,
+      userId: userKey,
+      userEmail: userEmail,
       sessionId: session.id,
-      topicId: selectedTopicId,
-      topicTitle: 'Reference Notes',
-      content: newNoteText,
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      topicId: targetTopicId,
+      topicTitle: targetTopicTitle,
+      content: newNoteText.trim(),
+      isPinned: false,
+      createdAt: formattedDate,
+      updatedAt: formattedDate
     };
-    setPersonalNotesList([note, ...personalNotesList]);
+
+    const updatedList = [newNote, ...personalNotesList];
+    setPersonalNotesList(updatedList);
+    saveUserPersonalNotesApi(userKey, session.id, updatedList);
     setNewNoteText('');
+    addToast('success', 'Private note saved securely to your profile!');
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    const updatedList = personalNotesList.filter(n => n.id !== noteId);
+    setPersonalNotesList(updatedList);
+    saveUserPersonalNotesApi(userKey, session.id, updatedList);
+    addToast('info', 'Personal note removed.');
+  };
+
+  const handleTogglePinNote = (noteId: string) => {
+    const updatedList = personalNotesList.map(n => n.id === noteId ? { ...n, isPinned: !n.isPinned } : n);
+    setPersonalNotesList(updatedList);
+    saveUserPersonalNotesApi(userKey, session.id, updatedList);
+  };
+
+  const handleStartEditNote = (note: PersonalNote) => {
+    setEditingNoteId(note.id);
+    setEditingNoteText(note.content);
+  };
+
+  const handleSaveEditNote = (noteId: string) => {
+    if (!editingNoteText.trim()) return;
+    const now = new Date();
+    const formattedDate = `${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const updatedList = personalNotesList.map(n => n.id === noteId ? { ...n, content: editingNoteText.trim(), updatedAt: formattedDate } : n);
+    setPersonalNotesList(updatedList);
+    saveUserPersonalNotesApi(userKey, session.id, updatedList);
+    setEditingNoteId(null);
+    setEditingNoteText('');
+    addToast('success', 'Note updated successfully!');
+  };
+
+  const handleCopyNote = (note: PersonalNote) => {
+    const text = `[${note.topicTitle}]\n${note.content}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedNoteId(note.id);
+      setTimeout(() => setCopiedNoteId(null), 2000);
+      addToast('success', 'Note copied to clipboard!');
+    });
+  };
+
+  const handleExportAllNotes = () => {
+    if (personalNotesList.length === 0) return;
+    const header = `# Personal Notes: ${session.name}\nAssociate: ${userName} (${userEmail})\nExported: ${new Date().toLocaleString()}\nTotal Notes: ${personalNotesList.length}\n\n=========================================\n\n`;
+    const body = personalNotesList.map((n, i) => `## Note ${i + 1}: ${n.topicTitle}\n**Created:** ${n.createdAt}\n\n${n.content}\n\n-----------------------------------------`).join('\n\n');
+    const blob = new Blob([header + body], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Personal_Notes_${session.name.replace(/[^a-zA-Z0-9]/g, '_')}_${userName.replace(/[^a-zA-Z0-9]/g, '_')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    addToast('success', 'Notes exported successfully!');
   };
 
   // View opens the stored document and does nothing else. It previously opened a blob URL when an
@@ -1004,36 +1108,253 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         </div>
       )}
 
-      {/* Notes Tab */}
+      {/* ======================================================== */}
+      {/* FIELD E: USER-SCOPED PERSONAL NOTES TAB                  */}
+      {/* ======================================================== */}
       {activeTab === 'notes' && (
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-md space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Your Reference Notes</h3>
+        <div className="space-y-6 animate-fadeIn">
+          {/* Header Card with Privacy Lock Indicator & Export */}
+          <div className="bg-gradient-to-r from-blue-50 via-indigo-50/60 to-slate-50 border border-blue-200/80 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/80 border border-emerald-300/80 text-emerald-800 text-xs font-bold shadow-xs">
+                <Lock className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Private to {userName} • Isolated per Associate</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-extrabold text-slate-900">Your Private Reference Notes</h3>
+              <p className="text-xs text-slate-600 font-medium max-w-xl leading-relaxed">
+                Record personal key concepts, syntax reminders, and exam takeaways for <span className="font-semibold text-slate-800">{session.name}</span>. These notes are 100% private to you and never shared with other associates.
+              </p>
+            </div>
+
+            {personalNotesList.length > 0 && (
+              <button
+                onClick={handleExportAllNotes}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 shadow-sm text-xs font-bold transition-all hover:-translate-y-0.5 whitespace-nowrap self-start sm:self-auto"
+                title="Download all your notes as Markdown"
+              >
+                <Download className="w-4 h-4 text-blue-600" />
+                <span>Export Notes ({personalNotesList.length})</span>
+              </button>
+            )}
+          </div>
+
+          {/* New Note Creator Box */}
+          <div className="bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-bold text-slate-800">Add New Personal Note</span>
+              </div>
+
+              {/* Topic Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-slate-500 whitespace-nowrap">Topic:</span>
+                <select
+                  value={noteTopicId || selectedTopicId || (session?.topics || [])[0]?.id || ''}
+                  onChange={(e) => setNoteTopicId(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600"
+                >
+                  <option value="general">General Session Notes</option>
+                  {(session?.topics || []).map((topic) => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <textarea
               value={newNoteText}
               onChange={(e) => setNewNoteText(e.target.value)}
-              placeholder="Record your insights, key syntax, or reminders for revision..."
-              className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 resize-none"
+              placeholder="Write your insights, important formulas, interview questions, or key takeaways for this topic..."
+              className="w-full h-28 bg-slate-50/80 border border-slate-200 rounded-2xl p-4 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white transition-all resize-none font-sans leading-relaxed"
             />
-            <button
-              onClick={handleAddNote}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md flex items-center gap-2 transition-all hover:-translate-y-0.5"
-            >
-              <Plus className="w-3.5 h-3.5" /> Save Personal Note
-            </button>
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-slate-400 font-mono">
+                {newNoteText.length > 0 ? `${newNoteText.length} characters` : 'Auto-saved to your personal account'}
+              </span>
+              <button
+                onClick={handleAddNote}
+                disabled={!newNoteText.trim()}
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-md ${
+                  newNoteText.trim()
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25 hover:-translate-y-0.5 cursor-pointer'
+                    : 'bg-slate-200 text-slate-400 shadow-none cursor-not-allowed'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Save Private Note</span>
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-3">
-            {personalNotesList.map((note) => (
-              <div key={note.id} className="bg-white border border-slate-200 rounded-2xl p-4 text-xs space-y-2 shadow-sm">
-                <div className="flex items-center justify-between text-slate-500 font-mono text-[10px]">
-                  <span>{note.topicTitle}</span>
-                  <span>{note.createdAt}</span>
-                </div>
-                <p className="text-slate-800 font-sans leading-relaxed">{note.content}</p>
+          {/* Search & Filter Bar (if 2 or more notes exist) */}
+          {personalNotesList.length > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-100/80 p-3 rounded-2xl border border-slate-200">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={noteSearchQuery}
+                  onChange={(e) => setNoteSearchQuery(e.target.value)}
+                  placeholder="Search your notes..."
+                  className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600"
+                />
               </div>
-            ))}
-          </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <Filter className="w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={noteTopicFilter}
+                  onChange={(e) => setNoteTopicFilter(e.target.value)}
+                  className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-600"
+                >
+                  <option value="All">All Topics ({personalNotesList.length})</option>
+                  <option value="general">General Session Notes</option>
+                  {(session?.topics || []).map((topic) => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Notes Display List */}
+          {personalNotesList.length > 0 ? (
+            <div className="space-y-4">
+              {(() => {
+                const filtered = personalNotesList
+                  .filter((n) => {
+                    const matchesSearch = !noteSearchQuery.trim() || n.content.toLowerCase().includes(noteSearchQuery.toLowerCase()) || n.topicTitle.toLowerCase().includes(noteSearchQuery.toLowerCase());
+                    const matchesTopic = noteTopicFilter === 'All' || n.topicId === noteTopicFilter;
+                    return matchesSearch && matchesTopic;
+                  })
+                  .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center text-xs text-slate-500">
+                      No notes matched your search query "{noteSearchQuery}".
+                    </div>
+                  );
+                }
+
+                return filtered.map((note) => {
+                  const isEditing = editingNoteId === note.id;
+                  const isCopied = copiedNoteId === note.id;
+
+                  return (
+                    <div
+                      key={note.id}
+                      className={`bg-white border rounded-2xl p-5 text-xs space-y-3 transition-all duration-200 ${
+                        note.isPinned
+                          ? 'border-amber-300 bg-gradient-to-br from-amber-50/30 to-white shadow-md'
+                          : 'border-slate-200/90 hover:border-slate-300 shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/80 font-mono text-[11px] font-bold">
+                            {note.topicTitle}
+                          </span>
+                          {note.isPinned && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                              <Pin className="w-3 h-3 text-amber-600 fill-amber-500" />
+                              <span>Pinned</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-slate-400">
+                          <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">{note.createdAt}</span>
+
+                          {/* Pin Button */}
+                          <button
+                            onClick={() => handleTogglePinNote(note.id)}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              note.isPinned ? 'text-amber-600 bg-amber-50' : 'hover:bg-slate-100 hover:text-slate-700'
+                            }`}
+                            title={note.isPinned ? 'Unpin note' : 'Pin note to top'}
+                          >
+                            <Pin className={`w-3.5 h-3.5 ${note.isPinned ? 'fill-amber-500' : ''}`} />
+                          </button>
+
+                          {/* Copy Button */}
+                          <button
+                            onClick={() => handleCopyNote(note)}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+                            title="Copy note content"
+                          >
+                            {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+
+                          {/* Edit Button */}
+                          <button
+                            onClick={() => (isEditing ? handleSaveEditNote(note.id) : handleStartEditNote(note))}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 hover:text-blue-600 transition-colors cursor-pointer"
+                            title="Edit note"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => handleDeleteNote(note.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                            title="Delete note"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {isEditing ? (
+                        <div className="space-y-2 pt-1">
+                          <textarea
+                            value={editingNoteText}
+                            onChange={(e) => setEditingNoteText(e.target.value)}
+                            className="w-full h-24 bg-slate-50 border border-blue-400 rounded-xl p-3 text-xs text-slate-900 focus:outline-none resize-none font-sans"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setEditingNoteId(null)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleSaveEditNote(note.id)}
+                              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm cursor-pointer"
+                            >
+                              Save Changes
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-slate-800 font-sans text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap">
+                          {note.content}
+                        </p>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-10 text-center space-y-3 shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto shadow-xs">
+                <Edit3 className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900">No Private Notes Saved Yet</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                Use the box above to write your key takeaways, interview questions, code snippets, or revision points for <span className="font-semibold text-slate-700">{session.name}</span>.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

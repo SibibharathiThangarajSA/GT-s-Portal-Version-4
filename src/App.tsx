@@ -525,6 +525,7 @@ export function App() {
             ) : selectedSession ? (
               <SessionDetailView
                 session={selectedSession}
+                currentUser={currentUser}
                 onBack={() => {
                   setSelectedSessionId(null);
                   setActiveQuiz(null);
@@ -568,6 +569,7 @@ export function App() {
             ) : selectedSession ? (
               <SessionDetailView
                 session={selectedSession}
+                currentUser={currentUser}
                 onBack={() => setSelectedSessionId(null)}
                 onStartQuiz={(quiz) => {
                   setActiveQuiz(quiz);

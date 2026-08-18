@@ -232,11 +232,15 @@ export interface Session {
 
 export interface PersonalNote {
   id: string;
+  userId?: string;
+  userEmail?: string;
   topicId: string;
   sessionId: string;
   topicTitle: string;
   content: string;
   highlightedText?: string;
+  isPinned?: boolean;
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }

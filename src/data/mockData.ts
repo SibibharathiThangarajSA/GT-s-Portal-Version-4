@@ -9,15 +9,15 @@ import {
 
 export const mockCurrentUser: User = {
   id: 'gt-101',
-  name: 'Alex Vance',
-  email: 'alex.vance@enterprise.com',
+  name: 'Sibibharathi Thangaraj',
+  email: 'Sibibharathi.Thangaraj@valuemomentum.com',
   role: 'GT',
-  batch: 'GT-2026-Batch-02',
+  batch: 'GT-2026-Batch-01',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   xp: 2850,
   level: 5,
   streakDays: 14,
-  lastActiveDate: '2026-08-01',
+  lastActiveDate: '2026-08-18',
   dailyGoalMinutes: 45,
   todayMinutesSpent: 38,
 };

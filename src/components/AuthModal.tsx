@@ -505,7 +505,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
                   type="email"
-                  placeholder={selectedRole === 'Admin' ? 'admin.email@valuemomentum.com' : 'employee.email@valuemomentum.com'}
+                  placeholder={selectedRole === 'Admin' ? 'e.g. Anukraha.Magdalene@valuemomentum.com' : 'e.g. Sibibharathi.Thangaraj@valuemomentum.com'}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isGuestAccess}

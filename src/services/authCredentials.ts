@@ -1,0 +1,343 @@
+/**
+ * Enterprise Authentication & User Credentials Service
+ * 
+ * Supports:
+ * - 6 Graduate Trainee / Associate Accounts (@valuemomentum.com)
+ * - 4 L&D Team / Administrator Accounts (@valuemomentum.com & @owlsure.com)
+ * - Strict Domain Validation (only @valuemomentum.com and @owlsure.com permitted)
+ * - Individual Persistent Password Management (localStorage backed)
+ */
+
+import { AuthUserDto } from '../services/api';
+
+export interface RegisteredCredential {
+  email: string;
+  defaultPassword: string;
+  role: 'GT' | 'Admin';
+  name: string;
+  firstName: string;
+  lastName: string;
+  batch?: string;
+  avatar?: string;
+}
+
+// Official Initial Seed Credentials
+export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
+  // ==========================================
+  // ASSOCIATES (Role: GT)
+  // ==========================================
+  {
+    email: 'Sibibharathi.Thangaraj@valuemomentum.com',
+    defaultPassword: 'Sibibharathi.Thangaraj',
+    role: 'GT',
+    name: 'Sibibharathi Thangaraj',
+    firstName: 'Sibibharathi',
+    lastName: 'Thangaraj',
+    batch: 'GT-2026-Batch-01',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Pavithran.Sivanandham@valuemomentum.com',
+    defaultPassword: 'Pavithran.Sivanandham',
+    role: 'GT',
+    name: 'Pavithran Sivanandham',
+    firstName: 'Pavithran',
+    lastName: 'Sivanandham',
+    batch: 'GT-2026-Batch-01',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Aswin.Muruganandham@valuemomentum.com',
+    defaultPassword: 'Aswin.Muruganandham',
+    role: 'GT',
+    name: 'Aswin Muruganandham',
+    firstName: 'Aswin',
+    lastName: 'Muruganandham',
+    batch: 'GT-2026-Batch-01',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Harshini.Radhakrishnan@valuemomentum.com',
+    defaultPassword: 'Harshini.Radhakrishnan',
+    role: 'GT',
+    name: 'Harshini Radhakrishnan',
+    firstName: 'Harshini',
+    lastName: 'Radhakrishnan',
+    batch: 'GT-2026-Batch-01',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Imran.Aupe@valuemomentum.com',
+    defaultPassword: 'Imran.Aupe',
+    role: 'GT',
+    name: 'Imran Aupe',
+    firstName: 'Imran',
+    lastName: 'Aupe',
+    batch: 'GT-2026-Batch-01',
+    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Kruthika.Devaraje@valuemomentum.com',
+    defaultPassword: 'Kruthika.Devaraje',
+    role: 'GT',
+    name: 'Kruthika Devaraje',
+    firstName: 'Kruthika',
+    lastName: 'Devaraje',
+    batch: 'GT-2026-Batch-01',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80'
+  },
+
+  // ==========================================
+  // L&D TEAM (Role: Admin)
+  // ==========================================
+  {
+    email: 'Anukraha.Magdalene@valuemomentum.com',
+    defaultPassword: 'Anukraha.Magdalene',
+    role: 'Admin',
+    name: 'Anukraha Magdalene',
+    firstName: 'Anukraha',
+    lastName: 'Magdalene',
+    batch: 'L&D Leadership',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Keren.Christobel@valuemomentum.com',
+    defaultPassword: 'Keren.Christobel',
+    role: 'Admin',
+    name: 'Keren Christobel',
+    firstName: 'Keren',
+    lastName: 'Christobel',
+    batch: 'L&D Management',
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Janani.Selvaraj@valuemomentum.com',
+    defaultPassword: 'Janani.Selvaraj',
+    role: 'Admin',
+    name: 'Janani Selvaraj',
+    firstName: 'Janani',
+    lastName: 'Selvaraj',
+    batch: 'L&D Management',
+    avatar: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80'
+  },
+  {
+    email: 'Sudhir.Vittapu@owlsure.com',
+    defaultPassword: 'Sudhir.Vittapu',
+    role: 'Admin',
+    name: 'Sudhir Vittapu',
+    firstName: 'Sudhir',
+    lastName: 'Vittapu',
+    batch: 'Technical Facilitation',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80'
+  }
+];
+
+const STORAGE_KEY = 'gt_custom_credentials_store_v2';
+
+/**
+ * Retrieves the current credentials store, merging initial seed data with user updates
+ */
+export const getCredentialsStore = (): Record<string, { password: string; profile: RegisteredCredential }> => {
+  const store: Record<string, { password: string; profile: RegisteredCredential }> = {};
+
+  // 1. Load initial seed credentials
+  INITIAL_CREDENTIALS.forEach((cred) => {
+    store[cred.email.toLowerCase()] = {
+      password: cred.defaultPassword,
+      profile: cred
+    };
+  });
+
+  // 2. Overlay persistent changes from localStorage
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const overrides = JSON.parse(raw);
+      if (typeof overrides === 'object' && overrides !== null) {
+        Object.keys(overrides).forEach((emailKey) => {
+          const lowerKey = emailKey.toLowerCase();
+          if (store[lowerKey] && typeof overrides[emailKey] === 'string') {
+            store[lowerKey].password = overrides[emailKey];
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse persistent credentials store', e);
+  }
+
+  return store;
+};
+
+/**
+ * Checks if the email domain is strictly @valuemomentum.com or @owlsure.com
+ */
+export const isAllowedDomain = (email: string): boolean => {
+  if (!email || typeof email !== 'string') return false;
+  const lower = email.trim().toLowerCase();
+  return lower.endsWith('@valuemomentum.com') || lower.endsWith('@owlsure.com');
+};
+
+/**
+ * Authenticates a user against the registered credentials store
+ */
+export const authenticateLocalUser = (
+  email: string,
+  password?: string
+): { success: boolean; data?: AuthUserDto; message?: string } => {
+  const cleanEmail = email.trim().toLowerCase();
+
+  // 1. Validate email domain
+  if (!isAllowedDomain(cleanEmail)) {
+    return {
+      success: false,
+      message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+    };
+  }
+
+  const store = getCredentialsStore();
+  const userEntry = store[cleanEmail];
+
+  // 2. Check if user exists in credentials store
+  if (!userEntry) {
+    return {
+      success: false,
+      message: 'Incorrect email ID or password.'
+    };
+  }
+
+  // 3. Check password
+  if (!password || password !== userEntry.password) {
+    return {
+      success: false,
+      message: 'Incorrect email ID or password.'
+    };
+  }
+
+  // 4. Return valid authenticated user DTO
+  const user = userEntry.profile;
+  const token = `token-${user.role.toLowerCase()}-${user.email}-${Date.now()}`;
+
+  return {
+    success: true,
+    data: {
+      id: `user-${user.email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      token,
+      batch: user.batch || 'GT-2026-Batch-01',
+      xp: 2850,
+      level: 5,
+      streakDays: 14,
+      lastActiveDate: new Date().toISOString().split('T')[0],
+      dailyGoalMinutes: 45,
+      todayMinutesSpent: 25
+    }
+  };
+};
+
+/**
+ * Changes a user's password and persists it to localStorage
+ */
+export const changeUserPassword = (
+  email: string,
+  currentPassword: string,
+  newPassword: string
+): { success: boolean; message: string } => {
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (!isAllowedDomain(cleanEmail)) {
+    return {
+      success: false,
+      message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+    };
+  }
+
+  const store = getCredentialsStore();
+  const userEntry = store[cleanEmail];
+
+  if (!userEntry) {
+    return {
+      success: false,
+      message: 'User account not found.'
+    };
+  }
+
+  if (currentPassword !== userEntry.password) {
+    return {
+      success: false,
+      message: 'Current password is incorrect.'
+    };
+  }
+
+  if (!newPassword || newPassword.length < 8) {
+    return {
+      success: false,
+      message: 'New password must be at least 8 characters long.'
+    };
+  }
+
+  // Save new password into localStorage
+  try {
+    let overrides: Record<string, string> = {};
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      overrides = JSON.parse(raw) || {};
+    }
+    overrides[cleanEmail] = newPassword;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+  } catch (e) {
+    console.warn('Failed to persist new password to localStorage', e);
+  }
+
+  return {
+    success: true,
+    message: 'Password changed successfully! You can now log in with your new password.'
+  };
+};
+
+/**
+ * Resets a user's password (e.g. from Forgot Password OTP flow)
+ */
+export const resetUserPassword = (
+  email: string,
+  newPassword: string
+): { success: boolean; message: string } => {
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (!isAllowedDomain(cleanEmail)) {
+    return {
+      success: false,
+      message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+    };
+  }
+
+  const store = getCredentialsStore();
+  const userEntry = store[cleanEmail];
+
+  if (!userEntry) {
+    return {
+      success: false,
+      message: 'User account not found.'
+    };
+  }
+
+  try {
+    let overrides: Record<string, string> = {};
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      overrides = JSON.parse(raw) || {};
+    }
+    overrides[cleanEmail] = newPassword;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+  } catch (e) {
+    console.warn('Failed to persist reset password to localStorage', e);
+  }
+
+  return {
+    success: true,
+    message: 'Password has been reset successfully! Please log in with your new password.'
+  };
+};
