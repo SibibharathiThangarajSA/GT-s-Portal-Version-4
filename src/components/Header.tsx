@@ -53,9 +53,9 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, [showProfilePopover]);
 
-  const handleBackToLogin = () => {
+  const handleLogout = () => {
+    setShowProfilePopover(false);
     onLogout();
-    onOpenLogin(activePortal === 'Admin' ? 'Admin' : 'GT');
   };
 
   return (
@@ -211,15 +211,12 @@ export const Header: React.FC<HeaderProps> = ({
                         </button>
                       )}
                       <button
-                        onClick={() => {
-                          setShowProfilePopover(false);
-                          handleBackToLogin();
-                        }}
+                        onClick={handleLogout}
                         className="w-full text-left px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-between font-semibold cursor-pointer"
                       >
                         <span className="flex items-center gap-2">
                           <LogOut className="w-3.5 h-3.5" />
-                          <span>Back to Login</span>
+                          <span>Logout</span>
                         </span>
                       </button>
                     </div>
