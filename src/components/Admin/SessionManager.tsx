@@ -667,13 +667,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       ))}
 
                       {/* Add Subtopic Node button positioned down below the subtopic cards */}
-                      <div className="pt-2">
+                      <div className="pt-2 flex justify-end">
                         <button
                           type="button"
                           onClick={() => handleAddSubtopicNode(tIdx)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                         >
-                          <Plus className="w-4 h-4" /> Add Subtopic Node
+                          <Plus className="w-3.5 h-3.5" /> Add Subtopic Node
                         </button>
                       </div>
                     </div>
@@ -681,13 +681,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 ))}
 
                 {/* Add Topic Node Button at the bottom of the Topic Nodes list */}
-                <div className="pt-2">
+                <div className="pt-2 flex justify-end">
                   <button
                     type="button"
                     onClick={handleAddTopicNode}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" /> Add New Topic Node
+                    <Plus className="w-3.5 h-3.5" /> Add New Topic Node
                   </button>
                 </div>
               </div>
@@ -913,13 +913,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 ))}
 
                 {/* Add Provided Material Button at the bottom of Provided Materials list */}
-                <div className="pt-2">
+                <div className="pt-2 flex justify-end">
                   <button
                     type="button"
                     onClick={handleAddProvidedMaterial}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" /> Add Provided Material
+                    <Plus className="w-3.5 h-3.5" /> Add Provided Material
                   </button>
                 </div>
               </div>
@@ -1144,13 +1144,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 ))}
 
                 {/* Add Additional Material Button at the bottom of Additional Materials list */}
-                <div className="pt-2">
+                <div className="pt-2 flex justify-end">
                   <button
                     type="button"
                     onClick={handleAddAdditionalMaterial}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" /> Add Additional Material
+                    <Plus className="w-3.5 h-3.5" /> Add Additional Material
                   </button>
                 </div>
               </div>
@@ -1268,13 +1268,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 ))}
 
                 {/* Add Assignment Button at the bottom of Assignments list */}
-                <div className="pt-2">
+                <div className="pt-2 flex justify-end">
                   <button
                     type="button"
                     onClick={handleAddAssignment}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" /> Add New Assignment
+                    <Plus className="w-3.5 h-3.5" /> Add New Assignment
                   </button>
                 </div>
               </div>
