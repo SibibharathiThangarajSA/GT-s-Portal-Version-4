@@ -43,9 +43,9 @@ const isUsableUrl = (value?: string): boolean => {
 export const resolveDocumentUrl = (record: DocumentLike | null | undefined): string => {
   if (!record) return '';
 
-  if (record.file instanceof Blob || record.file instanceof File) {
+  if (record.file && typeof record.file === 'object' && ((record.file as any) instanceof Blob || 'size' in record.file)) {
     try {
-      return URL.createObjectURL(record.file);
+      return URL.createObjectURL(record.file as Blob);
     } catch (e) {
       console.warn('Could not create object URL for in-memory file:', e);
     }

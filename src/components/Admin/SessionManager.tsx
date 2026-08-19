@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Session, CategoryType, RoadmapTopic, SubTopic, StudyMaterial, SessionAssignment, PersonalNote, Quiz, QuizQuestion } from '../../types';
 import { SessionTracker } from './SessionTracker';
 import { useFileUpload } from '../../hooks/useFileUpload';

@@ -506,7 +506,7 @@ export const deleteQuizApi = async (id: string): Promise<void> => {
   }
 };
 
-export const createSessionApi = async (sessionData: Partial<Session>): Promise<Session> => {
+export const createSessionApi = async (sessionData: Partial<Session> | any): Promise<Session> => {
   const res = await fetch('/api/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -519,34 +519,53 @@ export const createSessionApi = async (sessionData: Partial<Session>): Promise<S
 
 export const uploadStudyMaterialFile = (
   file: File,
-  sessionId?: string,
-  onProgress?: (percent: number) => void
-): Promise<{ fileName: string; url: string; driveItemId?: string; webUrl?: string; downloadUrl?: string }> => {
-  const formData = new FormData();
-  formData.append('file', file);
-  if (sessionId) formData.append('sessionId', sessionId);
+  sessionIdOrProgress?: string | ((percent: number) => void),
+  maybeProgress?: (percent: number) => void
+): Promise<{ url: string; driveItemId: string; webUrl: string; downloadUrl: string; fileName: string; fileSize: string; fileType: string }> => {
+  const sessionId = typeof sessionIdOrProgress === 'string' ? sessionIdOrProgress : undefined;
+  const onProgress = typeof sessionIdOrProgress === 'function' ? sessionIdOrProgress : maybeProgress;
 
   return new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.open('POST', '/api/materials/files/upload');
+    const formData = new FormData();
+    formData.append('file', file);
+    if (sessionId) {
+      formData.append('sessionId', sessionId);
+    }
 
-    request.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
+    const request = new XMLHttpRequest();
+    request.open('POST', '/api/materials/files/upload', true);
+
+    if (request.upload && onProgress) {
+      request.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentCompleted = Math.round((event.loaded * 100) / event.total);
+          onProgress(percentCompleted);
+        }
+      };
+    }
 
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) {
         try {
-          resolve(JSON.parse(request.responseText));
+          const parsed = JSON.parse(request.responseText);
+          const webUrl = parsed.webUrl || parsed.url || '';
+          const downloadUrl = parsed.downloadUrl || parsed.url || '';
+          resolve({
+            url: parsed.url || downloadUrl || webUrl,
+            driveItemId: parsed.driveItemId || parsed.id || '',
+            webUrl,
+            downloadUrl,
+            fileName: parsed.fileName || file.name,
+            fileSize: parsed.fileSize || `${Math.round(file.size / 1024)} KB`,
+            fileType: parsed.fileType || file.type
+          });
         } catch {
-          reject(new Error('The upload finished but the response could not be read.'));
+          reject(new Error('Invalid response from upload service.'));
         }
         return;
       }
 
-      let message = `Upload failed with status ${request.status}.`;
+      let message = `File upload failed with status ${request.status}.`;
       try {
         const errorJson = JSON.parse(request.responseText);
         message = errorJson?.message || errorJson?.error || message;
@@ -572,7 +591,7 @@ export const createStudyMaterialApi = async (materialData: CreateStudyMaterialPa
   return await parseApiResponse<StudyMaterial>(res);
 };
 
-export const updateSessionApi = async (id: string, sessionData: Partial<Session>): Promise<Session> => {
+export const updateSessionApi = async (id: string, sessionData: Partial<Session> | any): Promise<Session> => {
   const res = await fetch(`/api/sessions/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -924,13 +943,20 @@ export const logActivityApi = async (action: string, details?: string) => {
 
 export interface AuthUserDto {
   token: string;
+  id?: string;
   userId?: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: 'GT' | 'Admin';
+  role: 'GT' | 'Admin' | string;
   avatar?: string;
   batch?: string;
+  xp?: number;
+  level?: number;
+  streakDays?: number;
+  lastActiveDate?: string;
+  dailyGoalMinutes?: number;
+  todayMinutesSpent?: number;
 }
 
 import {

@@ -66,6 +66,7 @@ export interface SubTopic {
   durationMinutes: number;
   status?: RoadmapNodeStatus;
   defaultStatus?: RoadmapNodeStatus;
+  order?: number;
   orderIndex?: number;
   description?: string;
   videoUrl?: string;
@@ -160,6 +161,7 @@ export interface QuizQuestion {
   correctAnswer: string | string[]; // Single string or array for multi-select / matching
   explanation: string;
   points?: number;
+  orderIndex?: number;
   codeSnippet?: string;
   matchPairs?: { left: string; right: string }[];
 }
@@ -209,6 +211,8 @@ export interface Session {
   category: CategoryType;
   description: string;
   thumbnail: string;
+  thumbnailUrl?: string;
+  sortOrder?: number;
   durationHours: number;
   difficulty: DifficultyLevel;
   progressPercent: number;
@@ -270,6 +274,21 @@ export interface CodePlaygroundExercise {
   expectedOutput: string;
   solutionCode: string;
   hints: string[];
+}
+
+export interface UserManagementRecord {
+  id: string;
+  vamId: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  role: 'Employee' | 'Admin' | 'Associate' | string;
+  addedOn: string;
+  status: 'Active' | 'Inactive' | string;
+  access: 'Enabled' | 'Disabled' | string;
+  addedBy: string;
+  batch: string;
+  password?: string;
 }
 
 

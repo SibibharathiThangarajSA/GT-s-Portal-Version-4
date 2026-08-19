@@ -157,7 +157,7 @@ export function App() {
   const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
     initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState ? initialHashState.gtViewMode : 'sessions'
   );
-  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder'>(
+  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>(
     initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState ? initialHashState.adminViewMode : 'tracker'
   );
 
