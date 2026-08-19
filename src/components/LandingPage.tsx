@@ -70,7 +70,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-emerald-600 bg-clip-text text-transparent">
                   Share with
                 </span>{' '}
-                the Next.
+                the NextGen.
 
               </h1>
             </div>
