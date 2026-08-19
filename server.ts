@@ -397,9 +397,27 @@ async function startServer() {
   app.post("/api/sessions", (req, res) => {
     const newSession = req.body || {};
     const sessions = getAllSessions();
+    const sessionId = newSession.id || `session-${Date.now()}`;
+
+    // Deduplicate: If session with this ID or (Name + Category) already exists, update in-place
+    const existingIdx = sessions.findIndex((s: any) => 
+      (newSession.id && s.id === newSession.id) || 
+      (newSession.name && s.name && s.name.trim().toLowerCase() === newSession.name.trim().toLowerCase() && s.category === newSession.category)
+    );
+    
+    if (existingIdx !== -1) {
+      sessions[existingIdx] = {
+        ...sessions[existingIdx],
+        ...newSession,
+        id: sessions[existingIdx].id
+      };
+      saveAllSessions(sessions);
+      return res.json(sessions[existingIdx]);
+    }
+
     const createdSession = {
       ...newSession,
-      id: newSession.id || `session-${Date.now()}`,
+      id: sessionId,
       learningObjectives: newSession.learningObjectives || [],
       topics: newSession.topics || [],
       studyMaterials: newSession.studyMaterials || [],

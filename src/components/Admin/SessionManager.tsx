@@ -151,7 +151,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
 
   const handleCreateNew = () => {
     setEditingSession({
-      id: '',
+      id: `session-${Date.now()}`,
       name: '',
       description: '',
       category: '.NET with C#',
@@ -177,7 +177,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
   const handleSaveForm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSession || !editingSession.name) return;
-    onSaveSession(editingSession);
+    const sessionToSave = {
+      ...editingSession,
+      id: editingSession.id || `session-${Date.now()}`
+    };
+    onSaveSession(sessionToSave);
     setEditingSession(null);
   };
 
