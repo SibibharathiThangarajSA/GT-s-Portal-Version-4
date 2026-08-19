@@ -383,6 +383,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
 
     return (
       <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn pb-12">
+        <UploadProgressOverlay isUploading={isUploading} progress={progress} fileName={uploadingFileName} />
+
         <div className="flex items-center justify-between">
           <button
             onClick={() => setEditingSession(null)}
