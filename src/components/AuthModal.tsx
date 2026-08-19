@@ -38,14 +38,14 @@ interface AuthModalProps {
 type ModalView = 'login' | 'forgot-email' | 'verify-otp' | 'new-password' | 'mobile-login' | 'mobile-otp-verify';
 
 const COUNTRY_CODES = [
-  { code: '+91', label: '🇮🇳 +91 (IN)' },
-  { code: '+1', label: '🇺🇸 +1 (US)' },
-  { code: '+44', label: '🇬🇧 +44 (UK)' },
-  { code: '+65', label: '🇸🇬 +65 (SG)' },
-  { code: '+971', label: '🇦🇪 +971 (UAE)' },
-  { code: '+61', label: '🇦🇺 +61 (AU)' },
-  { code: '+49', label: '🇩🇪 +49 (DE)' },
-  { code: '+81', label: '🇯🇵 +81 (JP)' }
+  { code: '+91', label: '+91 (IN)' },
+  { code: '+1', label: '+1 (US)' },
+  { code: '+44', label: '+44 (UK)' },
+  { code: '+65', label: '+65 (SG)' },
+  { code: '+971', label: '+971 (UAE)' },
+  { code: '+61', label: '+61 (AU)' },
+  { code: '+49', label: '+49 (DE)' },
+  { code: '+81', label: '+81 (JP)' }
 ];
 
 export const AuthModal: React.FC<AuthModalProps> = ({
@@ -618,11 +618,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setErrorMsg('');
                   }
                 }}
-                className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  selectedRole === 'GT'
+                className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${selectedRole === 'GT'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <UserCheck className="w-4 h-4" />
                 <span>Associates</span>
@@ -638,11 +637,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setErrorMsg('');
                   }
                 }}
-                className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  selectedRole === 'Admin'
+                className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${selectedRole === 'Admin'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <ShieldCheck className="w-4 h-4 shrink-0" />
                 <span className="text-center text-[11px] sm:text-xs leading-tight">Learning & Development</span>
@@ -662,11 +660,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setEmail(e.target.value);
                     if (errorMsg) setErrorMsg('');
                   }}
-                  className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${
-                    errorMsg
+                  className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
                       ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
                       : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
-                  }`}
+                    }`}
                   required
                 />
               </div>
@@ -685,11 +682,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setPassword(e.target.value);
                     if (errorMsg) setErrorMsg('');
                   }}
-                  className={`w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all ${
-                    errorMsg
+                  className={`w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all ${errorMsg
                       ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
                       : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
-                  }`}
+                    }`}
                   required
                 />
                 <button
@@ -740,10 +736,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="submit"
               disabled={isLoginDisabled}
               className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-3 cursor-pointer ${isLoginDisabled
-                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
-                  : selectedRole === 'Admin'
-                    ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
-                    : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+                ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                : selectedRole === 'Admin'
+                  ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
                 }`}
             >
               {isLoading ? (
@@ -803,11 +799,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {mobileNumber.length}/10
                 </span>
               </div>
-              <div className={`flex rounded-xl border bg-white overflow-hidden shadow-xs focus-within:ring-2 transition-all ${
-                errorMsg
+              <div className={`flex rounded-xl border bg-white overflow-hidden shadow-xs focus-within:ring-2 transition-all ${errorMsg
                   ? 'border-rose-400 focus-within:border-rose-500 focus-within:ring-rose-500/20'
                   : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-blue-500/20'
-              }`}>
+                }`}>
                 <select
                   value={mobileCountryCode}
                   onChange={(e) => setMobileCountryCode(e.target.value)}
@@ -847,8 +842,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="submit"
               disabled={isMobileLoginDisabled}
               className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isMobileLoginDisabled
-                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
-                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+                ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
                 }`}
             >
               {isLoading ? (
@@ -907,11 +902,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       if (errorMsg) setErrorMsg('');
                     }}
                     onKeyDown={(e) => handleMobileOtpKeyDown(idx, e)}
-                    className={`w-10 h-12 text-center text-lg font-extrabold font-mono bg-white border rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all text-slate-900 ${
-                      errorMsg
+                    className={`w-10 h-12 text-center text-lg font-extrabold font-mono bg-white border rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all text-slate-900 ${errorMsg
                         ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
                         : 'border-slate-300 focus:border-blue-600 focus:ring-blue-500/20'
-                    }`}
+                      }`}
                   />
                 ))}
               </div>
@@ -942,8 +936,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={handleResendMobileOtp}
                 disabled={!canResendMobileOtp || isResending}
                 className={`font-semibold transition-colors flex items-center gap-1 cursor-pointer ${canResendMobileOtp && !isResending
-                    ? 'text-blue-600 hover:text-blue-800 hover:underline'
-                    : 'text-slate-400 cursor-not-allowed'
+                  ? 'text-blue-600 hover:text-blue-800 hover:underline'
+                  : 'text-slate-400 cursor-not-allowed'
                   }`}
               >
                 <RefreshCw className={`w-3 h-3 ${isResending ? 'animate-spin' : ''}`} />
@@ -956,8 +950,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="submit"
               disabled={isMobileVerifyDisabled}
               className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isMobileVerifyDisabled
-                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
-                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
                 }`}
             >
               {isLoading ? (
@@ -1005,11 +999,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setRecoveryEmail(e.target.value);
                     if (errorMsg) setErrorMsg('');
                   }}
-                  className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${
-                    errorMsg
+                  className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
                       ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
                       : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
-                  }`}
+                    }`}
                   required
                   autoFocus
                 />
@@ -1028,8 +1021,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="submit"
               disabled={isSendOtpDisabled}
               className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isSendOtpDisabled
-                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
-                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+                ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
                 }`}
             >
               {isLoading ? (
@@ -1080,11 +1073,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       if (errorMsg) setErrorMsg('');
                     }}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    className={`w-11 h-12 text-center text-lg font-bold font-mono bg-white border rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all ${
-                      errorMsg
+                    className={`w-11 h-12 text-center text-lg font-bold font-mono bg-white border rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
                         ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
                         : 'border-slate-300 focus:border-blue-600 focus:ring-blue-500/20'
-                    }`}
+                      }`}
                   />
                 ))}
               </div>
@@ -1110,8 +1102,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={handleResendOtp}
                 disabled={!canResend || isResending}
                 className={`font-semibold transition-colors flex items-center gap-1 cursor-pointer ${canResend && !isResending
-                    ? 'text-blue-600 hover:text-blue-800 hover:underline'
-                    : 'text-slate-400 cursor-not-allowed'
+                  ? 'text-blue-600 hover:text-blue-800 hover:underline'
+                  : 'text-slate-400 cursor-not-allowed'
                   }`}
               >
                 <RefreshCw className={`w-3 h-3 ${isResending ? 'animate-spin' : ''}`} />
@@ -1124,8 +1116,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="submit"
               disabled={isVerifyOtpDisabled}
               className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isVerifyOtpDisabled
-                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
-                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
                 }`}
             >
               {isLoading ? (
@@ -1189,8 +1181,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   Password Requirements
                 </span>
                 <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${isPasswordValid
-                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                    : 'bg-slate-200 text-slate-600'
+                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                  : 'bg-slate-200 text-slate-600'
                   }`}>
                   {[hasMinLength, hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar].filter(Boolean).length}/5 Satisfied
                 </span>
@@ -1245,10 +1237,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className={`w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm ${isPasswordMismatch
-                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20'
-                      : isPasswordMatch
-                        ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/20'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
+                    ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20'
+                    : isPasswordMatch
+                      ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/20'
+                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
                     }`}
                   required
                 />
@@ -1282,8 +1274,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="submit"
               disabled={isResetDisabled}
               className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isResetDisabled
-                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
-                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
                 }`}
             >
               {isLoading ? (
