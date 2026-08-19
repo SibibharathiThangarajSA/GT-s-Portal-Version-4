@@ -81,6 +81,17 @@ const getGeminiClient = () => {
   });
 };
 
+// Initialize S3 Client for Object Storage (Tigris)
+const s3Client = new S3Client({
+  endpoint: process.env.S3_ENDPOINT || 'https://t3.storageapi.dev',
+  region: process.env.S3_REGION || 'auto',
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || 'tid_qJLZlUnpNMISimFhapSl_QhDKMbBumkqfSPqdbFjeAqPVcqSck',
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || 'tsec_DExQt4kUQMFnD-ATXFJKoL+NAbk0SAEZ6ntDiu6z0FxxCV+JIiR-6+m-xiX+q9EW4oNcn1'
+  }
+});
+const S3_BUCKET = process.env.S3_BUCKET_NAME || 'shelved-trunk-zrxdvpxaih4';
+
 async function startServer() {
   const app = express();
   const requestedPort = Number(process.env.PORT || 3000);
@@ -497,6 +508,73 @@ async function startServer() {
       downloadUrl: publicUrl
     });
   });
+
+  // Stream files / videos with HTTP 206 Partial Content / Range support from S3 & Local Disk
+  const streamFileHandler = async (req: express.Request, res: express.Response) => {
+    try {
+      let rawPath = req.params[0] || (req.params as any).filePath || '';
+      if (rawPath.startsWith('download/')) {
+        rawPath = rawPath.substring('download/'.length);
+      }
+      const unescaped = decodeURIComponent(rawPath).replace(/^[\/\\]+/, '');
+
+      if (!unescaped) {
+        return res.status(400).json({ message: 'File path not specified' });
+      }
+
+      // 1. Try S3 Tigris Object Storage
+      const rangeHeader = req.headers.range;
+      const cmd = new GetObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: unescaped,
+        Range: rangeHeader
+      });
+
+      try {
+        const s3Res = await s3Client.send(cmd);
+
+        res.setHeader('Accept-Ranges', 'bytes');
+        if (s3Res.ContentType) res.setHeader('Content-Type', s3Res.ContentType);
+        if (s3Res.ContentLength !== undefined) res.setHeader('Content-Length', s3Res.ContentLength.toString());
+        if (s3Res.ContentRange) {
+          res.setHeader('Content-Range', s3Res.ContentRange);
+          res.status(206);
+        } else {
+          res.status(200);
+        }
+
+        if (s3Res.Body) {
+          (s3Res.Body as any).pipe(res);
+        } else {
+          res.status(404).end();
+        }
+        return;
+      } catch (s3Err: any) {
+        // Fallback to local files
+        const candidatePaths = [
+          path.join(process.cwd(), 'public', 'uploads', unescaped),
+          path.join(process.cwd(), 'public', unescaped),
+          path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', unescaped),
+          path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', 'site-assets', 'videos', path.basename(unescaped))
+        ];
+
+        for (const localPath of candidatePaths) {
+          if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+            return res.sendFile(localPath);
+          }
+        }
+
+        console.warn(`File not found in S3 or local disk: ${unescaped}`);
+        return res.status(404).json({ message: `File not found: ${unescaped}` });
+      }
+    } catch (err: any) {
+      console.error('File stream error:', err);
+      return res.status(500).json({ message: 'Internal server error while streaming file' });
+    }
+  };
+
+  app.get('/api/materials/files/download/*', streamFileHandler);
+  app.get('/api/materials/files/*', streamFileHandler);
 
   // --- 5. QUIZZES & ASSIGNMENTS ROUTERS ---
   app.get("/api/quizzes", (req, res) => {
