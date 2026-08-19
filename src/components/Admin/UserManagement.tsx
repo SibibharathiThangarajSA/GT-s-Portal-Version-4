@@ -30,12 +30,12 @@ import { getDefaultPasswordForEmail } from '../../services/authCredentials';
 import { useToast } from '../../context/ToastContext';
 
 export const COUNTRY_CODES = [
-  { code: '+91', label: '🇮🇳 +91 (IN)' },
-  { code: '+1', label: '🇺🇸 +1 (US)' },
-  { code: '+44', label: '🇬🇧 +44 (UK)' },
-  { code: '+65', label: '🇸🇬 +65 (SG)' },
-  { code: '+971', label: '🇦🇪 +971 (UAE)' },
-  { code: '+61', label: '🇦🇺 +61 (AU)' },
+  { code: '+91', label: '+91 (IN)' },
+  { code: '+1', label: '+1 (US)' },
+  { code: '+44', label: '+44 (UK)' },
+  { code: '+65', label: '+65 (SG)' },
+  { code: '+971', label: '+971 (UAE)' },
+  { code: '+61', label: '+61 (AU)' },
   { code: '+49', label: '🇩🇪 +49 (DE)' },
   { code: '+81', label: '🇯🇵 +81 (JP)' }
 ];
@@ -332,7 +332,7 @@ export const UserManagement: React.FC = () => {
       {/* Filter & Search Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          
+
           {/* Global Search Input */}
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -360,11 +360,10 @@ export const UserManagement: React.FC = () => {
                 <button
                   key={r}
                   onClick={() => setRoleFilter(r)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    roleFilter === r
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${roleFilter === r
                       ? 'bg-white text-blue-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   {r === 'ALL' ? 'All Roles' : r}
                 </button>
@@ -536,11 +535,10 @@ export const UserManagement: React.FC = () => {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
-                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
-                    currentPage === page
+                  className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage === page
                       ? 'bg-blue-600 text-white shadow-xs'
                       : 'hover:bg-slate-100 text-slate-700 border border-slate-200'
-                  }`}
+                    }`}
                 >
                   {page}
                 </button>
@@ -564,7 +562,7 @@ export const UserManagement: React.FC = () => {
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-6 text-slate-900 my-8 animate-fadeIn max-h-[90vh] flex flex-col">
-            
+
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div className="flex items-center gap-3">
@@ -621,7 +619,7 @@ export const UserManagement: React.FC = () => {
 
                     {/* Entry Inputs Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                      
+
                       {/* Role Dropdown */}
                       <div>
                         <label className="block text-slate-700 font-bold mb-1">Role *</label>
@@ -647,11 +645,10 @@ export const UserManagement: React.FC = () => {
                           value={isAssociate ? '' : entry.vamId}
                           onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value)}
                           placeholder={isAssociate ? '— Disabled for Associate —' : 'e.g. 105527'}
-                          className={`w-full border rounded-xl px-3 py-2 font-medium focus:outline-none shadow-xs ${
-                            isAssociate
+                          className={`w-full border rounded-xl px-3 py-2 font-medium focus:outline-none shadow-xs ${isAssociate
                               ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
                               : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
-                          }`}
+                            }`}
                         />
                       </div>
 
@@ -712,11 +709,10 @@ export const UserManagement: React.FC = () => {
                           value={isAssociate ? '' : entry.email}
                           onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
                           placeholder={isAssociate ? '— Disabled for Associate —' : 'e.g. name@valuemomentum.com'}
-                          className={`w-full border rounded-xl px-3 py-2 font-medium focus:outline-none shadow-xs ${
-                            isAssociate
+                          className={`w-full border rounded-xl px-3 py-2 font-medium focus:outline-none shadow-xs ${isAssociate
                               ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
                               : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
-                          }`}
+                            }`}
                         />
                       </div>
 
@@ -754,7 +750,7 @@ export const UserManagement: React.FC = () => {
                   className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-300 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <Plus className="w-4 h-4 text-blue-600" />
-                  <span>+ Add Another</span>
+                  <span>Add Another</span>
                 </button>
               </div>
 
@@ -786,7 +782,7 @@ export const UserManagement: React.FC = () => {
       {editingUser && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6 text-slate-900 my-8 animate-fadeIn">
-            
+
             <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200">
