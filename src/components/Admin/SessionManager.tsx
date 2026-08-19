@@ -556,17 +556,15 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        // The file has to reach the bucket: an object URL only resolves inside this
-                        // tab, so saving one gives every other viewer a dead video.
                         try {
                           const uploadResult = await uploadFile(file, editingSession?.id);
-                                    if (!uploadResult) return;
+                          if (!uploadResult) return;
                           const uploadedUrl = uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '';
-                          setEditingSession({
-                            ...editingSession,
+                          setEditingSession((prev) => prev ? ({
+                            ...prev,
                             videoUrl: uploadedUrl,
                             featuredVideoUrl: uploadedUrl
-                          });
+                          }) : prev);
                         } catch (error: any) {
                           console.error('Video upload failed', error);
                         }
@@ -841,20 +839,25 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                                   try {
                                     const uploadResult = await uploadFile(file, editingSession?.id);
                                     if (!uploadResult) return;
-                                    const list = [...(editingSession.providedMaterials || [])];
-                                    list[mIdx] = {
-                                      ...list[mIdx],
-                                      file: undefined,
-                                      fileName: uploadResult.fileName || file.name,
-                                      fileType: file.type,
-                                      fileSize: `${file.size} bytes`,
-                                      urlType: 'File',
-                                      url: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '',
-                                      webUrl: uploadResult.webUrl || uploadResult.url || '',
-                                      downloadUrl: uploadResult.downloadUrl || uploadResult.url || '',
-                                      driveItemId: uploadResult.driveItemId || undefined
-                                    };
-                                    setEditingSession({ ...editingSession, providedMaterials: list });
+                                    setEditingSession((prev) => {
+                                      if (!prev) return prev;
+                                      const list = [...(prev.providedMaterials || [])];
+                                      if (list[mIdx]) {
+                                        list[mIdx] = {
+                                          ...list[mIdx],
+                                          file: undefined,
+                                          fileName: uploadResult.fileName || file.name,
+                                          fileType: file.type,
+                                          fileSize: `${file.size} bytes`,
+                                          urlType: 'File',
+                                          url: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '',
+                                          webUrl: uploadResult.webUrl || uploadResult.url || '',
+                                          downloadUrl: uploadResult.downloadUrl || uploadResult.url || '',
+                                          driveItemId: uploadResult.driveItemId || undefined
+                                        };
+                                      }
+                                      return { ...prev, providedMaterials: list };
+                                    });
                                   } catch (error: any) {
                                     console.error('File upload failed', error);
                                   }
@@ -1072,20 +1075,25 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                                   try {
                                     const uploadResult = await uploadFile(file, editingSession?.id);
                                     if (!uploadResult) return;
-                                    const list = [...(editingSession.additionalMaterials || [])];
-                                    list[mIdx] = {
-                                      ...list[mIdx],
-                                      file: undefined,
-                                      fileName: uploadResult.fileName || file.name,
-                                      fileType: file.type,
-                                      fileSize: `${file.size} bytes`,
-                                      urlType: 'File',
-                                      url: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '',
-                                      webUrl: uploadResult.webUrl || uploadResult.url || '',
-                                      downloadUrl: uploadResult.downloadUrl || uploadResult.url || '',
-                                      driveItemId: uploadResult.driveItemId || undefined
-                                    };
-                                    setEditingSession({ ...editingSession, additionalMaterials: list });
+                                    setEditingSession((prev) => {
+                                      if (!prev) return prev;
+                                      const list = [...(prev.additionalMaterials || [])];
+                                      if (list[mIdx]) {
+                                        list[mIdx] = {
+                                          ...list[mIdx],
+                                          file: undefined,
+                                          fileName: uploadResult.fileName || file.name,
+                                          fileType: file.type,
+                                          fileSize: `${file.size} bytes`,
+                                          urlType: 'File',
+                                          url: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || '',
+                                          webUrl: uploadResult.webUrl || uploadResult.url || '',
+                                          downloadUrl: uploadResult.downloadUrl || uploadResult.url || '',
+                                          driveItemId: uploadResult.driveItemId || undefined
+                                        };
+                                      }
+                                      return { ...prev, additionalMaterials: list };
+                                    });
                                   } catch (error: any) {
                                     console.error('File upload failed', error);
                                   }
@@ -1230,13 +1238,18 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                                 try {
                                   const uploadResult = await uploadFile(file, editingSession?.id);
                                   if (!uploadResult) return;
-                                  const list = [...(editingSession.assignments || [])];
-                                  list[aIdx] = {
-                                    ...list[aIdx],
-                                    attachmentName: uploadResult.fileName || file.name,
-                                    attachmentUrl: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || ''
-                                  };
-                                  setEditingSession({ ...editingSession, assignments: list });
+                                  setEditingSession((prev) => {
+                                    if (!prev) return prev;
+                                    const list = [...(prev.assignments || [])];
+                                    if (list[aIdx]) {
+                                      list[aIdx] = {
+                                        ...list[aIdx],
+                                        attachmentName: uploadResult.fileName || file.name,
+                                        attachmentUrl: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || ''
+                                      };
+                                    }
+                                    return { ...prev, assignments: list };
+                                  });
                                 } catch (error: any) {
                                   console.error('Assignment attachment upload failed', error);
                                 }

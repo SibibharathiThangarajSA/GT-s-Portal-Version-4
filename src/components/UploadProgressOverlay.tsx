@@ -20,49 +20,46 @@ export const UploadProgressOverlay: React.FC<UploadProgressOverlayProps> = ({ is
   <AnimatePresence>
     {isUploading && (
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[99998] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 30, scale: 0.95 }}
+        className="fixed bottom-6 right-6 z-[99998] pointer-events-auto"
       >
-        <motion.div
-          initial={{ scale: 0.94, y: 12 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.94, opacity: 0 }}
-          className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-sm p-6 space-y-4 text-center"
-        >
-          <div className="relative w-14 h-14 mx-auto">
-            <div className="absolute inset-0 rounded-2xl bg-blue-50 flex items-center justify-center">
-              <UploadCloud className="w-7 h-7 text-blue-600" />
+        <div className="bg-slate-900/95 text-white backdrop-blur-md rounded-2xl shadow-2xl border border-slate-700/80 w-80 p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="relative w-9 h-9 flex-shrink-0">
+              <div className="absolute inset-0 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                <UploadCloud className="w-5 h-5 text-blue-400" />
+              </div>
+              <Loader2 className="absolute -inset-0.5 w-10 h-10 text-blue-400 animate-spin" />
             </div>
-            <Loader2 className="absolute -inset-1 w-16 h-16 text-blue-500/50 animate-spin" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-extrabold text-white">Uploading file…</h4>
+                <span className="text-[11px] font-mono font-bold text-blue-400">
+                  {progress >= 99 ? 'Processing…' : `${progress}%`}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 truncate" title={fileName}>
+                {fileName}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-1">
-            <h3 className="text-base font-extrabold text-slate-900">Uploading</h3>
-            <p className="text-xs font-semibold text-slate-600 truncate" title={fileName}>
-              {fileName}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
               <motion.div
-                className="h-full rounded-full bg-blue-600"
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(progress, 100)}%` }}
                 transition={{ ease: 'easeOut', duration: 0.2 }}
               />
             </div>
-            <p className="text-[11px] font-mono font-bold text-slate-500">
-              {progress >= 99 ? 'Finishing up…' : `${progress}%`}
+            <p className="text-[10px] text-slate-400 font-medium">
+              Uploading in background — you can continue editing freely!
             </p>
           </div>
-
-          <p className="text-[11px] text-slate-500 leading-relaxed">
-            Keep this window open until the upload finishes. Large videos can take a few minutes.
-          </p>
-        </motion.div>
+        </div>
       </motion.div>
     )}
   </AnimatePresence>
