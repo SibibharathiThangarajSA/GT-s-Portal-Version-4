@@ -151,7 +151,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
 
   const handleCreateNew = () => {
     setEditingSession({
-      id: `session-${Date.now()}`,
+      id: '',
       name: '',
       description: '',
       category: '.NET with C#',
@@ -176,12 +176,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
 
   const handleSaveForm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingSession || !editingSession.name) return;
-    const sessionToSave = {
-      ...editingSession,
-      id: editingSession.id || `session-${Date.now()}`
-    };
-    onSaveSession(sessionToSave);
+    if (!editingSession) return;
+    if (!editingSession.name || !editingSession.name.trim()) {
+      addToast('error', 'Please enter a Session Title on the Session Overview tab before saving.');
+      setActiveTab('overview');
+      return;
+    }
+    onSaveSession(editingSession);
     setEditingSession(null);
   };
 

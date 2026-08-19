@@ -756,23 +756,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
             </button>
 
-            {/* Mobile OTP Button */}
-            <div className="pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setView('mobile-login');
-                  setErrorMsg('');
-                  setSuccessMsg('');
-                  setMobileNumber('');
-                  setMobileOtpDigits(['', '', '', '', '', '']);
-                }}
-                className="w-full py-2.5 px-4 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-blue-600" />
-                <span>I don't have credentials / Login with Mobile OTP</span>
-              </button>
-            </div>
+            {/* Mobile OTP Button (Only visible for Associates / GT role) */}
+            {selectedRole === 'GT' && (
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('mobile-login');
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                    setMobileNumber('');
+                    setMobileOtpDigits(['', '', '', '', '', '']);
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                  <span>I don't have credentials / Login with Mobile OTP</span>
+                </button>
+              </div>
+            )}
 
           </form>
         )}

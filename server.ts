@@ -433,9 +433,24 @@ async function startServer() {
   app.put("/api/sessions/:id", (req, res) => {
     const sessions = getAllSessions();
     const index = sessions.findIndex((s: any) => s.id === req.params.id);
-    if (index === -1) return res.status(404).json({ message: "Session not found" });
+    if (index === -1) {
+      // Upsert if session doesn't exist
+      const createdSession = {
+        ...req.body,
+        id: req.params.id,
+        learningObjectives: req.body.learningObjectives || [],
+        topics: req.body.topics || [],
+        studyMaterials: req.body.studyMaterials || [],
+        quizzes: req.body.quizzes || [],
+        assignments: req.body.assignments || [],
+        notes: req.body.notes || []
+      };
+      sessions.unshift(createdSession);
+      saveAllSessions(sessions);
+      return res.status(201).json(createdSession);
+    }
 
-    sessions[index] = { ...sessions[index], ...req.body };
+    sessions[index] = { ...sessions[index], ...req.body, id: req.params.id };
     saveAllSessions(sessions);
     res.json(sessions[index]);
   });

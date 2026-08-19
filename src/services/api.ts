@@ -596,12 +596,12 @@ export const submitQuizApi = async (quizId: string, userAnswers: Record<string, 
   return await res.json();
 };
 
-const isGuid = (val?: string) => typeof val === 'string' && (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val) || val.startsWith('session-'));
+const isGuid = (val?: string) => typeof val === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val);
 
 export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise<Session> => {
   // 1. Persist Session core
   let savedSession: Session;
-  const isExisting = !!(sessionData.id && typeof sessionData.id === 'string' && sessionData.id.trim().length > 0 && !sessionData.id.startsWith('temp-'));
+  const isExisting = !!(sessionData.id && isGuid(sessionData.id));
 
   const sessionPayload = {
     name: sessionData.name || 'Untitled Session',
@@ -643,9 +643,13 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
   };
 
   if (isExisting) {
-    savedSession = await updateSessionApi(sessionData.id!, sessionPayload);
+    try {
+      savedSession = await updateSessionApi(sessionData.id!, sessionPayload);
+    } catch {
+      savedSession = await createSessionApi({ ...sessionPayload, id: sessionData.id });
+    }
   } else {
-    savedSession = await createSessionApi(sessionPayload);
+    savedSession = await createSessionApi({ ...sessionPayload, id: sessionData.id || undefined });
   }
 
   const targetSessionId = savedSession.id;
