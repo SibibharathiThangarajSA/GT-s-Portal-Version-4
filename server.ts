@@ -3,8 +3,8 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import { GoogleGenAI } from "@google/genai";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import multer from "multer";
 
 // Storage files configuration
 const DATA_DIR = process.cwd();
@@ -91,6 +91,14 @@ const s3Client = new S3Client({
   }
 });
 const S3_BUCKET = process.env.S3_BUCKET_NAME || 'shelved-trunk-zrxdvpxaih4';
+
+// Multer Upload Configuration (Supports up to 500MB video and document uploads)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 1024 * 1024 * 500 // 500 MB
+  }
+});
 
 async function startServer() {
   const app = express();
@@ -487,26 +495,75 @@ async function startServer() {
     res.json({ message: "Material deleted successfully" });
   });
 
-  app.post("/api/materials/files/upload", (req, res) => {
-    const { fileName, fileContent } = req.body || {};
-    const safeName = (fileName || `upload-${Date.now()}.bin`).replace(/[^a-zA-Z0-9._-]/g, '_');
-    const targetPath = path.join(UPLOADS_DIR, `${Date.now()}_${safeName}`);
+  app.post("/api/materials/files/upload", upload.single('file'), async (req, res) => {
+    try {
+      const file = req.file;
+      const { sessionId, fileName: bodyFileName } = req.body || {};
 
-    if (fileContent && typeof fileContent === 'string') {
-      try {
-        const base64Data = fileContent.replace(/^data:[^;]+;base64,/, '');
-        fs.writeFileSync(targetPath, Buffer.from(base64Data, 'base64'));
-      } catch (e) {
-        console.warn('Error saving uploaded file to disk', e);
+      if (!file && !req.body?.fileContent) {
+        return res.status(400).json({ message: "No file was uploaded." });
       }
-    }
 
-    const publicUrl = `/uploads/${path.basename(targetPath)}`;
-    res.json({
-      fileName: safeName,
-      url: publicUrl,
-      downloadUrl: publicUrl
-    });
+      let fileBuffer: Buffer;
+      let originalName: string;
+      let mimeType: string;
+
+      if (file) {
+        fileBuffer = file.buffer;
+        originalName = file.originalname;
+        mimeType = file.mimetype || 'application/octet-stream';
+      } else {
+        // Fallback for base64 JSON payload
+        const base64Data = (req.body.fileContent || '').replace(/^data:[^;]+;base64,/, '');
+        fileBuffer = Buffer.from(base64Data, 'base64');
+        originalName = bodyFileName || `upload-${Date.now()}.bin`;
+        mimeType = 'application/octet-stream';
+      }
+
+      const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const cleanSessionId = (sessionId || '').toString().trim().replace(/[^a-zA-Z0-9_-]/g, '');
+      const s3Key = cleanSessionId ? `sessions/${cleanSessionId}/${safeName}` : `uploads/${Date.now()}_${safeName}`;
+
+      let fileUploadedToS3 = false;
+      try {
+        const putCmd = new PutObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: s3Key,
+          Body: fileBuffer,
+          ContentType: mimeType
+        });
+        await s3Client.send(putCmd);
+        fileUploadedToS3 = true;
+        console.log(`[S3 Upload] Successfully uploaded to Tigris S3: ${s3Key} (${fileBuffer.length} bytes)`);
+      } catch (s3Error: any) {
+        console.warn(`[S3 Upload] S3 upload error:`, s3Error?.message);
+      }
+
+      // Also save to local public/uploads as reliable local fallback
+      const localDiskPath = path.join(UPLOADS_DIR, `${Date.now()}_${safeName}`);
+      try {
+        fs.writeFileSync(localDiskPath, fileBuffer);
+      } catch (diskErr) {
+        console.warn('Local disk write warning:', diskErr);
+      }
+
+      const fileUrl = `/api/materials/files/${encodeURIComponent(s3Key)}`;
+      const downloadUrl = `/api/materials/files/download/${encodeURIComponent(s3Key)}`;
+
+      return res.status(200).json({
+        fileName: safeName,
+        url: fileUrl,
+        downloadUrl: downloadUrl,
+        webUrl: fileUrl,
+        driveItemId: null,
+        storage: fileUploadedToS3 ? 's3-tigris' : 'local-disk'
+      });
+    } catch (err: any) {
+      console.error('[Upload Handler] Critical error uploading file:', err);
+      return res.status(500).json({
+        message: `Failed to upload file: ${err?.message || 'Internal server error'}`
+      });
+    }
   });
 
   // Stream files / videos with HTTP 206 Partial Content / Range support from S3 & Local Disk
