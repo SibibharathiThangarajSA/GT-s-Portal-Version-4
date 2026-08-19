@@ -133,7 +133,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
       id: `track-${Date.now()}`,
       sessionCode: `SESS-GT-${Math.floor(100 + Math.random() * 900)}`,
       sessionName: '',
-      category: '.NET with C#',
+      category: '',
       trainerName: '',
       scheduleDate: new Date().toISOString().split('T')[0],
       scheduleTime: '09:00 AM - 12:00 PM',

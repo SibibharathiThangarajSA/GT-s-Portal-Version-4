@@ -64,13 +64,97 @@ const readJsonFile = <T>(filePath: string, fallback: T): T => {
   return fallback;
 };
 
+// Initialize S3 Client for Object Storage (Tigris)
+const s3Client = new S3Client({
+  endpoint: process.env.S3_ENDPOINT || 'https://t3.storageapi.dev',
+  region: process.env.S3_REGION || 'auto',
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || 'tid_qJLZlUnpNMISimFhapSl_QhDKMbBumkqfSPqdbFjeAqPVcqSck',
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || 'tsec_DExQt4kUQMFnD-ATXFJKoL+NAbk0SAEZ6ntDiu6z0FxxCV+JIiR-6+m-xiX+q9EW4oNcn1'
+  }
+});
+const S3_BUCKET = process.env.S3_BUCKET_NAME || 'shelved-trunk-zrxdvpxaih4';
+
+// Helper to sync JSON database files to Tigris S3 Cloud Storage
+const syncJsonToS3 = async (filePath: string, data: any): Promise<void> => {
+  try {
+    const fileName = path.basename(filePath);
+    const key = `db_backup/${fileName}`;
+    await s3Client.send(new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      Body: Buffer.from(JSON.stringify(data, null, 2), 'utf-8'),
+      ContentType: 'application/json'
+    }));
+  } catch (err: any) {
+    console.warn(`[S3 DB Sync] Warning syncing ${path.basename(filePath)} to S3:`, err?.message);
+  }
+};
+
+const fetchJsonFromS3 = async <T>(fileName: string, fallback: T): Promise<T> => {
+  try {
+    const key = `db_backup/${fileName}`;
+    const res = await s3Client.send(new GetObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: key
+    }));
+    const chunks: Buffer[] = [];
+    for await (const chunk of res.Body as any) {
+      chunks.push(Buffer.from(chunk));
+    }
+    const raw = Buffer.concat(chunks).toString('utf-8');
+    if (raw && raw.trim()) {
+      const parsed = JSON.parse(raw);
+      if (parsed !== null && parsed !== undefined) return parsed;
+    }
+  } catch (err: any) {
+    // File not found on S3 yet
+  }
+  return fallback;
+};
+
 const writeJsonFile = (filePath: string, data: any): void => {
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    // Asynchronously push update to Tigris S3 Cloud Storage
+    syncJsonToS3(filePath, data).catch(() => null);
   } catch (e) {
     console.error(`Failed to write ${filePath}`, e);
   }
 };
+
+// Initial Cloud S3 DB hydration on startup
+async function hydrateDatabaseFromS3() {
+  console.log('[S3 DB Hydration] Checking and syncing persistent database from Tigris S3...');
+  const files = [
+    { file: USER_ROSTER_FILE, fallback: INITIAL_USERS_ROSTER },
+    { file: SESSIONS_FILE, fallback: INITIAL_SEED_SESSIONS },
+    { file: SESSION_TRACKER_FILE, fallback: [] },
+    { file: CREDENTIALS_FILE, fallback: {} },
+    { file: NOTES_FILE, fallback: [] }
+  ];
+
+  for (const { file, fallback } of files) {
+    const fileName = path.basename(file);
+    try {
+      const s3Data = await fetchJsonFromS3(fileName, null);
+      if (s3Data !== null && s3Data !== undefined) {
+        fs.writeFileSync(file, JSON.stringify(s3Data, null, 2), 'utf-8');
+        console.log(`[S3 DB Hydration] Restored ${fileName} from Tigris S3 successfully.`);
+      } else {
+        if (!fs.existsSync(file)) {
+          fs.writeFileSync(file, JSON.stringify(fallback, null, 2), 'utf-8');
+          await syncJsonToS3(file, fallback);
+        } else {
+          const localData = readJsonFile(file, fallback);
+          await syncJsonToS3(file, localData);
+        }
+      }
+    } catch (e: any) {
+      console.warn(`[S3 DB Hydration] Note for ${fileName}:`, e?.message);
+    }
+  }
+}
 
 // Guarantee permanent files are initialized on local disk
 if (!fs.existsSync(USER_ROSTER_FILE)) {
@@ -103,17 +187,6 @@ const getGeminiClient = () => {
   });
 };
 
-// Initialize S3 Client for Object Storage (Tigris)
-const s3Client = new S3Client({
-  endpoint: process.env.S3_ENDPOINT || 'https://t3.storageapi.dev',
-  region: process.env.S3_REGION || 'auto',
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID || 'tid_qJLZlUnpNMISimFhapSl_QhDKMbBumkqfSPqdbFjeAqPVcqSck',
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || 'tsec_DExQt4kUQMFnD-ATXFJKoL+NAbk0SAEZ6ntDiu6z0FxxCV+JIiR-6+m-xiX+q9EW4oNcn1'
-  }
-});
-const S3_BUCKET = process.env.S3_BUCKET_NAME || 'shelved-trunk-zrxdvpxaih4';
-
 // Multer Upload Configuration (Supports up to 500MB video and document uploads)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -123,6 +196,8 @@ const upload = multer({
 });
 
 async function startServer() {
+  // Restore all database records from Tigris S3 Cloud Storage
+  await hydrateDatabaseFromS3();
   const app = express();
   const requestedPort = Number(process.env.PORT || 3000);
   const PORT = Number.isInteger(requestedPort) && requestedPort > 0 ? requestedPort : 3000;
