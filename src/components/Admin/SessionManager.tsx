@@ -42,26 +42,35 @@ interface SessionManagerProps {
 }
 
 const deriveEditingSessionMaterials = (session: Partial<Session>): Partial<Session> => {
-  const studyMaterials = Array.isArray(session.studyMaterials) ? session.studyMaterials : [];
-  const providedMaterials = Array.isArray(session.providedMaterials) ? session.providedMaterials : [];
-  const additionalMaterials = Array.isArray(session.additionalMaterials) ? session.additionalMaterials : [];
+  const rawList: StudyMaterial[] = [
+    ...(Array.isArray(session.providedMaterials) ? session.providedMaterials : []),
+    ...(Array.isArray(session.additionalMaterials) ? session.additionalMaterials : []),
+    ...(Array.isArray(session.studyMaterials) ? session.studyMaterials : [])
+  ];
 
-  const normalizedProvided = providedMaterials.length > 0
-    ? providedMaterials
-    : studyMaterials.filter((item) => {
-        const category = (item.materialCategory || item.materialType || item.type || '').toString().toLowerCase();
-        return category === 'provided' || category === 'official';
-      });
+  const seen = new Set<string>();
+  const uniqueMaterials: StudyMaterial[] = [];
+  for (const m of rawList) {
+    const key = m.id ? m.id : `${m.title}_${m.materialCategory || m.materialType || ''}_${m.url || ''}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueMaterials.push(m);
+    }
+  }
 
-  const normalizedAdditional = additionalMaterials.length > 0
-    ? additionalMaterials
-    : studyMaterials.filter((item) => {
-        const category = (item.materialCategory || item.materialType || item.type || '').toString().toLowerCase();
-        return category === 'additional' || category === 'extra' || category === 'external';
-      });
+  const normalizedProvided = uniqueMaterials.filter((item) => {
+    const category = (item.materialCategory || item.materialType || 'Provided').toString().trim().toLowerCase();
+    return category !== 'additional' && category !== 'extra';
+  });
+
+  const normalizedAdditional = uniqueMaterials.filter((item) => {
+    const category = (item.materialCategory || item.materialType || '').toString().trim().toLowerCase();
+    return category === 'additional' || category === 'extra';
+  });
 
   return {
     ...session,
+    studyMaterials: uniqueMaterials,
     providedMaterials: normalizedProvided,
     additionalMaterials: normalizedAdditional
   };
@@ -577,18 +586,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
           {/* TAB 2: ROAD MAP EDITOR */}
           {activeTab === 'roadmap' && (
             <div className="space-y-6 text-xs animate-fadeIn">
-              <div className="flex items-center justify-between bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
+              <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
                 <div>
                   <h3 className="font-extrabold text-blue-950 text-sm">Interactive Learning Roadmap Sequence</h3>
                   <p className="text-slate-600 font-medium">Add Topic Nodes, Subtopic Nodes, edit/add/replace video links, document files, and topic assignments.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddTopicNode}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all"
-                >
-                  <Plus className="w-4 h-4" /> Add New Topic Node
-                </button>
               </div>
 
               {/* Topic Nodes List */}
@@ -669,7 +671,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                         <button
                           type="button"
                           onClick={() => handleAddSubtopicNode(tIdx)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
                         >
                           <Plus className="w-4 h-4" /> Add Subtopic Node
                         </button>
@@ -677,6 +679,17 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                     </div>
                   </div>
                 ))}
+
+                {/* Add Topic Node Button at the bottom of the Topic Nodes list */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAddTopicNode}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add New Topic Node
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -684,18 +697,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
           {/* TAB 3: PROVIDED MATERIALS */}
           {activeTab === 'provided' && (
             <div className="space-y-6 text-xs animate-fadeIn">
-              <div className="flex items-center justify-between bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
+              <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
                 <div>
                   <h3 className="font-extrabold text-blue-950 text-sm">Provided Materials ({providedCount})</h3>
                   <p className="text-slate-600 font-medium">Official documents, guides, and external reference links provided for trainees.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddProvidedMaterial}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all"
-                >
-                  <Plus className="w-4 h-4" /> Add Provided Material
-                </button>
               </div>
 
               <div className="space-y-4">
@@ -905,6 +911,17 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                     </div>
                   </div>
                 ))}
+
+                {/* Add Provided Material Button at the bottom of Provided Materials list */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAddProvidedMaterial}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add Provided Material
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -912,18 +929,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
           {/* TAB 4: ADDITIONAL MATERIALS */}
           {activeTab === 'additional' && (
             <div className="space-y-6 text-xs animate-fadeIn">
-              <div className="flex items-center justify-between bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
+              <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
                 <div>
                   <h3 className="font-extrabold text-blue-950 text-sm">Additional Materials ({additionalCount})</h3>
                   <p className="text-slate-600 font-medium">Supplementary documents, external website references, and tutorial videos.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddAdditionalMaterial}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all"
-                >
-                  <Plus className="w-4 h-4" /> Add Additional Material
-                </button>
               </div>
 
               <div className="space-y-4">
@@ -994,7 +1004,6 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                         />
                       </div>
 
-                      {/* Upload Document Button */}
                       <div className="space-y-1 md:col-span-2">
                         <span className="text-slate-700 font-bold block mb-2">Source</span>
                         <div className="grid grid-cols-2 gap-2">
@@ -1133,6 +1142,17 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                     </div>
                   </div>
                 ))}
+
+                {/* Add Additional Material Button at the bottom of Additional Materials list */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAddAdditionalMaterial}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add Additional Material
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1140,18 +1160,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
           {/* TAB 5: ASSIGNMENTS */}
           {activeTab === 'assignments' && (
             <div className="space-y-6 text-xs animate-fadeIn">
-              <div className="flex items-center justify-between bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
+              <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-200/80">
                 <div>
                   <h3 className="font-extrabold text-blue-950 text-sm">Session Assignments ({assignmentsCount})</h3>
                   <p className="text-slate-600 font-medium">Practical tasks and assignment submissions for trainees.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddAssignment}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all"
-                >
-                  <Plus className="w-4 h-4" /> Add New Assignment
-                </button>
               </div>
 
               <div className="space-y-4">
@@ -1213,21 +1226,20 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                             className="hidden"
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
-                              if (!file) return;
-                              // Same reason as the overview video: the attachment has to be stored
-                              // server-side or trainees open a link that only ever worked here.
-                              try {
-                                const uploadResult = await uploadFile(file, editingSession?.id);
-                                    if (!uploadResult) return;
-                                const list = [...(editingSession.assignments || [])];
-                                list[aIdx] = {
-                                  ...list[aIdx],
-                                  attachmentName: uploadResult.fileName || file.name,
-                                  attachmentUrl: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || ''
-                                };
-                                setEditingSession({ ...editingSession, assignments: list });
-                              } catch (error: any) {
-                                console.error('Assignment attachment upload failed', error);
+                              if (file) {
+                                try {
+                                  const uploadResult = await uploadFile(file, editingSession?.id);
+                                  if (!uploadResult) return;
+                                  const list = [...(editingSession.assignments || [])];
+                                  list[aIdx] = {
+                                    ...list[aIdx],
+                                    attachmentName: uploadResult.fileName || file.name,
+                                    attachmentUrl: uploadResult.downloadUrl || uploadResult.webUrl || uploadResult.url || ''
+                                  };
+                                  setEditingSession({ ...editingSession, assignments: list });
+                                } catch (error: any) {
+                                  console.error('Assignment attachment upload failed', error);
+                                }
                               }
                             }}
                           />
@@ -1254,6 +1266,17 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                     </div>
                   </div>
                 ))}
+
+                {/* Add Assignment Button at the bottom of Assignments list */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAddAssignment}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all text-xs cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add New Assignment
+                  </button>
+                </div>
               </div>
             </div>
           )}

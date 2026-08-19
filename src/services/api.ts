@@ -160,15 +160,19 @@ export const normalizeSessionPayload = (raw: any): Session => {
     }))
     : [];
 
-  const additionalMaterials = studyMaterials.filter((item) => {
-    const category = (item.materialCategory || item.materialType || '').toString().toLowerCase();
-    return category === 'additional' || category === 'extra' || category === 'external';
-  });
+  const additionalMaterials = (Array.isArray(raw?.additionalMaterials) && raw.additionalMaterials.length > 0)
+    ? raw.additionalMaterials
+    : studyMaterials.filter((item) => {
+        const category = (item.materialCategory || item.materialType || '').toString().trim().toLowerCase();
+        return category === 'additional' || category === 'extra';
+      });
 
-  const providedMaterials = studyMaterials.filter((item) => {
-    const category = (item.materialCategory || item.materialType || '').toString().toLowerCase();
-    return category !== 'additional' && category !== 'extra' && category !== 'external';
-  });
+  const providedMaterials = (Array.isArray(raw?.providedMaterials) && raw.providedMaterials.length > 0)
+    ? raw.providedMaterials
+    : studyMaterials.filter((item) => {
+        const category = (item.materialCategory || item.materialType || '').toString().trim().toLowerCase();
+        return category !== 'additional' && category !== 'extra';
+      });
 
   const assignments = Array.isArray(raw?.assignments)
     ? raw.assignments.map((item: any) => ({
@@ -655,11 +659,16 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
   const targetSessionId = savedSession.id;
 
   // 2. Persist Provided Materials
-  const providedMaterials = (sessionData.providedMaterials && sessionData.providedMaterials.length > 0)
+  const providedMaterials = Array.isArray(sessionData.providedMaterials)
     ? sessionData.providedMaterials
     : (sessionData.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || 'Provided').toLowerCase() !== 'additional');
 
+  const seenProvided = new Set<string>();
   for (const mat of providedMaterials) {
+    const key = `${mat.title}_${mat.url || ''}`;
+    if (seenProvided.has(key)) continue;
+    seenProvided.add(key);
+
     let fileUrl = mat.url || '';
     if (mat.file) {
       try {
@@ -691,11 +700,16 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
   }
 
   // 3. Persist Additional Materials
-  const additionalMaterials = (sessionData.additionalMaterials && sessionData.additionalMaterials.length > 0)
+  const additionalMaterials = Array.isArray(sessionData.additionalMaterials)
     ? sessionData.additionalMaterials
     : (sessionData.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || '').toLowerCase() === 'additional');
 
+  const seenAdditional = new Set<string>();
   for (const mat of additionalMaterials) {
+    const key = `${mat.title}_${mat.url || ''}`;
+    if (seenAdditional.has(key)) continue;
+    seenAdditional.add(key);
+
     let fileUrl = mat.url || '';
     if (mat.file) {
       try {
@@ -728,7 +742,12 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
 
   // 4. Persist Assignments
   const assignments = sessionData.assignments || [];
+  const seenAssignments = new Set<string>();
   for (const assign of assignments) {
+    const key = `${assign.title}_${assign.dueDate || ''}`;
+    if (seenAssignments.has(key)) continue;
+    seenAssignments.add(key);
+
     const payload: Partial<SessionAssignment> = {
       sessionId: targetSessionId,
       title: assign.title || 'Session Assignment',

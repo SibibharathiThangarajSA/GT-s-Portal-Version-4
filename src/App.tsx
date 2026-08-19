@@ -410,12 +410,12 @@ export function App() {
   const selectedSession = rawSelectedSession ? {
     ...rawSelectedSession,
     studyMaterials: rawSelectedSession.studyMaterials || [],
-    providedMaterials: (rawSelectedSession.providedMaterials && rawSelectedSession.providedMaterials.length > 0)
+    providedMaterials: Array.isArray(rawSelectedSession.providedMaterials) && rawSelectedSession.providedMaterials.length > 0
       ? rawSelectedSession.providedMaterials
-      : (rawSelectedSession.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || 'Provided').toLowerCase() !== 'additional'),
-    additionalMaterials: (rawSelectedSession.additionalMaterials && rawSelectedSession.additionalMaterials.length > 0)
+      : (rawSelectedSession.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || '').toLowerCase() !== 'additional' && (m.materialCategory || m.materialType || '').toLowerCase() !== 'extra'),
+    additionalMaterials: Array.isArray(rawSelectedSession.additionalMaterials) && rawSelectedSession.additionalMaterials.length > 0
       ? rawSelectedSession.additionalMaterials
-      : (rawSelectedSession.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || '').toLowerCase() === 'additional'),
+      : (rawSelectedSession.studyMaterials || []).filter(m => (m.materialCategory || m.materialType || '').toLowerCase() === 'additional' || (m.materialCategory || m.materialType || '').toLowerCase() === 'extra'),
     assignments: rawSelectedSession.assignments || [],
     quizzes: rawSelectedSession.quizzes || []
   } : undefined;

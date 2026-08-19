@@ -464,7 +464,7 @@ async function startServer() {
 
   // --- 4. STUDY MATERIALS API ROUTER ---
   app.get("/api/materials", (req, res) => {
-    const { sessionId } = req.query;
+    const { sessionId, category } = req.query;
     const sessions = getAllSessions();
     let materials: any[] = [];
 
@@ -475,6 +475,20 @@ async function startServer() {
         }
       }
     });
+
+    if (category) {
+      const catLower = category.toString().trim().toLowerCase();
+      materials = materials.filter((m: any) => {
+        const itemCat = (m.materialCategory || m.materialType || '').toString().trim().toLowerCase();
+        if (catLower === 'provided') {
+          return itemCat !== 'additional' && itemCat !== 'extra';
+        }
+        if (catLower === 'additional') {
+          return itemCat === 'additional' || itemCat === 'extra';
+        }
+        return itemCat === catLower;
+      });
+    }
 
     res.json(materials);
   });
@@ -490,6 +504,20 @@ async function startServer() {
 
     if (targetSession) {
       if (!Array.isArray(targetSession.studyMaterials)) targetSession.studyMaterials = [];
+      const existingMatIdx = targetSession.studyMaterials.findIndex((m: any) => 
+        (newMat.id && m.id === newMat.id) || 
+        (newMat.title && m.title && m.title.trim().toLowerCase() === newMat.title.trim().toLowerCase() && (m.materialCategory || m.materialType) === (newMat.materialCategory || newMat.materialType))
+      );
+      if (existingMatIdx !== -1) {
+        targetSession.studyMaterials[existingMatIdx] = {
+          ...targetSession.studyMaterials[existingMatIdx],
+          ...newMat,
+          id: targetSession.studyMaterials[existingMatIdx].id
+        };
+        saveAllSessions(sessions);
+        return res.status(200).json(targetSession.studyMaterials[existingMatIdx]);
+      }
+
       targetSession.studyMaterials.push(createdMat);
       saveAllSessions(sessions);
     }
@@ -504,7 +532,7 @@ async function startServer() {
       if (Array.isArray(s.studyMaterials)) {
         const idx = s.studyMaterials.findIndex((m: any) => m.id === req.params.id);
         if (idx !== -1) {
-          s.studyMaterials[idx] = { ...s.studyMaterials[idx], ...req.body };
+          s.studyMaterials[idx] = { ...s.studyMaterials[idx], ...req.body, id: req.params.id };
           updatedMat = s.studyMaterials[idx];
         }
       }
@@ -755,6 +783,20 @@ async function startServer() {
 
     if (targetSession) {
       if (!Array.isArray(targetSession.assignments)) targetSession.assignments = [];
+      const existingIdx = targetSession.assignments.findIndex((a: any) =>
+        (newAssign.id && a.id === newAssign.id) ||
+        (newAssign.title && a.title && a.title.trim().toLowerCase() === newAssign.title.trim().toLowerCase())
+      );
+      if (existingIdx !== -1) {
+        targetSession.assignments[existingIdx] = {
+          ...targetSession.assignments[existingIdx],
+          ...newAssign,
+          id: targetSession.assignments[existingIdx].id
+        };
+        saveAllSessions(sessions);
+        return res.status(200).json(targetSession.assignments[existingIdx]);
+      }
+
       targetSession.assignments.push(createdAssign);
       saveAllSessions(sessions);
     }
