@@ -667,13 +667,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       ))}
 
                       {/* Add Subtopic Node button positioned down below the subtopic cards */}
-                      <div className="pt-2 flex justify-end">
+                      <div className="pt-2">
                         <button
                           type="button"
                           onClick={() => handleAddSubtopicNode(tIdx)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
                         >
-                          <Plus className="w-3.5 h-3.5" /> Add Subtopic Node
+                          <Plus className="w-4 h-4" /> Add Subtopic Node
                         </button>
                       </div>
                     </div>
