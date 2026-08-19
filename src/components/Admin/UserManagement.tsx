@@ -211,20 +211,85 @@ export const UserManagement: React.FC = () => {
   const handleSaveAddModal = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const seenBatchPhones = new Set<string>();
+    const seenBatchEmails = new Set<string>();
+    const seenBatchVamIds = new Set<string>();
+
     // Validation
     for (let i = 0; i < formEntries.length; i++) {
       const entry = formEntries[i];
+      const rowLabel = formEntries.length > 1 ? `Row ${i + 1}: ` : '';
+
       if (!entry.name.trim()) {
-        addToast('error', `Row ${i + 1}: Name is required.`);
+        addToast('error', `${rowLabel}Name is required.`);
         return;
       }
-      if (!entry.phoneNumber.trim() || entry.phoneNumber.replace(/\D/g, '').length < 10) {
-        addToast('error', `Row ${i + 1}: Valid 10-digit mobile number is required.`);
+
+      const cleanPhone = entry.phoneNumber.replace(/\D/g, '').trim();
+      if (!cleanPhone || cleanPhone.length < 10) {
+        addToast('error', `${rowLabel}Valid 10-digit mobile number is required.`);
         return;
       }
-      if (entry.role !== 'Associate' && (!entry.email.trim() || !entry.email.includes('@'))) {
-        addToast('error', `Row ${i + 1}: Valid enterprise email is required for ${entry.role}.`);
+
+      // Check if phone number already exists in registered roster
+      const existingUserWithPhone = users.find(
+        (u) => (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone
+      );
+      if (existingUserWithPhone) {
+        addToast(
+          'error',
+          `${rowLabel}Phone number "${cleanPhone}" already exists for ${existingUserWithPhone.name} (${existingUserWithPhone.role}). Duplicate phone numbers are not allowed.`
+        );
         return;
+      }
+
+      // Check if phone number is duplicated within the current add form entries
+      if (seenBatchPhones.has(cleanPhone)) {
+        addToast(
+          'error',
+          `${rowLabel}Phone number "${cleanPhone}" is entered more than once. Each user must have a unique phone number.`
+        );
+        return;
+      }
+      seenBatchPhones.add(cleanPhone);
+
+      // Email & VAM validations for Employee / Admin roles
+      if (entry.role !== 'Associate') {
+        const cleanEmail = entry.email.trim().toLowerCase();
+        if (!cleanEmail || !cleanEmail.includes('@')) {
+          addToast('error', `${rowLabel}Valid enterprise email is required for ${entry.role}.`);
+          return;
+        }
+
+        const existingUserWithEmail = users.find(
+          (u) => u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail
+        );
+        if (existingUserWithEmail) {
+          addToast('error', `${rowLabel}Email ID "${cleanEmail}" is already registered for ${existingUserWithEmail.name}.`);
+          return;
+        }
+
+        if (seenBatchEmails.has(cleanEmail)) {
+          addToast('error', `${rowLabel}Email "${cleanEmail}" is duplicated in multiple rows.`);
+          return;
+        }
+        seenBatchEmails.add(cleanEmail);
+
+        if (entry.vamId && entry.vamId.trim() && entry.vamId.trim() !== '-') {
+          const cleanVam = entry.vamId.trim();
+          const existingUserWithVam = users.find(
+            (u) => u.vamId && u.vamId !== '-' && u.vamId.trim().toLowerCase() === cleanVam.toLowerCase()
+          );
+          if (existingUserWithVam) {
+            addToast('error', `${rowLabel}VAM ID "${cleanVam}" already exists for ${existingUserWithVam.name}.`);
+            return;
+          }
+          if (seenBatchVamIds.has(cleanVam.toLowerCase())) {
+            addToast('error', `${rowLabel}VAM ID "${cleanVam}" is duplicated in multiple rows.`);
+            return;
+          }
+          seenBatchVamIds.add(cleanVam.toLowerCase());
+        }
       }
     }
 
@@ -266,13 +331,50 @@ export const UserManagement: React.FC = () => {
       addToast('error', 'Name is required.');
       return;
     }
-    if (!editingUser.phoneNumber.trim() || editingUser.phoneNumber.replace(/\D/g, '').length < 10) {
+
+    const cleanPhone = editingUser.phoneNumber.replace(/\D/g, '').trim();
+    if (!cleanPhone || cleanPhone.length < 10) {
       addToast('error', 'Valid 10-digit mobile number is required.');
       return;
     }
-    if (editingUser.role !== 'Associate' && (!editingUser.email || !editingUser.email.includes('@'))) {
-      addToast('error', `Valid enterprise email is required for ${editingUser.role}.`);
+
+    // Check duplicate phone in existing users excluding current editing user
+    const duplicatePhoneUser = users.find(
+      (u) => u.id !== editingUser.id && (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone
+    );
+    if (duplicatePhoneUser) {
+      addToast(
+        'error',
+        `Phone number "${cleanPhone}" already exists for ${duplicatePhoneUser.name} (${duplicatePhoneUser.role}). Duplicate phone numbers are not allowed.`
+      );
       return;
+    }
+
+    if (editingUser.role !== 'Associate') {
+      const cleanEmail = (editingUser.email || '').trim().toLowerCase();
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        addToast('error', `Valid enterprise email is required for ${editingUser.role}.`);
+        return;
+      }
+
+      const duplicateEmailUser = users.find(
+        (u) => u.id !== editingUser.id && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail
+      );
+      if (duplicateEmailUser) {
+        addToast('error', `Email ID "${cleanEmail}" is already registered for ${duplicateEmailUser.name}.`);
+        return;
+      }
+
+      if (editingUser.vamId && editingUser.vamId.trim() && editingUser.vamId.trim() !== '-') {
+        const cleanVam = editingUser.vamId.trim();
+        const duplicateVamUser = users.find(
+          (u) => u.id !== editingUser.id && u.vamId && u.vamId !== '-' && u.vamId.trim().toLowerCase() === cleanVam.toLowerCase()
+        );
+        if (duplicateVamUser) {
+          addToast('error', `VAM ID "${cleanVam}" already exists for ${duplicateVamUser.name}.`);
+          return;
+        }
+      }
     }
 
     const updatedUsers = users.map((u) => {
@@ -283,6 +385,7 @@ export const UserManagement: React.FC = () => {
 
         return {
           ...editingUser,
+          phoneNumber: cleanPhone,
           vamId: cleanVam,
           email: cleanEmail,
           password: u.password || defaultPw
@@ -694,28 +797,59 @@ export const UserManagement: React.FC = () => {
                             {entry.phoneNumber.length}/10
                           </span>
                         </div>
-                        <div className="flex rounded-xl border border-slate-300 bg-white overflow-hidden shadow-xs focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10">
-                          <select
-                            value={entry.countryCode || '+91'}
-                            onChange={(e) => handleUpdateEntry(index, 'countryCode', e.target.value)}
-                            className="bg-slate-100/90 px-2.5 py-2 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
-                          >
-                            {COUNTRY_CODES.map((c) => (
-                              <option key={c.code} value={c.code}>
-                                {c.label}
-                              </option>
-                            ))}
-                          </select>
-                          <input
-                            type="tel"
-                            required
-                            maxLength={10}
-                            value={entry.phoneNumber}
-                            onChange={(e) => handleUpdateEntry(index, 'phoneNumber', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                            placeholder="9345766068"
-                            className="w-full px-3 py-2 font-mono font-medium text-slate-900 placeholder-slate-400 focus:outline-none"
-                          />
-                        </div>
+                        {(() => {
+                          const cleanP = (entry.phoneNumber || '').replace(/\D/g, '');
+                          const existingWithPhone = cleanP.length === 10 ? users.find((u) => (u.phoneNumber || '').replace(/\D/g, '') === cleanP) : null;
+                          const isBatchDuplicate = cleanP.length === 10 && formEntries.some((other, oIdx) => oIdx !== index && (other.phoneNumber || '').replace(/\D/g, '') === cleanP);
+                          const isPhoneError = Boolean(existingWithPhone || isBatchDuplicate);
+
+                          return (
+                            <div>
+                              <div
+                                className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${
+                                  isPhoneError
+                                    ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
+                                    : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
+                                }`}
+                              >
+                                <select
+                                  value={entry.countryCode || '+91'}
+                                  onChange={(e) => handleUpdateEntry(index, 'countryCode', e.target.value)}
+                                  className="bg-slate-100/90 px-2.5 py-2 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
+                                >
+                                  {COUNTRY_CODES.map((c) => (
+                                    <option key={c.code} value={c.code}>
+                                      {c.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="tel"
+                                  required
+                                  maxLength={10}
+                                  value={entry.phoneNumber}
+                                  onChange={(e) => handleUpdateEntry(index, 'phoneNumber', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                  placeholder="9345766068"
+                                  className="w-full px-3 py-2 font-mono font-medium text-slate-900 placeholder-slate-400 focus:outline-none"
+                                />
+                              </div>
+
+                              {existingWithPhone && (
+                                <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                                  <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                                  <span>Number already exists for <strong>{existingWithPhone.name}</strong> ({existingWithPhone.role})</span>
+                                </p>
+                              )}
+
+                              {isBatchDuplicate && !existingWithPhone && (
+                                <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                                  <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                                  <span>Duplicate number entered in another row</span>
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Mail ID (Blocked for Associate) */}
@@ -864,28 +998,51 @@ export const UserManagement: React.FC = () => {
                     {(editingUser.phoneNumber || '').replace(/\D/g, '').length}/10
                   </span>
                 </div>
-                <div className="flex rounded-xl border border-slate-300 bg-white overflow-hidden shadow-xs focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10">
-                  <select
-                    value={editCountryCode}
-                    onChange={(e) => setEditCountryCode(e.target.value)}
-                    className="bg-slate-100/90 px-2.5 py-2 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
-                  >
-                    {COUNTRY_CODES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    value={editingUser.phoneNumber}
-                    onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                    placeholder="Enter Mobile Number"
-                    className="w-full px-3 py-2 font-mono text-slate-900 focus:outline-none"
-                  />
-                </div>
+                {(() => {
+                  const cleanP = (editingUser.phoneNumber || '').replace(/\D/g, '');
+                  const duplicateUser = cleanP.length === 10 ? users.find((u) => u.id !== editingUser.id && (u.phoneNumber || '').replace(/\D/g, '') === cleanP) : null;
+                  const isError = Boolean(duplicateUser);
+
+                  return (
+                    <div>
+                      <div
+                        className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${
+                          isError
+                            ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
+                            : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
+                        }`}
+                      >
+                        <select
+                          value={editCountryCode}
+                          onChange={(e) => setEditCountryCode(e.target.value)}
+                          className="bg-slate-100/90 px-2.5 py-2 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          value={editingUser.phoneNumber}
+                          onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          placeholder="Enter Mobile Number"
+                          className="w-full px-3 py-2 font-mono text-slate-900 focus:outline-none"
+                        />
+                      </div>
+
+                      {duplicateUser && (
+                        <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                          <span>Number already exists for <strong>{duplicateUser.name}</strong> ({duplicateUser.role})</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div>

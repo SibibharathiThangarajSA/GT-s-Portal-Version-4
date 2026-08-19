@@ -240,11 +240,27 @@ async function startServer() {
   // Save/Update full users roster
   auth.post('/users', (req, res) => {
     const { records } = req.body || {};
-    if (Array.isArray(records)) {
-      saveAllUsers(records);
-      return res.json({ success: true, message: 'User roster saved successfully.', count: records.length });
+    if (!Array.isArray(records)) {
+      return res.status(400).json({ success: false, message: 'Invalid records format.' });
     }
-    return res.status(400).json({ success: false, message: 'Invalid records format.' });
+
+    // Backend duplicate phone check
+    const seenPhones = new Set<string>();
+    for (const rec of records) {
+      const cleanPhone = (rec.phoneNumber || '').replace(/\D/g, '').trim();
+      if (cleanPhone && cleanPhone.length === 10) {
+        if (seenPhones.has(cleanPhone)) {
+          return res.status(400).json({
+            success: false,
+            message: `Duplicate phone number "${cleanPhone}" detected. Each user must have a unique phone number.`
+          });
+        }
+        seenPhones.add(cleanPhone);
+      }
+    }
+
+    saveAllUsers(records);
+    return res.json({ success: true, message: 'User roster saved successfully.', count: records.length });
   });
 
   // Delete user from roster permanently
@@ -269,15 +285,29 @@ async function startServer() {
     let users = getAllUsers();
     const targetId = decodeURIComponent(req.params.id || '').trim();
     const index = users.findIndex((u: any) => u.id === targetId || u.vamId === targetId || (u.email && u.email.toLowerCase() === targetId.toLowerCase()));
-    if (index !== -1) {
-      users[index] = { ...users[index], ...req.body, id: users[index].id || targetId };
-      if (req.body.password && users[index].email && users[index].email !== '-') {
-        savePasswordDisk(users[index].email, req.body.password);
-      }
-      saveAllUsers(users);
-      return res.json({ success: true, data: users[index] });
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
-    return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (req.body.phoneNumber) {
+      const cleanPhone = req.body.phoneNumber.replace(/\D/g, '').trim();
+      if (cleanPhone && cleanPhone.length === 10) {
+        const duplicate = users.find((u: any) => u.id !== targetId && (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone);
+        if (duplicate) {
+          return res.status(400).json({
+            success: false,
+            message: `Phone number "${cleanPhone}" is already registered for ${duplicate.name}.`
+          });
+        }
+      }
+    }
+
+    users[index] = { ...users[index], ...req.body, id: users[index].id || targetId };
+    if (req.body.password && users[index].email && users[index].email !== '-') {
+      savePasswordDisk(users[index].email, req.body.password);
+    }
+    saveAllUsers(users);
+    return res.json({ success: true, data: users[index] });
   });
 
   // Mobile OTP Generation
