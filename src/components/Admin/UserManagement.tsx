@@ -24,7 +24,8 @@ import {
 import { UserManagementRecord } from '../../types';
 import {
   fetchUserManagementRecordsApi,
-  saveUserManagementRecordsApi
+  saveUserManagementRecordsApi,
+  deleteUserManagementRecordApi
 } from '../../services/api';
 import { getDefaultPasswordForEmail } from '../../services/authCredentials';
 import { useToast } from '../../context/ToastContext';
@@ -72,7 +73,7 @@ export const UserManagement: React.FC = () => {
     try {
       const saved = sessionStorage.getItem('gt_admin_user_form_entries');
       if (saved) return JSON.parse(saved);
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -299,10 +300,12 @@ export const UserManagement: React.FC = () => {
   // Confirm Delete
   const handleConfirmDelete = async () => {
     if (!deletingUser) return;
-    const updated = users.filter((u) => u.id !== deletingUser.id);
+    const userToRemove = deletingUser;
+    const updated = users.filter((u) => u.id !== userToRemove.id);
     setUsers(updated);
+    await deleteUserManagementRecordApi(userToRemove.id);
     await saveUserManagementRecordsApi(updated);
-    addToast('info', `Removed credentials for ${deletingUser.name}.`);
+    addToast('info', `Permanently removed credentials for ${userToRemove.name}.`);
     setDeletingUser(null);
   };
 
@@ -379,8 +382,8 @@ export const UserManagement: React.FC = () => {
                   key={r}
                   onClick={() => setRoleFilter(r)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${roleFilter === r
-                      ? 'bg-white text-blue-600 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                     }`}
                 >
                   {r === 'ALL' ? 'All Roles' : r}
@@ -554,8 +557,8 @@ export const UserManagement: React.FC = () => {
                   key={page}
                   onClick={() => setCurrentPage(page)}
                   className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${currentPage === page
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'hover:bg-slate-100 text-slate-700 border border-slate-200'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'hover:bg-slate-100 text-slate-700 border border-slate-200'
                     }`}
                 >
                   {page}
@@ -664,8 +667,8 @@ export const UserManagement: React.FC = () => {
                           onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value)}
                           placeholder={isAssociate ? '— Disabled for Associate —' : 'e.g. 105527'}
                           className={`w-full border rounded-xl px-3 py-2 font-medium focus:outline-none shadow-xs ${isAssociate
-                              ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
-                              : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
+                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
                             }`}
                         />
                       </div>
@@ -678,7 +681,7 @@ export const UserManagement: React.FC = () => {
                           required
                           value={entry.name}
                           onChange={(e) => handleUpdateEntry(index, 'name', e.target.value)}
-                          placeholder="e.g. Sibibharathi Thangaraj"
+                          placeholder="Enter your name"
                           className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
                         />
                       </div>
@@ -728,8 +731,8 @@ export const UserManagement: React.FC = () => {
                           onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
                           placeholder={isAssociate ? '— Disabled for Associate —' : 'e.g. name@valuemomentum.com'}
                           className={`w-full border rounded-xl px-3 py-2 font-medium focus:outline-none shadow-xs ${isAssociate
-                              ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
-                              : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
+                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
                             }`}
                         />
                       </div>
@@ -837,7 +840,7 @@ export const UserManagement: React.FC = () => {
                   disabled={editingUser.role === 'Associate'}
                   value={editingUser.role === 'Associate' ? '' : (editingUser.vamId || '')}
                   onChange={(e) => setEditingUser({ ...editingUser, vamId: e.target.value })}
-                  placeholder={editingUser.role === 'Associate' ? '— Disabled for Associate —' : 'e.g. 105527'}
+                  placeholder={editingUser.role === 'Associate' ? '— Disabled for Associate —' : 'Enter your VAM ID'}
                   className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -879,7 +882,7 @@ export const UserManagement: React.FC = () => {
                     maxLength={10}
                     value={editingUser.phoneNumber}
                     onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                    placeholder="9345766068"
+                    placeholder="Enter Mobile Number"
                     className="w-full px-3 py-2 font-mono text-slate-900 focus:outline-none"
                   />
                 </div>

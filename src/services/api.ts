@@ -1124,28 +1124,55 @@ export const changePasswordApi = async (email: string, currentPassword: string, 
 // ============================================================================
 
 export const fetchUserPersonalNotesApi = async (userId: string, sessionId: string): Promise<PersonalNote[]> => {
+  const cleanUser = (userId || 'guest').trim().toLowerCase();
+  const cleanSession = (sessionId || '').trim();
+  const key = `gt_personal_notes_${cleanUser}_${cleanSession}`;
+
   try {
-    const cleanUser = (userId || 'guest').trim().toLowerCase();
-    const key = `gt_personal_notes_${cleanUser}_${sessionId}`;
+    const res = await fetch(`/api/notes?userId=${encodeURIComponent(cleanUser)}&sessionId=${encodeURIComponent(cleanSession)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        localStorage.setItem(key, JSON.stringify(data));
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to fetch user notes from server, checking local cache', err);
+  }
+
+  try {
     const stored = localStorage.getItem(key);
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) return parsed;
     }
   } catch (err) {
-    console.warn('Failed to read user personal notes', err);
+    console.warn('Failed to read user personal notes from storage', err);
   }
   return [];
 };
 
 export const saveUserPersonalNotesApi = async (userId: string, sessionId: string, notes: PersonalNote[]): Promise<boolean> => {
+  const cleanUser = (userId || 'guest').trim().toLowerCase();
+  const cleanSession = (sessionId || '').trim();
+  const key = `gt_personal_notes_${cleanUser}_${cleanSession}`;
+
   try {
-    const cleanUser = (userId || 'guest').trim().toLowerCase();
-    const key = `gt_personal_notes_${cleanUser}_${sessionId}`;
     localStorage.setItem(key, JSON.stringify(notes));
-    return true;
   } catch (err) {
-    console.warn('Failed to save user personal notes', err);
+    console.warn('Failed to save user personal notes to local storage', err);
+  }
+
+  try {
+    const res = await fetch('/api/notes/bulk', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: cleanUser, sessionId: cleanSession, notes })
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Failed to save user personal notes to server', err);
     return false;
   }
 };
@@ -1180,15 +1207,28 @@ export const fetchUserManagementRecordsApi = async (): Promise<UserManagementRec
 export const saveUserManagementRecordsApi = async (records: UserManagementRecord[]): Promise<boolean> => {
   saveUserManagementRecords(records);
   try {
-    fetch('/api/auth/users', {
+    const res = await fetch('/api/auth/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ records })
-    }).catch(() => null);
-  } catch {
-    // ignore
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Failed to save user management records to server', err);
+    return false;
   }
-  return true;
+};
+
+export const deleteUserManagementRecordApi = async (id: string): Promise<boolean> => {
+  try {
+    const res = await fetch(`/api/auth/users/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Failed to delete user record on server', err);
+    return false;
+  }
 };
 
 export const requestMobileOtpApi = async (

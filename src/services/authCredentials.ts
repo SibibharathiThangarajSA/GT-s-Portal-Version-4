@@ -160,15 +160,33 @@ const STORAGE_KEY = 'gt_custom_credentials_store_v2';
 export const getCredentialsStore = (): Record<string, { password: string; profile: RegisteredCredential }> => {
   const store: Record<string, { password: string; profile: RegisteredCredential }> = {};
 
-  // 1. Load initial seed credentials
-  INITIAL_CREDENTIALS.forEach((cred) => {
-    store[cred.email.toLowerCase()] = {
-      password: cred.defaultPassword,
-      profile: cred
+  // 1. Dynamically load from active user management records roster
+  const activeRoster = getUserManagementRecords();
+
+  activeRoster.forEach((u) => {
+    if (!u.email || u.email === '-' || !u.email.includes('@')) return;
+    const lowerEmail = u.email.trim().toLowerCase();
+    const defaultPw = (lowerEmail.split('@')[0] || '').toLowerCase();
+    const parts = (u.name || '').trim().split(' ');
+
+    store[lowerEmail] = {
+      password: u.password || defaultPw,
+      profile: {
+        email: u.email.trim(),
+        defaultPassword: defaultPw,
+        role: u.role === 'Admin' ? 'Admin' : 'GT',
+        name: u.name,
+        firstName: parts[0] || u.name,
+        lastName: parts.slice(1).join(' ') || '',
+        batch: u.batch || 'GT-2026-Batch-01',
+        avatar: u.role === 'Admin'
+          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+      }
     };
   });
 
-  // 2. Overlay persistent changes from localStorage
+  // 2. Overlay persistent changes from localStorage password overrides
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -553,9 +571,9 @@ export const getDefaultPasswordForEmail = (email: string): string => {
 export const getUserManagementRecords = (): UserManagementRecord[] => {
   try {
     const raw = localStorage.getItem(USER_MGMT_STORAGE_KEY);
-    if (raw) {
+    if (raw !== null && raw !== undefined) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }

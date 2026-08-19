@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { GoogleGenAI } from "@google/genai";
 import multer from "multer";
 
@@ -16,6 +16,8 @@ const MATERIALS_FILE = path.join(DATA_DIR, 'server_materials.json');
 const QUIZZES_FILE = path.join(DATA_DIR, 'server_quizzes.json');
 const ASSIGNMENTS_FILE = path.join(DATA_DIR, 'server_assignments.json');
 const DISCUSSIONS_FILE = path.join(DATA_DIR, 'server_discussions.json');
+const NOTES_FILE = path.join(DATA_DIR, 'server_personal_notes.json');
+const SESSION_TRACKER_FILE = path.join(DATA_DIR, 'server_session_tracker.json');
 const UPLOADS_DIR = path.join(DATA_DIR, 'public', 'uploads');
 
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -51,8 +53,10 @@ const readJsonFile = <T>(filePath: string, fallback: T): T => {
   try {
     if (fs.existsSync(filePath)) {
       const raw = fs.readFileSync(filePath, 'utf-8');
-      const parsed = JSON.parse(raw);
-      if (parsed !== null && parsed !== undefined) return parsed;
+      if (raw && raw.trim()) {
+        const parsed = JSON.parse(raw);
+        if (parsed !== null && parsed !== undefined) return parsed;
+      }
     }
   } catch (e) {
     console.warn(`Failed to read ${filePath}`, e);
@@ -67,6 +71,23 @@ const writeJsonFile = (filePath: string, data: any): void => {
     console.error(`Failed to write ${filePath}`, e);
   }
 };
+
+// Guarantee permanent files are initialized on local disk
+if (!fs.existsSync(USER_ROSTER_FILE)) {
+  writeJsonFile(USER_ROSTER_FILE, INITIAL_USERS_ROSTER);
+}
+if (!fs.existsSync(SESSIONS_FILE)) {
+  writeJsonFile(SESSIONS_FILE, INITIAL_SEED_SESSIONS);
+}
+if (!fs.existsSync(SESSION_TRACKER_FILE)) {
+  writeJsonFile(SESSION_TRACKER_FILE, []);
+}
+if (!fs.existsSync(CREDENTIALS_FILE)) {
+  writeJsonFile(CREDENTIALS_FILE, {});
+}
+if (!fs.existsSync(NOTES_FILE)) {
+  writeJsonFile(NOTES_FILE, []);
+}
 
 // Initialize Gemini Client
 const getGeminiClient = () => {
@@ -216,14 +237,47 @@ async function startServer() {
     return res.json({ success: true, data: users });
   });
 
-  // Save/Update users in roster
+  // Save/Update full users roster
   auth.post('/users', (req, res) => {
     const { records } = req.body || {};
     if (Array.isArray(records)) {
       saveAllUsers(records);
-      return res.json({ success: true, message: 'User roster saved successfully.' });
+      return res.json({ success: true, message: 'User roster saved successfully.', count: records.length });
     }
     return res.status(400).json({ success: false, message: 'Invalid records format.' });
+  });
+
+  // Delete user from roster permanently
+  auth.delete('/users/:id', (req, res) => {
+    let users = getAllUsers();
+    const targetId = decodeURIComponent(req.params.id || '').trim();
+    const userToDelete = users.find((u: any) => u.id === targetId || u.vamId === targetId || (u.email && u.email.toLowerCase() === targetId.toLowerCase()));
+    
+    if (userToDelete && userToDelete.email) {
+      const overrides = readJsonFile<Record<string, string>>(CREDENTIALS_FILE, {});
+      delete overrides[userToDelete.email.toLowerCase()];
+      writeJsonFile(CREDENTIALS_FILE, overrides);
+    }
+    
+    users = users.filter((u: any) => u.id !== targetId && u.vamId !== targetId && (!u.email || u.email.toLowerCase() !== targetId.toLowerCase()));
+    saveAllUsers(users);
+    return res.json({ success: true, message: 'User permanently removed from roster.' });
+  });
+
+  // Update user in roster
+  auth.put('/users/:id', (req, res) => {
+    let users = getAllUsers();
+    const targetId = decodeURIComponent(req.params.id || '').trim();
+    const index = users.findIndex((u: any) => u.id === targetId || u.vamId === targetId || (u.email && u.email.toLowerCase() === targetId.toLowerCase()));
+    if (index !== -1) {
+      users[index] = { ...users[index], ...req.body, id: users[index].id || targetId };
+      if (req.body.password && users[index].email && users[index].email !== '-') {
+        savePasswordDisk(users[index].email, req.body.password);
+      }
+      saveAllUsers(users);
+      return res.json({ success: true, data: users[index] });
+    }
+    return res.status(404).json({ success: false, message: 'User not found' });
   });
 
   // Mobile OTP Generation
@@ -546,15 +600,45 @@ async function startServer() {
     res.status(404).json({ message: "Material not found" });
   });
 
-  app.delete("/api/materials/:id", (req, res) => {
+  app.delete("/api/materials/:id", async (req, res) => {
     const sessions = getAllSessions();
+    let deletedMaterial: any = null;
+
     sessions.forEach((s: any) => {
       if (Array.isArray(s.studyMaterials)) {
+        const found = s.studyMaterials.find((m: any) => m.id === req.params.id);
+        if (found) deletedMaterial = found;
         s.studyMaterials = s.studyMaterials.filter((m: any) => m.id !== req.params.id);
       }
+      if (Array.isArray(s.providedMaterials)) {
+        s.providedMaterials = s.providedMaterials.filter((m: any) => m.id !== req.params.id);
+      }
+      if (Array.isArray(s.additionalMaterials)) {
+        s.additionalMaterials = s.additionalMaterials.filter((m: any) => m.id !== req.params.id);
+      }
     });
+
     saveAllSessions(sessions);
-    res.json({ message: "Material deleted successfully" });
+
+    if (deletedMaterial) {
+      const s3Key = deletedMaterial.driveItemId || 
+        (deletedMaterial.url && deletedMaterial.url.startsWith('/api/materials/files/') 
+          ? decodeURIComponent(deletedMaterial.url.replace('/api/materials/files/', '')) 
+          : null);
+      if (s3Key) {
+        try {
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: S3_BUCKET,
+            Key: s3Key
+          }));
+          console.log(`[S3 Delete] Permanently removed S3 object: ${s3Key}`);
+        } catch (s3Err: any) {
+          console.warn(`[S3 Delete] Warning deleting object ${s3Key}:`, s3Err?.message);
+        }
+      }
+    }
+
+    res.json({ success: true, message: "Material and attached file permanently deleted" });
   });
 
   app.post("/api/materials/files/upload", upload.single('file'), async (req, res) => {
@@ -825,23 +909,40 @@ async function startServer() {
     res.status(404).json({ message: "Assignment not found" });
   });
 
-  app.delete("/api/assignments/:id", (req, res) => {
+  app.delete("/api/assignments/:id", async (req, res) => {
     const sessions = getAllSessions();
+    let deletedAssign: any = null;
     sessions.forEach((s: any) => {
       if (Array.isArray(s.assignments)) {
+        const found = s.assignments.find((a: any) => a.id === req.params.id);
+        if (found) deletedAssign = found;
         s.assignments = s.assignments.filter((a: any) => a.id !== req.params.id);
       }
     });
     saveAllSessions(sessions);
-    res.json({ message: "Assignment deleted successfully" });
+
+    if (deletedAssign && deletedAssign.attachmentUrl) {
+      const s3Key = deletedAssign.attachmentUrl.startsWith('/api/materials/files/') 
+        ? decodeURIComponent(deletedAssign.attachmentUrl.replace('/api/materials/files/', '')) 
+        : null;
+      if (s3Key) {
+        try {
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: S3_BUCKET,
+            Key: s3Key
+          }));
+          console.log(`[S3 Delete] Deleted assignment file: ${s3Key}`);
+        } catch (s3Err: any) {
+          console.warn(`[S3 Delete] Assignment file deletion warning:`, s3Err?.message);
+        }
+      }
+    }
+
+    res.json({ success: true, message: "Assignment deleted successfully" });
   });
 
   // --- 6. SESSION TRACKER PERSISTENT ROUTER ---
-  const SESSION_TRACKER_FILE = path.join(process.cwd(), 'server_session_tracker.json');
-
-  const INITIAL_SESSION_TRACKER_RECORDS: any[] = [];
-
-  const getAllTrackerRecords = () => readJsonFile(SESSION_TRACKER_FILE, INITIAL_SESSION_TRACKER_RECORDS);
+  const getAllTrackerRecords = () => readJsonFile(SESSION_TRACKER_FILE, []);
   const saveAllTrackerRecords = (records: any[]) => writeJsonFile(SESSION_TRACKER_FILE, records);
 
   app.get("/api/session-tracker", (_req, res) => {
@@ -887,6 +988,60 @@ async function startServer() {
     const updated = records.filter((r: any) => r.id !== req.params.id);
     saveAllTrackerRecords(updated);
     res.json({ success: true, message: "Tracker record deleted successfully" });
+  });
+
+  // --- 7. PERSONAL NOTES PERSISTENT ROUTER ---
+  const getAllNotes = () => readJsonFile(NOTES_FILE, []);
+  const saveAllNotes = (notes: any[]) => writeJsonFile(NOTES_FILE, notes);
+
+  app.get("/api/notes", (req, res) => {
+    const { userId, sessionId } = req.query;
+    const notes = getAllNotes();
+    const filtered = notes.filter((n: any) => {
+      const matchUser = !userId || (n.userId && n.userId.toString().toLowerCase() === userId.toString().toLowerCase());
+      const matchSession = !sessionId || (n.sessionId && n.sessionId.toString().toLowerCase() === sessionId.toString().toLowerCase());
+      return matchUser && matchSession;
+    });
+    res.json(filtered);
+  });
+
+  app.post("/api/notes", (req, res) => {
+    const newNote = req.body;
+    if (!newNote) return res.status(400).json({ message: "Invalid note data" });
+    const notes = getAllNotes();
+    const id = newNote.id || `note-${Date.now()}`;
+    const noteWithId = { ...newNote, id, updatedAt: new Date().toISOString() };
+    const existingIdx = notes.findIndex((n: any) => n.id === id);
+    if (existingIdx !== -1) {
+      notes[existingIdx] = noteWithId;
+    } else {
+      notes.unshift(noteWithId);
+    }
+    saveAllNotes(notes);
+    res.status(201).json(noteWithId);
+  });
+
+  app.put("/api/notes/bulk", (req, res) => {
+    const { userId, sessionId, notes: userNotes } = req.body || {};
+    if (!Array.isArray(userNotes)) return res.status(400).json({ message: "Invalid notes array" });
+    const notes = getAllNotes();
+    const cleanUser = (userId || '').toString().toLowerCase();
+    const cleanSession = (sessionId || '').toString().toLowerCase();
+    const remaining = notes.filter((n: any) => {
+      const isThisUser = cleanUser && n.userId && n.userId.toString().toLowerCase() === cleanUser;
+      const isThisSession = cleanSession && n.sessionId && n.sessionId.toString().toLowerCase() === cleanSession;
+      return !(isThisUser && isThisSession);
+    });
+    const updated = [...userNotes, ...remaining];
+    saveAllNotes(updated);
+    res.json({ success: true, count: userNotes.length });
+  });
+
+  app.delete("/api/notes/:id", (req, res) => {
+    let notes = getAllNotes();
+    notes = notes.filter((n: any) => n.id !== req.params.id);
+    saveAllNotes(notes);
+    res.json({ success: true, message: "Note deleted successfully" });
   });
 
   // --- 7. USER PROFILE & ACTIVITY ROUTERS ---
