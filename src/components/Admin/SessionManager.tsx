@@ -128,7 +128,28 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       addToast('error', error?.message || `Could not remove ${label}. It has not been deleted.`);
     }
   };
-  const [editingSession, setEditingSession] = useState<Partial<Session> | null>(null);
+
+  // Auto-restore draft from sessionStorage on mount / reload so typing is never lost on refresh
+  const [editingSession, setEditingSession] = useState<Partial<Session> | null>(() => {
+    try {
+      const savedDraft = sessionStorage.getItem('gt_admin_session_draft');
+      if (savedDraft) {
+        return JSON.parse(savedDraft);
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved session draft', e);
+    }
+    return null;
+  });
+
+  // Auto-persist active edit draft to sessionStorage
+  useEffect(() => {
+    if (editingSession) {
+      sessionStorage.setItem('gt_admin_session_draft', JSON.stringify(editingSession));
+    } else {
+      sessionStorage.removeItem('gt_admin_session_draft');
+    }
+  }, [editingSession]);
   const [activeTab, setActiveTab] = useState<'overview' | 'roadmap' | 'provided' | 'additional' | 'assignments' | 'notes' | 'quiz'>('overview');
   const [sessionManagerMode, setSessionManagerMode] = useState<'modules' | 'tracker'>('modules');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'Published' | 'Draft' | 'Archived'>('ALL');
@@ -192,6 +213,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       return;
     }
     onSaveSession(editingSession);
+    sessionStorage.removeItem('gt_admin_session_draft');
     setEditingSession(null);
   };
 
@@ -1518,7 +1540,10 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
           <div className="pt-4 border-t border-slate-200 flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => setEditingSession(null)}
+              onClick={() => {
+                sessionStorage.removeItem('gt_admin_session_draft');
+                setEditingSession(null);
+              }}
               className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-colors"
             >
               Cancel

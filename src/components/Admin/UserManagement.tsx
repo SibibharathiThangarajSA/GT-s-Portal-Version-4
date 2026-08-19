@@ -64,9 +64,27 @@ export const UserManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Add Modal State
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [formEntries, setFormEntries] = useState<FormCredentialEntry[]>([]);
+  // Add Modal State with auto-preservation across reloads
+  const [isAddModalOpen, setIsAddModalOpen] = useState(() => {
+    return sessionStorage.getItem('gt_admin_user_add_modal_open') === 'true';
+  });
+  const [formEntries, setFormEntries] = useState<FormCredentialEntry[]>(() => {
+    try {
+      const saved = sessionStorage.getItem('gt_admin_user_form_entries');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    if (isAddModalOpen && formEntries.length > 0) {
+      sessionStorage.setItem('gt_admin_user_form_entries', JSON.stringify(formEntries));
+      sessionStorage.setItem('gt_admin_user_add_modal_open', 'true');
+    } else if (!isAddModalOpen) {
+      sessionStorage.removeItem('gt_admin_user_form_entries');
+      sessionStorage.removeItem('gt_admin_user_add_modal_open');
+    }
+  }, [formEntries, isAddModalOpen]);
 
   // Edit Modal State
   const [editingUser, setEditingUser] = useState<UserManagementRecord | null>(null);
