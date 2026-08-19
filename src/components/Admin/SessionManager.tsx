@@ -1594,56 +1594,35 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             </div>
 
             {/* Quick Actions */}
-            <div className="flex flex-col gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-200 self-end lg:self-center min-w-[170px]">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setEditingSession(deriveEditingSessionMaterials(session));
-                    setActiveTab('overview');
-                  }}
-                  style={{
-                    background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
-                    border: '1px solid #BFDBFE',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
-                  }}
-                  className="font-extrabold text-xs px-4 py-2.5 rounded-xl text-blue-800 hover:text-blue-900 flex items-center justify-center gap-2 transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md hover:border-blue-400 flex-1"
-                  title="Edit Session Details & Content"
-                >
-                  <Edit3 className="w-4 h-4 text-blue-700 fill-blue-700" />
-                  <span className="text-blue-800 font-extrabold">Edit Session</span>
-                </button>
-                
-                <button
-                  onClick={() => onDeleteSession(session.id)}
-                  style={{
-                    background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
-                    border: '1px solid #BFDBFE',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
-                  }}
-                  className="p-2.5 rounded-xl text-blue-800 hover:text-rose-700 hover:border-rose-300 flex items-center justify-center transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
-                  title="Delete Session"
-                >
-                  <Trash2 className="w-4 h-4 text-rose-600" />
-                </button>
-              </div>
-
-              {/* Publish button under the Edit Session button */}
+            <div className="flex items-center gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-200 self-end lg:self-center">
               <button
-                disabled={session.status !== 'Publish'}
                 onClick={() => {
-                  if (session.status === 'Publish') {
-                    onSaveSession({ ...session, status: 'Published', isPublished: true });
-                  }
+                  setEditingSession(deriveEditingSessionMaterials(session));
+                  setActiveTab('overview');
                 }}
-                className={`w-full font-extrabold text-xs px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 ${
-                  session.status === 'Publish'
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20 cursor-pointer hover:-translate-y-0.5'
-                    : 'bg-slate-200/80 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
-                }`}
-                title={session.status === 'Publish' ? 'Click to Publish session' : 'Publish button enabled when status is "Publish"'}
+                style={{
+                  background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
+                  border: '1px solid #BFDBFE',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
+                }}
+                className="font-extrabold text-xs px-4 py-2.5 rounded-xl text-blue-800 hover:text-blue-900 flex items-center justify-center gap-2 transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md hover:border-blue-400 flex-1"
+                title="Edit Session Details & Content"
               >
-                <CheckCircle2 className={`w-4 h-4 ${session.status === 'Publish' ? 'text-white' : 'text-slate-400'}`} />
-                <span>Publish</span>
+                <Edit3 className="w-4 h-4 text-blue-700 fill-blue-700" />
+                <span className="text-blue-800 font-extrabold">Edit Session</span>
+              </button>
+              
+              <button
+                onClick={() => onDeleteSession(session.id)}
+                style={{
+                  background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
+                  border: '1px solid #BFDBFE',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
+                }}
+                className="p-2.5 rounded-xl text-blue-800 hover:text-rose-700 hover:border-rose-300 flex items-center justify-center transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+                title="Delete Session"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
               </button>
             </div>
           </div>
