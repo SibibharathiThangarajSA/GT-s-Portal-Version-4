@@ -88,6 +88,7 @@ const syncJsonToS3 = async (filePath: string, data: any): Promise<void> => {
       Body: Buffer.from(JSON.stringify(data, null, 2), 'utf-8'),
       ContentType: 'application/json'
     }));
+    console.log(`[S3 DB Sync] Synced ${fileName} to Tigris S3 successfully (${Array.isArray(data) ? data.length + ' items' : 'object'}).`);
   } catch (err: any) {
     console.warn(`[S3 DB Sync] Warning syncing ${path.basename(filePath)} to S3:`, err?.message);
   }
@@ -110,7 +111,7 @@ const fetchJsonFromS3 = async <T>(fileName: string, fallback: T): Promise<T> => 
       if (parsed !== null && parsed !== undefined) return parsed;
     }
   } catch (err: any) {
-    // File not found on S3 yet
+    // File not found on S3 yet or network error
   }
   return fallback;
 };
@@ -119,13 +120,15 @@ const writeJsonFile = (filePath: string, data: any): void => {
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
     // Asynchronously push update to Tigris S3 Cloud Storage
-    syncJsonToS3(filePath, data).catch(() => null);
+    syncJsonToS3(filePath, data).catch((err) => {
+      console.warn(`[S3 Write Warning] Async push failed for ${path.basename(filePath)}:`, err?.message);
+    });
   } catch (e) {
     console.error(`Failed to write ${filePath}`, e);
   }
 };
 
-// Initial Cloud S3 DB hydration on startup
+// Initial Cloud S3 DB hydration on startup (Safe, non-destructive)
 async function hydrateDatabaseFromS3() {
   console.log('[S3 DB Hydration] Checking and syncing persistent database from Tigris S3...');
   const files = [
@@ -141,46 +144,35 @@ async function hydrateDatabaseFromS3() {
   for (const { file, fallback } of files) {
     const fileName = path.basename(file);
     try {
-      const s3Data = await fetchJsonFromS3(fileName, null);
+      const s3Data = await fetchJsonFromS3<any>(fileName, null);
       if (s3Data !== null && s3Data !== undefined) {
         fs.writeFileSync(file, JSON.stringify(s3Data, null, 2), 'utf-8');
-        console.log(`[S3 DB Hydration] Restored ${fileName} from Tigris S3 successfully.`);
+        const countStr = Array.isArray(s3Data) ? `${s3Data.length} records` : 'object';
+        console.log(`[S3 DB Hydration] Restored ${fileName} from Tigris S3 successfully (${countStr}).`);
       } else {
-        if (!fs.existsSync(file)) {
-          fs.writeFileSync(file, JSON.stringify(fallback, null, 2), 'utf-8');
-          await syncJsonToS3(file, fallback);
-        } else {
+        // S3 is empty for this key. If local disk has existing data, seed S3 with it.
+        if (fs.existsSync(file)) {
           const localData = readJsonFile(file, fallback);
-          await syncJsonToS3(file, localData);
+          if (localData !== null && localData !== undefined && (Array.isArray(localData) ? localData.length > 0 : Object.keys(localData).length > 0)) {
+            await syncJsonToS3(file, localData);
+            console.log(`[S3 DB Hydration] Initialized S3 ${fileName} with local data.`);
+          } else {
+            fs.writeFileSync(file, JSON.stringify(fallback, null, 2), 'utf-8');
+          }
+        } else {
+          fs.writeFileSync(file, JSON.stringify(fallback, null, 2), 'utf-8');
+          if (Array.isArray(fallback) && fallback.length > 0) {
+            await syncJsonToS3(file, fallback);
+          }
         }
       }
     } catch (e: any) {
       console.warn(`[S3 DB Hydration] Note for ${fileName}:`, e?.message);
+      if (!fs.existsSync(file)) {
+        fs.writeFileSync(file, JSON.stringify(fallback, null, 2), 'utf-8');
+      }
     }
   }
-}
-
-// Guarantee permanent files are initialized on local disk
-if (!fs.existsSync(USER_ROSTER_FILE)) {
-  writeJsonFile(USER_ROSTER_FILE, INITIAL_USERS_ROSTER);
-}
-if (!fs.existsSync(SESSIONS_FILE)) {
-  writeJsonFile(SESSIONS_FILE, INITIAL_SEED_SESSIONS);
-}
-if (!fs.existsSync(SESSION_TRACKER_FILE)) {
-  writeJsonFile(SESSION_TRACKER_FILE, []);
-}
-if (!fs.existsSync(CREDENTIALS_FILE)) {
-  writeJsonFile(CREDENTIALS_FILE, {});
-}
-if (!fs.existsSync(NOTES_FILE)) {
-  writeJsonFile(NOTES_FILE, []);
-}
-if (!fs.existsSync(ACTIVITIES_FILE)) {
-  writeJsonFile(ACTIVITIES_FILE, []);
-}
-if (!fs.existsSync(PROGRESS_FILE)) {
-  writeJsonFile(PROGRESS_FILE, []);
 }
 
 // Initialize Gemini Client
@@ -206,11 +198,46 @@ const upload = multer({
 });
 
 async function startServer() {
-  // Restore all database records from Tigris S3 Cloud Storage
+  // 1. Restore all database records from Tigris S3 Cloud Storage before accepting traffic
   await hydrateDatabaseFromS3();
+
   const app = express();
   const requestedPort = Number(process.env.PORT || 3000);
   const PORT = Number.isInteger(requestedPort) && requestedPort > 0 ? requestedPort : 3000;
+
+  // 2. Reverse Proxy & Trust Configuration (Crucial for Railway / Cloudflare / Load Balancers)
+  app.set('trust proxy', 1);
+
+  // 3. Global CORS Configuration
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Range');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
+  // 4. Live HTTP Traffic Logging Middleware (Displays incoming network traffic in Railway console)
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      const status = res.statusCode;
+      const isHealth = req.path === '/api/health' || req.path === '/api/ai/health';
+      const statusIcon = status < 400 ? '🟢' : (status < 500 ? '🟡' : '🔴');
+      
+      // Log all API traffic and errors (quiet healthchecks under 400 to prevent log clutter)
+      if (!isHealth || status >= 400) {
+        console.log(`${statusIcon} [HTTP] ${req.method.padEnd(6)} ${req.originalUrl} -> ${status} (${duration}ms) [IP: ${ip}]`);
+      }
+    });
+    next();
+  });
 
   // JSON Body Parsing for all incoming requests
   app.use(express.json({ limit: '50mb' }));
@@ -219,15 +246,26 @@ async function startServer() {
   // Static Assets
   app.use('/uploads', express.static(UPLOADS_DIR));
 
-  // --- 1. HEALTH CHECK ---
-  app.get("/api/health", (_req, res) => {
+  // --- 1. HEALTH CHECKS (Supports Railway deployment healthcheck & monitoring) ---
+  const handleHealthCheck = (_req: express.Request, res: express.Response) => {
+    const sessions = getAllSessions();
+    const users = getAllUsers();
     res.json({
       status: "ok",
+      service: "GT-Portal-BFF",
       mode: "standalone-node-backend",
+      uptimeSeconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
-      database: "local-persistent-json"
+      database: "persistent-s3-json",
+      stats: {
+        totalSessions: sessions.length,
+        totalUsers: users.length
+      }
     });
-  });
+  };
+
+  app.get("/api/health", handleHealthCheck);
+  app.get("/api/ai/health", handleHealthCheck);
 
   // --- 2. AUTHENTICATION & USER MANAGEMENT ROUTER ---
   const auth = express.Router();
@@ -958,6 +996,94 @@ async function startServer() {
     res.json({ message: "Quiz deleted successfully" });
   });
 
+  // Submit and grade quiz
+  app.post("/api/quizzes/:id/submit", (req, res) => {
+    const { userAnswers, userId } = req.body || {};
+    const sessions = getAllSessions();
+    let foundQuiz: any = null;
+    let targetSession: any = null;
+
+    for (const s of sessions) {
+      if (Array.isArray(s.quizzes)) {
+        const q = s.quizzes.find((quiz: any) => quiz.id === req.params.id);
+        if (q) {
+          foundQuiz = q;
+          targetSession = s;
+          break;
+        }
+      }
+    }
+
+    if (!foundQuiz) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+
+    const questions = foundQuiz.questions || [];
+    let totalScore = 0;
+    let maxScore = 0;
+    const questionResults: any[] = [];
+
+    questions.forEach((q: any, idx: number) => {
+      const qId = q.id || `q-${idx}`;
+      const points = Number(q.points || 10);
+      maxScore += points;
+      const userAnswer = userAnswers ? userAnswers[qId] : undefined;
+      const correctAnswer = q.correctAnswer;
+
+      let isCorrect = false;
+      if (userAnswer !== undefined && correctAnswer !== undefined) {
+        if (Array.isArray(correctAnswer)) {
+          const userArr = Array.isArray(userAnswer) ? userAnswer.map(String) : [String(userAnswer)];
+          isCorrect = correctAnswer.length === userArr.length && correctAnswer.every((val: any) => userArr.includes(String(val)));
+        } else {
+          isCorrect = String(userAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
+        }
+      }
+
+      if (isCorrect) totalScore += points;
+      questionResults.push({
+        questionId: qId,
+        isCorrect,
+        userAnswer,
+        correctAnswer,
+        pointsAwarded: isCorrect ? points : 0
+      });
+    });
+
+    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 100;
+    const isPassed = percentage >= (Number(foundQuiz.passingScorePercent) || 70);
+
+    // Record user progress
+    if (userId && targetSession) {
+      const progressList = getAllProgress();
+      const cleanUser = String(userId).toLowerCase();
+      const existingIdx = progressList.findIndex((p: any) => p.userId?.toLowerCase() === cleanUser && p.sessionId === targetSession.id);
+      const progEntry = {
+        id: existingIdx !== -1 ? progressList[existingIdx].id : `prog-${Date.now()}`,
+        userId: cleanUser,
+        sessionId: targetSession.id,
+        quizScore: percentage,
+        lastUpdated: new Date().toISOString()
+      };
+      if (existingIdx !== -1) {
+        progressList[existingIdx] = { ...progressList[existingIdx], ...progEntry };
+      } else {
+        progressList.unshift(progEntry);
+      }
+      saveAllProgress(progressList);
+    }
+
+    return res.json({
+      success: true,
+      quizId: foundQuiz.id,
+      totalScore,
+      maxScore,
+      percentage,
+      isPassed,
+      questionResults
+    });
+  });
+
   app.get("/api/assignments", (req, res) => {
     const { sessionId } = req.query;
     const sessions = getAllSessions();
@@ -1427,10 +1553,20 @@ User Query: ${message}`
 
   console.log(`\n========================================================`);
   console.log(`🚀 GT Portal Standalone Backend & Frontend Online!`);
-  console.log(`📡 URL: http://localhost:${activePort}`);
-  console.log(`🛡️ Auth APIs: http://localhost:${activePort}/api/auth`);
-  console.log(`📚 Sessions API: http://localhost:${activePort}/api/sessions`);
+  console.log(`📡 URL: http://0.0.0.0:${activePort} (Local: http://localhost:${activePort})`);
+  console.log(`🩺 Healthcheck: http://0.0.0.0:${activePort}/api/health`);
+  console.log(`🛡️ Auth APIs: http://0.0.0.0:${activePort}/api/auth`);
+  console.log(`📚 Sessions API: http://0.0.0.0:${activePort}/api/sessions`);
+  console.log(`☁️ Cloud Storage: Tigris S3 Bucket (${S3_BUCKET})`);
   console.log(`========================================================\n`);
+
+  // Graceful shutdown handling for container redeployment
+  const shutdown = (signal: string) => {
+    console.log(`\n[Server Shutdown] Received ${signal}. Flushing data and exiting cleanly...`);
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 startServer();
