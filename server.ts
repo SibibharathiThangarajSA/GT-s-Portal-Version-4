@@ -42,177 +42,8 @@ const INITIAL_USERS_ROSTER = [
   { id: 'usr-associate-ram', vamId: '-', name: 'Ram', email: '-', phoneNumber: '9894242460', role: 'Associate', addedOn: '19-Aug-2026', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' }
 ];
 
-// Initial Seed Sessions
-const INITIAL_SEED_SESSIONS = [
-  {
-    id: "session-dotnet-core-01",
-    name: ".NET Core & C# Enterprise Architecture",
-    category: ".NET",
-    description: "Deep dive into .NET Core CLR, Dependency Injection, Middleware, Async programming, and clean architecture design patterns.",
-    thumbnail: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80",
-    durationHours: 12,
-    difficulty: "Intermediate",
-    progressPercent: 45,
-    isPublished: true,
-    status: "Published",
-    trainerName: "Sudhir Vittapu",
-    rating: 4.9,
-    ratingCount: 28,
-    learningObjectives: [
-      "Master C# 12 modern language features and pattern matching",
-      "Configure custom middleware in ASP.NET Core request pipeline",
-      "Implement Clean Architecture and Domain Driven Design (DDD)",
-      "Optimize async database operations with Entity Framework Core"
-    ],
-    topics: [
-      {
-        id: "top-1",
-        title: "C# 12 Modern Language Features & Memory Management",
-        order: 1,
-        orderIndex: 1,
-        status: "Completed",
-        description: "Primary constructors, collection expressions, and GC internal mechanics.",
-        subtopics: [
-          { id: "sub-1-1", title: "Primary Constructors in Classes", durationMinutes: 25, status: "Completed" },
-          { id: "sub-1-2", title: "Memory Allocation & Span<T>", durationMinutes: 35, status: "Completed" }
-        ]
-      },
-      {
-        id: "top-2",
-        title: "ASP.NET Core Web API & Custom Middleware",
-        order: 2,
-        orderIndex: 2,
-        status: "InProgress",
-        description: "Building production RESTful APIs with global exception handling and rate limiting.",
-        subtopics: [
-          { id: "sub-2-1", title: "Global Exception Handler Middleware", durationMinutes: 30, status: "Completed" },
-          { id: "sub-2-2", title: "Dependency Injection Lifetimes (Scoped/Transient/Singleton)", durationMinutes: 40, status: "InProgress" }
-        ]
-      },
-      {
-        id: "top-3",
-        title: "Entity Framework Core & Query Optimization",
-        order: 3,
-        orderIndex: 3,
-        status: "Unlocked",
-        description: "AsNoTracking, SQL profiling, and migration management.",
-        subtopics: [
-          { id: "sub-3-1", title: "Execution Plans & Indexing Strategies", durationMinutes: 45, status: "Unlocked" }
-        ]
-      }
-    ],
-    studyMaterials: [
-      {
-        id: "mat-1",
-        title: "C# 12 Enterprise Architecture Guide",
-        type: "PDF",
-        url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-        materialCategory: "Provided",
-        materialType: "Provided",
-        fileName: "csharp-enterprise-guide.pdf",
-        fileSize: "3.4 MB",
-        currentVersion: 1,
-        versions: []
-      },
-      {
-        id: "mat-2",
-        title: "ASP.NET Core Performance Best Practices",
-        type: "Video",
-        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-        materialCategory: "Provided",
-        materialType: "Provided",
-        fileName: "performance-best-practices.mp4",
-        fileSize: "45 MB",
-        currentVersion: 1,
-        versions: []
-      }
-    ],
-    quizzes: [
-      {
-        id: "quiz-dotnet-1",
-        sessionId: "session-dotnet-core-01",
-        title: ".NET Core Architectural Assessment",
-        description: "Test your grasp on middleware pipeline, async await, and dependency injection.",
-        passingScorePercent: 80,
-        questions: [
-          {
-            id: "q-1",
-            questionText: "What is the lifetime of a Service registered with AddScoped() in ASP.NET Core?",
-            type: "MultipleChoice",
-            options: [
-              "Created once per HTTP request and shared within that request context",
-              "Created once per application startup and never disposed",
-              "Created every single time it is requested from DI container",
-              "Disposed immediately after method returns"
-            ],
-            correctAnswer: "Created once per HTTP request and shared within that request context",
-            explanation: "Scoped services are created once per client request (connection) and disposed when the HTTP request ends."
-          },
-          {
-            id: "q-2",
-            questionText: "Which method in EF Core prevents entities from being tracked by the Change Tracker for read-only queries?",
-            type: "MultipleChoice",
-            options: [
-              "AsNoTracking()",
-              "WithoutTracking()",
-              "DisableChangeTracking()",
-              "ReadOnlyQuery()"
-            ],
-            correctAnswer: "AsNoTracking()",
-            explanation: "AsNoTracking() returns a new query where the entities will not be tracked in the DbContext, speeding up read performance."
-          }
-        ]
-      }
-    ],
-    assignments: [
-      {
-        id: "assign-1",
-        sessionId: "session-dotnet-core-01",
-        title: "Build a High-Throughput Order Processing API",
-        description: "Create an ASP.NET Core 8 Web API implementing clean architecture, validation filter, and PostgreSQL persistence.",
-        dueDate: "2026-09-01",
-        status: "Pending",
-        maxScore: 100
-      }
-    ]
-  },
-  {
-    id: "session-react-ts-02",
-    name: "React 19 & TypeScript Modern Frontend",
-    category: "React",
-    description: "Building responsive, accessible enterprise interfaces with modern React 19 features, hooks, and TypeScript strict mode.",
-    thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=80",
-    durationHours: 10,
-    difficulty: "Intermediate",
-    progressPercent: 70,
-    isPublished: true,
-    status: "Published",
-    trainerName: "Anukraha Magdalene",
-    rating: 4.95,
-    ratingCount: 34,
-    learningObjectives: [
-      "Master React 19 Actions and useActionState hook",
-      "Implement typed state management with Context & Reducers",
-      "Build fluid animations and accessible UI components with Tailwind CSS"
-    ],
-    topics: [
-      {
-        id: "top-react-1",
-        title: "React 19 Architecture & State Primitives",
-        order: 1,
-        orderIndex: 1,
-        status: "Completed",
-        description: "Deep dive into React 19 hooks and rendering lifecycle.",
-        subtopics: [
-          { id: "sub-r1-1", title: "useActionState & useOptimistic", durationMinutes: 30, status: "Completed" }
-        ]
-      }
-    ],
-    studyMaterials: [],
-    quizzes: [],
-    assignments: []
-  }
-];
+// Initial Seed Sessions (Empty - Admin will create sessions from scratch)
+const INITIAL_SEED_SESSIONS: any[] = [];
 
 // Helper Functions for JSON Disk DB
 const readJsonFile = <T>(filePath: string, fallback: T): T => {
@@ -794,7 +625,60 @@ async function startServer() {
     res.json({ message: "Assignment deleted successfully" });
   });
 
-  // --- 6. USER PROFILE & ACTIVITY ROUTERS ---
+  // --- 6. SESSION TRACKER PERSISTENT ROUTER ---
+  const SESSION_TRACKER_FILE = path.join(process.cwd(), 'server_session_tracker.json');
+
+  const INITIAL_SESSION_TRACKER_RECORDS: any[] = [];
+
+  const getAllTrackerRecords = () => readJsonFile(SESSION_TRACKER_FILE, INITIAL_SESSION_TRACKER_RECORDS);
+  const saveAllTrackerRecords = (records: any[]) => writeJsonFile(SESSION_TRACKER_FILE, records);
+
+  app.get("/api/session-tracker", (_req, res) => {
+    const records = getAllTrackerRecords();
+    res.json(records);
+  });
+
+  app.post("/api/session-tracker", (req, res) => {
+    const newRecord = req.body;
+    if (!newRecord) return res.status(400).json({ message: "Invalid record data" });
+    const records = getAllTrackerRecords();
+    const id = newRecord.id || `track-${Date.now()}`;
+    const recordWithId = { ...newRecord, id, lastUpdated: new Date().toISOString().split('T')[0] };
+    const exists = records.some((r: any) => r.id === id);
+    const updated = exists ? records.map((r: any) => r.id === id ? recordWithId : r) : [recordWithId, ...records];
+    saveAllTrackerRecords(updated);
+    res.json(recordWithId);
+  });
+
+  app.put("/api/session-tracker/bulk", (req, res) => {
+    const records = req.body;
+    if (!Array.isArray(records)) return res.status(400).json({ message: "Expected an array of records" });
+    saveAllTrackerRecords(records);
+    res.json({ success: true, count: records.length });
+  });
+
+  app.put("/api/session-tracker/:id", (req, res) => {
+    const records = getAllTrackerRecords();
+    const index = records.findIndex((r: any) => r.id === req.params.id);
+    if (index !== -1) {
+      records[index] = { ...records[index], ...req.body, id: req.params.id, lastUpdated: new Date().toISOString().split('T')[0] };
+      saveAllTrackerRecords(records);
+      return res.json(records[index]);
+    }
+    const newRec = { ...req.body, id: req.params.id, lastUpdated: new Date().toISOString().split('T')[0] };
+    records.unshift(newRec);
+    saveAllTrackerRecords(records);
+    res.json(newRec);
+  });
+
+  app.delete("/api/session-tracker/:id", (req, res) => {
+    const records = getAllTrackerRecords();
+    const updated = records.filter((r: any) => r.id !== req.params.id);
+    saveAllTrackerRecords(updated);
+    res.json({ success: true, message: "Tracker record deleted successfully" });
+  });
+
+  // --- 7. USER PROFILE & ACTIVITY ROUTERS ---
   app.get("/api/user", (_req, res) => {
     res.json({
       id: "user-current-session",

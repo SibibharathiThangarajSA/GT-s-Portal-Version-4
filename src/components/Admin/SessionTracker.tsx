@@ -1,6 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SessionTrackerRecord, Session } from '../../types';
 import { mockSessionTrackerRecords } from '../../data/mockData';
+import {
+  fetchSessionTrackerApi,
+  saveSessionTrackerRecordApi,
+  deleteSessionTrackerRecordApi,
+  saveAllSessionTrackerRecordsApi
+} from '../../services/api';
 import { 
   Table, 
   Plus, 
@@ -59,6 +65,17 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
     }
     return mockSessionTrackerRecords;
   });
+
+  // Fetch persistent records from backend API on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetchSessionTrackerApi().then(data => {
+      if (isMounted && Array.isArray(data)) {
+        setTrackerRecords(data);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
@@ -137,7 +154,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
     setIsAddEditModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     setTrackerRecords(prev => {
       const updated = prev.filter(r => r.id !== id);
       try {
@@ -145,10 +162,11 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
       } catch {}
       return updated;
     });
+    await deleteSessionTrackerRecordApi(id);
     if (onDeleteRecord) onDeleteRecord(id);
   };
 
-  const handleSaveForm = (e: React.FormEvent) => {
+  const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRecord || !editingRecord.sessionName) return;
 
@@ -180,6 +198,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
       return updated;
     });
 
+    await saveSessionTrackerRecordApi(fullRecord);
     if (onSaveRecord) onSaveRecord(fullRecord);
     setIsAddEditModalOpen(false);
     setEditingRecord(null);

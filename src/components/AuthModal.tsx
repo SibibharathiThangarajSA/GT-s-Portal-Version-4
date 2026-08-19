@@ -100,6 +100,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (isOpen) {
       setView('login');
       setSelectedRole(initialRole);
+      setEmail('');
+      setPassword('');
       setErrorMsg('');
       setSuccessMsg('');
       setIsLoading(false);
@@ -609,8 +611,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedRole('GT');
-                  setErrorMsg('');
+                  if (selectedRole !== 'GT') {
+                    setSelectedRole('GT');
+                    setEmail('');
+                    setPassword('');
+                    setErrorMsg('');
+                  }
                 }}
                 className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   selectedRole === 'GT'
@@ -625,8 +631,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedRole('Admin');
-                  setErrorMsg('');
+                  if (selectedRole !== 'Admin') {
+                    setSelectedRole('Admin');
+                    setEmail('');
+                    setPassword('');
+                    setErrorMsg('');
+                  }
                 }}
                 className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   selectedRole === 'Admin'

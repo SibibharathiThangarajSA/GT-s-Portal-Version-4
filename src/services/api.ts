@@ -1,4 +1,5 @@
-import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote, User } from '../types';
+import { Session, StudyMaterial, Quiz, SessionAssignment, PersonalNote, User, SessionTrackerRecord } from '../types';
+import { mockSessionTrackerRecords } from '../data/mockData';
 
 type CreateStudyMaterialPayload = Partial<StudyMaterial> & {
   versionNote?: string;
@@ -1302,6 +1303,83 @@ export const verifyMobileOtpApi = async (
     message: 'OTP verified successfully! Logging you in...'
   };
 };
+
+const TRACKER_STORAGE_KEY = 'gt_session_tracker_records_manual_v1';
+
+export const fetchSessionTrackerApi = async (): Promise<SessionTrackerRecord[]> => {
+  try {
+    const res = await fetch('/api/session-tracker');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(data));
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn('Session tracker API unavailable; checking localStorage', err);
+  }
+
+  try {
+    const stored = localStorage.getItem(TRACKER_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Failed to parse tracker records from storage', e);
+  }
+
+  return mockSessionTrackerRecords;
+};
+
+export const saveSessionTrackerRecordApi = async (record: SessionTrackerRecord): Promise<SessionTrackerRecord> => {
+  try {
+    const res = await fetch('/api/session-tracker', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record)
+    });
+    if (res.ok) {
+      const saved = await res.json();
+      return saved;
+    }
+  } catch (err) {
+    console.warn('Session tracker save API failed; fallback to local storage', err);
+  }
+  return record;
+};
+
+export const deleteSessionTrackerRecordApi = async (id: string): Promise<boolean> => {
+  try {
+    const res = await fetch(`/api/session-tracker/${id}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      return true;
+    }
+  } catch (err) {
+    console.warn('Session tracker delete API failed', err);
+  }
+  return false;
+};
+
+export const saveAllSessionTrackerRecordsApi = async (records: SessionTrackerRecord[]): Promise<boolean> => {
+  try {
+    const res = await fetch('/api/session-tracker/bulk', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(records)
+    });
+    if (res.ok) {
+      return true;
+    }
+  } catch (err) {
+    console.warn('Session tracker bulk save API failed', err);
+  }
+  return false;
+};
+
 
 
 
