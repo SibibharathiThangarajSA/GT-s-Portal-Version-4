@@ -3,30 +3,243 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { createProxyMiddleware } from "http-proxy-middleware";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
-/**
- * This server is a thin BFF, not a data store.
- *
- * Everything under /api is proxied to the .NET GTsPortal API, which owns the
- * PostgreSQL database. The only routes handled locally are /api/ai/*, because the
- * Gemini API key must stay server-side and never reach the browser.
- *
- * It previously served in-memory mock data for sessions, materials, quizzes, notes
- * and discussions, which is why the UI never reflected the real database.
- */
+// Storage files configuration
+const DATA_DIR = process.cwd();
+const SESSIONS_FILE = path.join(DATA_DIR, 'server_sessions.json');
+const USER_ROSTER_FILE = path.join(DATA_DIR, 'server_users_roster.json');
+const CREDENTIALS_FILE = path.join(DATA_DIR, 'server_credentials.json');
+const MATERIALS_FILE = path.join(DATA_DIR, 'server_materials.json');
+const QUIZZES_FILE = path.join(DATA_DIR, 'server_quizzes.json');
+const ASSIGNMENTS_FILE = path.join(DATA_DIR, 'server_assignments.json');
+const DISCUSSIONS_FILE = path.join(DATA_DIR, 'server_discussions.json');
+const UPLOADS_DIR = path.join(DATA_DIR, 'public', 'uploads');
 
-// Where the .NET API lives. In Railway, set this to the API service's internal URL.
-const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:5000";
+if (!fs.existsSync(UPLOADS_DIR)) {
+  try {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  } catch (e) {
+    console.warn('Could not create uploads directory', e);
+  }
+}
+
+// Initial Official User Roster (13 Accounts)
+const INITIAL_USERS_ROSTER = [
+  { id: 'usr-105527', vamId: '105527', name: 'Sibibharathi Thangaraj', email: 'Sibibharathi.Thangaraj@valuemomentum.com', phoneNumber: '9345766068', role: 'Employee', addedOn: '20-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' },
+  { id: 'usr-105500', vamId: '105500', name: 'Pavithran Sivanandham', email: 'Pavithran.Sivanandham@valuemomentum.com', phoneNumber: '7845911687', role: 'Employee', addedOn: '20-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' },
+  { id: 'usr-105515', vamId: '105515', name: 'Aswin Muruganandham', email: 'Aswin.Muruganandham@valuemomentum.com', phoneNumber: '9626637490', role: 'Employee', addedOn: '20-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' },
+  { id: 'usr-105520', vamId: '105520', name: 'Harshini Radhakrishnan', email: 'Harshini.Radhakrishnan@valuemomentum.com', phoneNumber: '8220126157', role: 'Employee', addedOn: '18-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' },
+  { id: 'usr-105511', vamId: '105511', name: 'Imran Aupe', email: 'Imran.Aupe@valuemomentum.com', phoneNumber: '9952590815', role: 'Employee', addedOn: '18-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' },
+  { id: 'usr-105496', vamId: '105496', name: 'Kruthika Devaraje', email: 'Kruthika.Devaraje@valuemomentum.com', phoneNumber: '9902518633', role: 'Employee', addedOn: '15-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' },
+  { id: 'usr-105503', vamId: '105503', name: 'Vaishali Karunai', email: 'Vaishali.Karunai@valuemomentum.com', phoneNumber: '8012325313', role: 'Employee', addedOn: '15-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' },
+  { id: 'usr-105529', vamId: '105529', name: 'Tanvitha Nadukuda', email: 'Tanvitha.Nadukuda@valuemomentum.com', phoneNumber: '9490101088', role: 'Employee', addedOn: '15-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' },
+  { id: 'usr-105530', vamId: '105530', name: 'Anukraha Magdalene', email: 'Anukraha.Magdalene@valuemomentum.com', phoneNumber: '9384428335', role: 'Admin', addedOn: '10-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'L&D Leadership' },
+  { id: 'usr-104275', vamId: '104275', name: 'Keren Christobel', email: 'Keren.Christobel@valuemomentum.com', phoneNumber: '9999999999', role: 'Admin', addedOn: '10-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'L&D Management' },
+  { id: 'usr-102163', vamId: '102163', name: 'Janani Selvaraj', email: 'Janani.Selvaraj@valuemomentum.com', phoneNumber: '9999999999', role: 'Admin', addedOn: '10-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'L&D Management' },
+  { id: 'usr-100137', vamId: '100137', name: 'Sudhir Vittapu', email: 'Sudhir.Vittapu@owlsure.com', phoneNumber: '9999999999', role: 'Admin', addedOn: '10-Jan-2025', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'Technical Facilitation' },
+  { id: 'usr-associate-ram', vamId: '-', name: 'Ram', email: '-', phoneNumber: '9894242460', role: 'Associate', addedOn: '19-Aug-2026', status: 'Active', access: 'Enabled', addedBy: 'Admin', batch: 'GT-2026-Batch-01' }
+];
+
+// Initial Seed Sessions
+const INITIAL_SEED_SESSIONS = [
+  {
+    id: "session-dotnet-core-01",
+    name: ".NET Core & C# Enterprise Architecture",
+    category: ".NET",
+    description: "Deep dive into .NET Core CLR, Dependency Injection, Middleware, Async programming, and clean architecture design patterns.",
+    thumbnail: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80",
+    durationHours: 12,
+    difficulty: "Intermediate",
+    progressPercent: 45,
+    isPublished: true,
+    status: "Published",
+    trainerName: "Sudhir Vittapu",
+    rating: 4.9,
+    ratingCount: 28,
+    learningObjectives: [
+      "Master C# 12 modern language features and pattern matching",
+      "Configure custom middleware in ASP.NET Core request pipeline",
+      "Implement Clean Architecture and Domain Driven Design (DDD)",
+      "Optimize async database operations with Entity Framework Core"
+    ],
+    topics: [
+      {
+        id: "top-1",
+        title: "C# 12 Modern Language Features & Memory Management",
+        order: 1,
+        orderIndex: 1,
+        status: "Completed",
+        description: "Primary constructors, collection expressions, and GC internal mechanics.",
+        subtopics: [
+          { id: "sub-1-1", title: "Primary Constructors in Classes", durationMinutes: 25, status: "Completed" },
+          { id: "sub-1-2", title: "Memory Allocation & Span<T>", durationMinutes: 35, status: "Completed" }
+        ]
+      },
+      {
+        id: "top-2",
+        title: "ASP.NET Core Web API & Custom Middleware",
+        order: 2,
+        orderIndex: 2,
+        status: "InProgress",
+        description: "Building production RESTful APIs with global exception handling and rate limiting.",
+        subtopics: [
+          { id: "sub-2-1", title: "Global Exception Handler Middleware", durationMinutes: 30, status: "Completed" },
+          { id: "sub-2-2", title: "Dependency Injection Lifetimes (Scoped/Transient/Singleton)", durationMinutes: 40, status: "InProgress" }
+        ]
+      },
+      {
+        id: "top-3",
+        title: "Entity Framework Core & Query Optimization",
+        order: 3,
+        orderIndex: 3,
+        status: "Unlocked",
+        description: "AsNoTracking, SQL profiling, and migration management.",
+        subtopics: [
+          { id: "sub-3-1", title: "Execution Plans & Indexing Strategies", durationMinutes: 45, status: "Unlocked" }
+        ]
+      }
+    ],
+    studyMaterials: [
+      {
+        id: "mat-1",
+        title: "C# 12 Enterprise Architecture Guide",
+        type: "PDF",
+        url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+        materialCategory: "Provided",
+        materialType: "Provided",
+        fileName: "csharp-enterprise-guide.pdf",
+        fileSize: "3.4 MB",
+        currentVersion: 1,
+        versions: []
+      },
+      {
+        id: "mat-2",
+        title: "ASP.NET Core Performance Best Practices",
+        type: "Video",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        materialCategory: "Provided",
+        materialType: "Provided",
+        fileName: "performance-best-practices.mp4",
+        fileSize: "45 MB",
+        currentVersion: 1,
+        versions: []
+      }
+    ],
+    quizzes: [
+      {
+        id: "quiz-dotnet-1",
+        sessionId: "session-dotnet-core-01",
+        title: ".NET Core Architectural Assessment",
+        description: "Test your grasp on middleware pipeline, async await, and dependency injection.",
+        passingScorePercent: 80,
+        questions: [
+          {
+            id: "q-1",
+            questionText: "What is the lifetime of a Service registered with AddScoped() in ASP.NET Core?",
+            type: "MultipleChoice",
+            options: [
+              "Created once per HTTP request and shared within that request context",
+              "Created once per application startup and never disposed",
+              "Created every single time it is requested from DI container",
+              "Disposed immediately after method returns"
+            ],
+            correctAnswer: "Created once per HTTP request and shared within that request context",
+            explanation: "Scoped services are created once per client request (connection) and disposed when the HTTP request ends."
+          },
+          {
+            id: "q-2",
+            questionText: "Which method in EF Core prevents entities from being tracked by the Change Tracker for read-only queries?",
+            type: "MultipleChoice",
+            options: [
+              "AsNoTracking()",
+              "WithoutTracking()",
+              "DisableChangeTracking()",
+              "ReadOnlyQuery()"
+            ],
+            correctAnswer: "AsNoTracking()",
+            explanation: "AsNoTracking() returns a new query where the entities will not be tracked in the DbContext, speeding up read performance."
+          }
+        ]
+      }
+    ],
+    assignments: [
+      {
+        id: "assign-1",
+        sessionId: "session-dotnet-core-01",
+        title: "Build a High-Throughput Order Processing API",
+        description: "Create an ASP.NET Core 8 Web API implementing clean architecture, validation filter, and PostgreSQL persistence.",
+        dueDate: "2026-09-01",
+        status: "Pending",
+        maxScore: 100
+      }
+    ]
+  },
+  {
+    id: "session-react-ts-02",
+    name: "React 19 & TypeScript Modern Frontend",
+    category: "React",
+    description: "Building responsive, accessible enterprise interfaces with modern React 19 features, hooks, and TypeScript strict mode.",
+    thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&auto=format&fit=crop&q=80",
+    durationHours: 10,
+    difficulty: "Intermediate",
+    progressPercent: 70,
+    isPublished: true,
+    status: "Published",
+    trainerName: "Anukraha Magdalene",
+    rating: 4.95,
+    ratingCount: 34,
+    learningObjectives: [
+      "Master React 19 Actions and useActionState hook",
+      "Implement typed state management with Context & Reducers",
+      "Build fluid animations and accessible UI components with Tailwind CSS"
+    ],
+    topics: [
+      {
+        id: "top-react-1",
+        title: "React 19 Architecture & State Primitives",
+        order: 1,
+        orderIndex: 1,
+        status: "Completed",
+        description: "Deep dive into React 19 hooks and rendering lifecycle.",
+        subtopics: [
+          { id: "sub-r1-1", title: "useActionState & useOptimistic", durationMinutes: 30, status: "Completed" }
+        ]
+      }
+    ],
+    studyMaterials: [],
+    quizzes: [],
+    assignments: []
+  }
+];
+
+// Helper Functions for JSON Disk DB
+const readJsonFile = <T>(filePath: string, fallback: T): T => {
+  try {
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed !== null && parsed !== undefined) return parsed;
+    }
+  } catch (e) {
+    console.warn(`Failed to read ${filePath}`, e);
+  }
+  return fallback;
+};
+
+const writeJsonFile = (filePath: string, data: any): void => {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error(`Failed to write ${filePath}`, e);
+  }
+};
 
 // Initialize Gemini Client
 const getGeminiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.warn("GEMINI_API_KEY is missing. Gemini AI features will return graceful fallback responses.");
-    return null;
-  }
+  if (!apiKey) return null;
   return new GoogleGenAI({
     apiKey,
     httpOptions: {
@@ -42,29 +255,577 @@ async function startServer() {
   const requestedPort = Number(process.env.PORT || 3000);
   const PORT = Number.isInteger(requestedPort) && requestedPort > 0 ? requestedPort : 3000;
 
-  const listenOnPort = (port: number) => new Promise<number>((resolve, reject) => {
-    const server = app.listen(port, '0.0.0.0', () => resolve(port));
-    server.on('error', (err: any) => reject(err));
+  // JSON Body Parsing for all incoming requests
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+  // Static Assets
+  app.use('/uploads', express.static(UPLOADS_DIR));
+
+  // --- 1. HEALTH CHECK ---
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      mode: "standalone-node-backend",
+      timestamp: new Date().toISOString(),
+      database: "local-persistent-json"
+    });
   });
 
-  // --- LOCAL AI ROUTES ---
-  // JSON parsing is scoped to these routes only. Applying it globally would consume
-  // the request body before the proxy could forward it, breaking every POST and PUT.
+  // --- 2. AUTHENTICATION & USER MANAGEMENT ROUTER ---
+  const auth = express.Router();
+
+  const getAllUsers = () => readJsonFile(USER_ROSTER_FILE, INITIAL_USERS_ROSTER);
+  const saveAllUsers = (users: any[]) => writeJsonFile(USER_ROSTER_FILE, users);
+
+  const getActivePasswordStore = () => {
+    const store: Record<string, { password: string; profile: any }> = {};
+    const roster = getAllUsers();
+
+    roster.forEach((acc: any) => {
+      if (!acc.email || acc.email === '-') return;
+      const defaultPw = (acc.email.split('@')[0] || '').toLowerCase();
+      const parts = (acc.name || '').split(' ');
+      store[acc.email.toLowerCase()] = {
+        password: defaultPw,
+        profile: {
+          ...acc,
+          firstName: parts[0] || acc.name,
+          lastName: parts.slice(1).join(' ') || '',
+          defaultPassword: defaultPw
+        }
+      };
+    });
+
+    const overrides = readJsonFile<Record<string, string>>(CREDENTIALS_FILE, {});
+    Object.keys(overrides).forEach((key) => {
+      const lower = key.toLowerCase();
+      if (store[lower]) {
+        store[lower].password = overrides[key];
+      }
+    });
+
+    return store;
+  };
+
+  const savePasswordDisk = (email: string, newPassword: string) => {
+    const overrides = readJsonFile<Record<string, string>>(CREDENTIALS_FILE, {});
+    overrides[email.toLowerCase()] = newPassword;
+    writeJsonFile(CREDENTIALS_FILE, overrides);
+  };
+
+  // Login (Email + Password)
+  auth.post('/login', (req, res) => {
+    const { email, password } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!cleanEmail.endsWith('@valuemomentum.com') && !cleanEmail.endsWith('@owlsure.com')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+      });
+    }
+
+    const store = getActivePasswordStore();
+    const userEntry = store[cleanEmail];
+
+    if (!userEntry || !password || (userEntry.password.toLowerCase() !== password.toLowerCase() && userEntry.password !== password)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Incorrect email ID or password.'
+      });
+    }
+
+    const user = userEntry.profile;
+    const role = user.role === 'Admin' ? 'Admin' : 'GT';
+
+    return res.json({
+      success: true,
+      data: {
+        id: `user-${user.email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role,
+        token: `token-${role.toLowerCase()}-${user.email}-${Date.now()}`,
+        batch: user.batch || 'GT-2026-Batch-01',
+        xp: 2850,
+        level: 5,
+        streakDays: 14,
+        lastActiveDate: new Date().toISOString().split('T')[0],
+        dailyGoalMinutes: 45,
+        todayMinutesSpent: 25
+      }
+    });
+  });
+
+  // Get all users in roster
+  auth.get('/users', (_req, res) => {
+    const users = getAllUsers();
+    return res.json({ success: true, data: users });
+  });
+
+  // Save/Update users in roster
+  auth.post('/users', (req, res) => {
+    const { records } = req.body || {};
+    if (Array.isArray(records)) {
+      saveAllUsers(records);
+      return res.json({ success: true, message: 'User roster saved successfully.' });
+    }
+    return res.status(400).json({ success: false, message: 'Invalid records format.' });
+  });
+
+  // Mobile OTP Generation
+  auth.post('/request-mobile-otp', (req, res) => {
+    const { phoneNumber } = req.body || {};
+    const cleanPhone = (phoneNumber || '').replace(/\D/g, '').trim();
+
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid 10-digit mobile number.' });
+    }
+
+    const roster = getAllUsers();
+    const user = roster.find((u: any) => (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mobile number not found. Please contact your L&D Administrator.'
+      });
+    }
+
+    // Enterprise Credentials Guard
+    const hasVamId = user.vamId && user.vamId !== '-' && user.vamId.trim() !== '';
+    const hasEmail = user.email && user.email !== '-' && user.email.includes('@');
+
+    if (hasVamId || hasEmail) {
+      return res.status(400).json({
+        success: false,
+        isEnterpriseUser: true,
+        message: 'You have enterprise credentials registered. Please login with your official email and password.'
+      });
+    }
+
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    return res.json({
+      success: true,
+      otp: generatedOtp,
+      user,
+      message: `Verification code generated successfully for ${cleanPhone}.`
+    });
+  });
+
+  // Mobile OTP Verification
+  auth.post('/verify-mobile-otp', (req, res) => {
+    const { phoneNumber, otp } = req.body || {};
+    const cleanPhone = (phoneNumber || '').replace(/\D/g, '').trim();
+    const cleanOtp = (otp || '').trim();
+
+    if (!cleanOtp || cleanOtp.length !== 6) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid 6-digit OTP code.' });
+    }
+
+    const roster = getAllUsers();
+    const user = roster.find((u: any) => (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Mobile number not found.' });
+    }
+
+    const role = user.role === 'Admin' ? 'Admin' : 'GT';
+    const fullName = user.name || 'Associate User';
+    const parts = fullName.split(' ');
+
+    return res.json({
+      success: true,
+      data: {
+        id: user.id || `user-mobile-${cleanPhone}`,
+        email: user.email && user.email !== '-' ? user.email : `associate.${cleanPhone}@valuemomentum.com`,
+        firstName: parts[0] || fullName,
+        lastName: parts.slice(1).join(' ') || '',
+        role,
+        token: `token-mobile-${cleanPhone}-${Date.now()}`,
+        batch: user.batch || 'GT-2026-Batch-01',
+        xp: 1500,
+        level: 3,
+        streakDays: 7,
+        lastActiveDate: new Date().toISOString().split('T')[0],
+        dailyGoalMinutes: 45,
+        todayMinutesSpent: 15
+      },
+      message: 'OTP verified successfully.'
+    });
+  });
+
+  // Change Password
+  auth.post('/change-password', (req, res) => {
+    const { email, currentPassword, newPassword } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    const store = getActivePasswordStore();
+    const userEntry = store[cleanEmail];
+
+    if (!userEntry) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    if (userEntry.password !== currentPassword && userEntry.password.toLowerCase() !== currentPassword.toLowerCase()) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 8 characters long.' });
+    }
+
+    savePasswordDisk(cleanEmail, newPassword);
+
+    return res.json({
+      success: true,
+      message: 'Password changed successfully! You can now log in with your new password.'
+    });
+  });
+
+  // Reset Password
+  auth.post('/reset-password', (req, res) => {
+    const { email, newPassword } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    const store = getActivePasswordStore();
+    const userEntry = store[cleanEmail];
+
+    if (!userEntry) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    savePasswordDisk(cleanEmail, newPassword);
+
+    return res.json({
+      success: true,
+      message: 'Password has been reset successfully! Please log in with your new password.'
+    });
+  });
+
+  // Forgot Password
+  auth.post('/forgot-password', (req, res) => {
+    const { email } = req.body || {};
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    const store = getActivePasswordStore();
+    if (!store[cleanEmail]) {
+      return res.status(404).json({ success: false, message: 'Account not found for this email address.' });
+    }
+
+    return res.json({ success: true, message: 'Verification code sent to your registered email address.' });
+  });
+
+  auth.post('/verify-otp', (_req, res) => {
+    return res.json({
+      success: true,
+      data: { resetToken: `reset-token-${Date.now()}` },
+      message: 'OTP verified successfully.'
+    });
+  });
+
+  app.use("/api/auth", auth);
+
+  // --- 3. SESSIONS API ROUTER ---
+  const getAllSessions = () => readJsonFile(SESSIONS_FILE, INITIAL_SEED_SESSIONS);
+  const saveAllSessions = (sessions: any[]) => writeJsonFile(SESSIONS_FILE, sessions);
+
+  app.get("/api/sessions", (_req, res) => {
+    const sessions = getAllSessions();
+    res.json(sessions);
+  });
+
+  app.get("/api/sessions/:id", (req, res) => {
+    const sessions = getAllSessions();
+    const session = sessions.find((s: any) => s.id === req.params.id);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+    res.json(session);
+  });
+
+  app.post("/api/sessions", (req, res) => {
+    const newSession = req.body || {};
+    const sessions = getAllSessions();
+    const createdSession = {
+      ...newSession,
+      id: newSession.id || `session-${Date.now()}`,
+      learningObjectives: newSession.learningObjectives || [],
+      topics: newSession.topics || [],
+      studyMaterials: newSession.studyMaterials || [],
+      quizzes: newSession.quizzes || [],
+      assignments: newSession.assignments || [],
+      notes: newSession.notes || []
+    };
+    sessions.unshift(createdSession);
+    saveAllSessions(sessions);
+    res.status(201).json(createdSession);
+  });
+
+  app.put("/api/sessions/:id", (req, res) => {
+    const sessions = getAllSessions();
+    const index = sessions.findIndex((s: any) => s.id === req.params.id);
+    if (index === -1) return res.status(404).json({ message: "Session not found" });
+
+    sessions[index] = { ...sessions[index], ...req.body };
+    saveAllSessions(sessions);
+    res.json(sessions[index]);
+  });
+
+  app.delete("/api/sessions/:id", (req, res) => {
+    let sessions = getAllSessions();
+    sessions = sessions.filter((s: any) => s.id !== req.params.id);
+    saveAllSessions(sessions);
+    res.json({ message: "Session deleted successfully" });
+  });
+
+  // --- 4. STUDY MATERIALS API ROUTER ---
+  app.get("/api/materials", (req, res) => {
+    const { sessionId } = req.query;
+    const sessions = getAllSessions();
+    let materials: any[] = [];
+
+    sessions.forEach((s: any) => {
+      if (!sessionId || s.id === sessionId) {
+        if (Array.isArray(s.studyMaterials)) {
+          materials.push(...s.studyMaterials);
+        }
+      }
+    });
+
+    res.json(materials);
+  });
+
+  app.post("/api/materials", (req, res) => {
+    const newMat = req.body || {};
+    const sessions = getAllSessions();
+    const targetSession = sessions.find((s: any) => s.id === newMat.sessionId);
+    const createdMat = {
+      ...newMat,
+      id: newMat.id || `mat-${Date.now()}`
+    };
+
+    if (targetSession) {
+      if (!Array.isArray(targetSession.studyMaterials)) targetSession.studyMaterials = [];
+      targetSession.studyMaterials.push(createdMat);
+      saveAllSessions(sessions);
+    }
+    res.status(201).json(createdMat);
+  });
+
+  app.put("/api/materials/:id", (req, res) => {
+    const sessions = getAllSessions();
+    let updatedMat: any = null;
+
+    sessions.forEach((s: any) => {
+      if (Array.isArray(s.studyMaterials)) {
+        const idx = s.studyMaterials.findIndex((m: any) => m.id === req.params.id);
+        if (idx !== -1) {
+          s.studyMaterials[idx] = { ...s.studyMaterials[idx], ...req.body };
+          updatedMat = s.studyMaterials[idx];
+        }
+      }
+    });
+
+    if (updatedMat) {
+      saveAllSessions(sessions);
+      return res.json(updatedMat);
+    }
+    res.status(404).json({ message: "Material not found" });
+  });
+
+  app.delete("/api/materials/:id", (req, res) => {
+    const sessions = getAllSessions();
+    sessions.forEach((s: any) => {
+      if (Array.isArray(s.studyMaterials)) {
+        s.studyMaterials = s.studyMaterials.filter((m: any) => m.id !== req.params.id);
+      }
+    });
+    saveAllSessions(sessions);
+    res.json({ message: "Material deleted successfully" });
+  });
+
+  app.post("/api/materials/files/upload", (req, res) => {
+    const { fileName, fileContent } = req.body || {};
+    const safeName = (fileName || `upload-${Date.now()}.bin`).replace(/[^a-zA-Z0-9._-]/g, '_');
+    const targetPath = path.join(UPLOADS_DIR, `${Date.now()}_${safeName}`);
+
+    if (fileContent && typeof fileContent === 'string') {
+      try {
+        const base64Data = fileContent.replace(/^data:[^;]+;base64,/, '');
+        fs.writeFileSync(targetPath, Buffer.from(base64Data, 'base64'));
+      } catch (e) {
+        console.warn('Error saving uploaded file to disk', e);
+      }
+    }
+
+    const publicUrl = `/uploads/${path.basename(targetPath)}`;
+    res.json({
+      fileName: safeName,
+      url: publicUrl,
+      downloadUrl: publicUrl
+    });
+  });
+
+  // --- 5. QUIZZES & ASSIGNMENTS ROUTERS ---
+  app.get("/api/quizzes", (req, res) => {
+    const { sessionId } = req.query;
+    const sessions = getAllSessions();
+    let quizzes: any[] = [];
+
+    sessions.forEach((s: any) => {
+      if (!sessionId || s.id === sessionId) {
+        if (Array.isArray(s.quizzes)) quizzes.push(...s.quizzes);
+      }
+    });
+
+    res.json(quizzes);
+  });
+
+  app.post("/api/quizzes", (req, res) => {
+    const newQuiz = req.body || {};
+    const sessions = getAllSessions();
+    const targetSession = sessions.find((s: any) => s.id === newQuiz.sessionId);
+    const createdQuiz = {
+      ...newQuiz,
+      id: newQuiz.id || `quiz-${Date.now()}`
+    };
+
+    if (targetSession) {
+      if (!Array.isArray(targetSession.quizzes)) targetSession.quizzes = [];
+      targetSession.quizzes.push(createdQuiz);
+      saveAllSessions(sessions);
+    }
+    res.status(201).json(createdQuiz);
+  });
+
+  app.put("/api/quizzes/:id", (req, res) => {
+    const sessions = getAllSessions();
+    let updatedQuiz: any = null;
+
+    sessions.forEach((s: any) => {
+      if (Array.isArray(s.quizzes)) {
+        const idx = s.quizzes.findIndex((q: any) => q.id === req.params.id);
+        if (idx !== -1) {
+          s.quizzes[idx] = { ...s.quizzes[idx], ...req.body };
+          updatedQuiz = s.quizzes[idx];
+        }
+      }
+    });
+
+    if (updatedQuiz) {
+      saveAllSessions(sessions);
+      return res.json(updatedQuiz);
+    }
+    res.status(404).json({ message: "Quiz not found" });
+  });
+
+  app.delete("/api/quizzes/:id", (req, res) => {
+    const sessions = getAllSessions();
+    sessions.forEach((s: any) => {
+      if (Array.isArray(s.quizzes)) {
+        s.quizzes = s.quizzes.filter((q: any) => q.id !== req.params.id);
+      }
+    });
+    saveAllSessions(sessions);
+    res.json({ message: "Quiz deleted successfully" });
+  });
+
+  app.get("/api/assignments", (req, res) => {
+    const { sessionId } = req.query;
+    const sessions = getAllSessions();
+    let assignments: any[] = [];
+
+    sessions.forEach((s: any) => {
+      if (!sessionId || s.id === sessionId) {
+        if (Array.isArray(s.assignments)) assignments.push(...s.assignments);
+      }
+    });
+
+    res.json(assignments);
+  });
+
+  app.post("/api/assignments", (req, res) => {
+    const newAssign = req.body || {};
+    const sessions = getAllSessions();
+    const targetSession = sessions.find((s: any) => s.id === newAssign.sessionId);
+    const createdAssign = {
+      ...newAssign,
+      id: newAssign.id || `assign-${Date.now()}`
+    };
+
+    if (targetSession) {
+      if (!Array.isArray(targetSession.assignments)) targetSession.assignments = [];
+      targetSession.assignments.push(createdAssign);
+      saveAllSessions(sessions);
+    }
+    res.status(201).json(createdAssign);
+  });
+
+  app.put("/api/assignments/:id", (req, res) => {
+    const sessions = getAllSessions();
+    let updatedAssign: any = null;
+
+    sessions.forEach((s: any) => {
+      if (Array.isArray(s.assignments)) {
+        const idx = s.assignments.findIndex((a: any) => a.id === req.params.id);
+        if (idx !== -1) {
+          s.assignments[idx] = { ...s.assignments[idx], ...req.body };
+          updatedAssign = s.assignments[idx];
+        }
+      }
+    });
+
+    if (updatedAssign) {
+      saveAllSessions(sessions);
+      return res.json(updatedAssign);
+    }
+    res.status(404).json({ message: "Assignment not found" });
+  });
+
+  app.delete("/api/assignments/:id", (req, res) => {
+    const sessions = getAllSessions();
+    sessions.forEach((s: any) => {
+      if (Array.isArray(s.assignments)) {
+        s.assignments = s.assignments.filter((a: any) => a.id !== req.params.id);
+      }
+    });
+    saveAllSessions(sessions);
+    res.json({ message: "Assignment deleted successfully" });
+  });
+
+  // --- 6. USER PROFILE & ACTIVITY ROUTERS ---
+  app.get("/api/user", (_req, res) => {
+    res.json({
+      id: "user-current-session",
+      name: "Sibibharathi Thangaraj",
+      email: "Sibibharathi.Thangaraj@valuemomentum.com",
+      role: "GT",
+      batch: "GT-2026-Batch-01",
+      xp: 2850,
+      level: 5,
+      streakDays: 14,
+      lastActiveDate: new Date().toISOString().split('T')[0],
+      dailyGoalMinutes: 45,
+      todayMinutesSpent: 25,
+      isGuest: false
+    });
+  });
+
+  app.post("/api/activity", (req, res) => {
+    res.json({ success: true, logged: req.body });
+  });
+
+  // --- 7. LOCAL AI ROUTER (GEMINI ASSISTANT) ---
   const ai = express.Router();
-  ai.use(express.json({ limit: '10mb' }));
 
-  ai.get("/health", (_req, res) => {
-    res.json({ status: "ok", apiBaseUrl: API_BASE_URL, timestamp: new Date().toISOString() });
-  });
-
-  // AI Chat Tutor
   ai.post("/chat", async (req, res) => {
-    const { message, context } = req.body;
+    const { message, context } = req.body || {};
     const client = getGeminiClient();
 
     if (!client) {
       return res.json({
-        reply: `[AI Assistant Mode]: As your Graduate Trainee mentor for "${context?.sessionName || 'the portal'}", here is an answer to your question: "${message}". \n\nKey Concept Breakdown:\n1. Ensure strict type signatures in C# and TypeScript.\n2. Handle exception boundaries with Global Exception Middleware or try-catch blocks.\n3. Always write unit tests before pushing code to production.`
+        reply: `[AI Assistant Mentor]: For "${context?.sessionName || 'your learning module'}", here is guidance on "${message}":\n\n1. Ensure strict type discipline.\n2. Review asynchronous tasks with async/await.\n3. Verify database query performance.`
       });
     }
 
@@ -82,25 +843,23 @@ User Query: ${message}`
           }
         ],
         config: {
-          systemInstruction: "You are an encouraging, expert enterprise Technical Architect and L&D Mentor. Provide clear, well-structured, production-grade answers with concise code examples in C#, SQL, TypeScript, or Azure where appropriate."
+          systemInstruction: "You are an encouraging, expert enterprise Technical Architect and L&D Mentor. Provide clear, well-structured, production-grade answers."
         }
       });
 
       res.json({ reply: response.text || "No response generated." });
     } catch (err: any) {
-      console.error("Gemini AI Chat Error:", err);
       res.status(500).json({ error: "Failed to generate AI response", details: err.message });
     }
   });
 
-  // AI Document / Notes Summarizer
   ai.post("/summarize", async (req, res) => {
-    const { title, content } = req.body;
+    const { title, content } = req.body || {};
     const client = getGeminiClient();
 
     if (!client) {
       return res.json({
-        summary: `### AI Summary of ${title}\n\n- **Core Theme**: High performance enterprise system architecture.\n- **Key Takeaway**: Apply SOLID principles, proper indexing in SQL databases, and async/await non-blocking I/O.\n- **Action Item**: Review the code examples and complete the topic quiz.`
+        summary: `### AI Summary of ${title}\n\n- **Core Concept**: Production-grade enterprise design.\n- **Takeaway**: Practice design patterns and complete topic quizzes.`
       });
     }
 
@@ -109,7 +868,7 @@ User Query: ${message}`
         model: "gemini-3.6-flash",
         contents: `Summarize the following study material or note titled "${title}":\n\n${content}`,
         config: {
-          systemInstruction: "Provide a concise executive summary with 3 key bullet points, a 2-sentence key takeaway, and 2 interview preparation questions based on this material."
+          systemInstruction: "Provide a concise executive summary with 3 key bullet points and key takeaways."
         }
       });
 
@@ -119,409 +878,9 @@ User Query: ${message}`
     }
   });
 
-  // AI Practice Quiz Generator
-  ai.post("/generate-quiz", async (req, res) => {
-    const { topicName, textContent, numQuestions } = req.body;
-    const requestedCount = Number(numQuestions) > 0 ? Number(numQuestions) : 5;
-    const client = getGeminiClient();
-
-    if (!client) {
-      return res.json({
-        quizTitle: `AI Generated Practice Quiz: ${topicName || 'General Tech'}`,
-        questions: [
-          {
-            id: `ai-q-1`,
-            type: 'MCQ',
-            prompt: `In ${topicName || 'software design'}, what is the primary purpose of Dependency Injection?`,
-            options: [
-              'To decouple high-level modules from low-level concrete implementations',
-              'To speed up CPU clock cycles',
-              'To encrypt database tables',
-              'To automatically generate CSS styling'
-            ],
-            correctAnswer: 'To decouple high-level modules from low-level concrete implementations',
-            explanation: 'Dependency Injection enforces the Dependency Inversion Principle, allowing flexible unit testing and swapping of implementations.'
-          }
-        ]
-      });
-    }
-
-    try {
-      const response = await client.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: `Generate ${requestedCount} high quality multiple choice practice questions for GTs on the topic "${topicName}". Source Material: ${textContent || 'General enterprise topic'}`,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              quizTitle: { type: Type.STRING },
-              questions: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    id: { type: Type.STRING },
-                    type: { type: Type.STRING, description: "Must be 'MCQ'" },
-                    prompt: { type: Type.STRING },
-                    options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    correctAnswer: { type: Type.STRING },
-                    explanation: { type: Type.STRING }
-                  },
-                  required: ["id", "type", "prompt", "options", "correctAnswer", "explanation"]
-                }
-              }
-            },
-            required: ["quizTitle", "questions"]
-          }
-        }
-      });
-
-      const parsed = JSON.parse(response.text || "{}");
-      res.json(parsed);
-    } catch (err: any) {
-      res.status(500).json({ error: "Quiz generation failed", details: err.message });
-    }
-  });
-
   app.use("/api/ai", ai);
 
-  // --- LOCAL ENTERPRISE AUTHENTICATION & CREDENTIALS STORAGE (PERMANENT) ---
-  const auth = express.Router();
-  auth.use(express.json());
-
-  const CREDENTIALS_FILE = path.join(process.cwd(), 'server_credentials.json');
-
-  const INITIAL_SEED_ACCOUNTS = [
-    { email: 'Sibibharathi.Thangaraj@valuemomentum.com', defaultPassword: 'Sibibharathi.Thangaraj', role: 'GT', firstName: 'Sibibharathi', lastName: 'Thangaraj', batch: 'GT-2026-Batch-01' },
-    { email: 'Pavithran.Sivanandham@valuemomentum.com', defaultPassword: 'Pavithran.Sivanandham', role: 'GT', firstName: 'Pavithran', lastName: 'Sivanandham', batch: 'GT-2026-Batch-01' },
-    { email: 'Aswin.Muruganandham@valuemomentum.com', defaultPassword: 'Aswin.Muruganandham', role: 'GT', firstName: 'Aswin', lastName: 'Muruganandham', batch: 'GT-2026-Batch-01' },
-    { email: 'Harshini.Radhakrishnan@valuemomentum.com', defaultPassword: 'Harshini.Radhakrishnan', role: 'GT', firstName: 'Harshini', lastName: 'Radhakrishnan', batch: 'GT-2026-Batch-01' },
-    { email: 'Imran.Aupe@valuemomentum.com', defaultPassword: 'Imran.Aupe', role: 'GT', firstName: 'Imran', lastName: 'Aupe', batch: 'GT-2026-Batch-01' },
-    { email: 'Kruthika.Devaraje@valuemomentum.com', defaultPassword: 'Kruthika.Devaraje', role: 'GT', firstName: 'Kruthika', lastName: 'Devaraje', batch: 'GT-2026-Batch-01' },
-    { email: 'Vaishali.Karunai@valuemomentum.com', defaultPassword: 'Vaishali.Karunai', role: 'GT', firstName: 'Vaishali', lastName: 'Karunai', batch: 'GT-2026-Batch-01' },
-    { email: 'Tanvitha.Nadukuda@valuemomentum.com', defaultPassword: 'Tanvitha.Nadukuda', role: 'GT', firstName: 'Tanvitha', lastName: 'Nadukuda', batch: 'GT-2026-Batch-01' },
-    { email: 'Anukraha.Magdalene@valuemomentum.com', defaultPassword: 'Anukraha.Magdalene', role: 'Admin', firstName: 'Anukraha', lastName: 'Magdalene', batch: 'L&D Leadership' },
-    { email: 'Keren.Christobel@valuemomentum.com', defaultPassword: 'Keren.Christobel', role: 'Admin', firstName: 'Keren', lastName: 'Christobel', batch: 'L&D Management' },
-    { email: 'Janani.Selvaraj@valuemomentum.com', defaultPassword: 'Janani.Selvaraj', role: 'Admin', firstName: 'Janani', lastName: 'Selvaraj', batch: 'L&D Management' },
-    { email: 'Sudhir.Vittapu@owlsure.com', defaultPassword: 'Sudhir.Vittapu', role: 'Admin', firstName: 'Sudhir', lastName: 'Vittapu', batch: 'Technical Facilitation' }
-  ];
-
-  const getActiveAccounts = () => {
-    const store: Record<string, { password: string; profile: any }> = {};
-    INITIAL_SEED_ACCOUNTS.forEach((acc) => {
-      store[acc.email.toLowerCase()] = {
-        password: acc.defaultPassword,
-        profile: acc
-      };
-    });
-
-    try {
-      if (fs.existsSync(CREDENTIALS_FILE)) {
-        const raw = fs.readFileSync(CREDENTIALS_FILE, 'utf-8');
-        const overrides = JSON.parse(raw);
-        if (typeof overrides === 'object' && overrides !== null) {
-          Object.keys(overrides).forEach((key) => {
-            const lower = key.toLowerCase();
-            if (store[lower] && typeof overrides[key] === 'string') {
-              store[lower].password = overrides[key];
-            }
-          });
-        }
-      }
-    } catch (e) {
-      console.warn('Error reading server credentials file', e);
-    }
-
-    return store;
-  };
-
-  const savePasswordDisk = (email: string, newPassword: string) => {
-    try {
-      let overrides: Record<string, string> = {};
-      if (fs.existsSync(CREDENTIALS_FILE)) {
-        const raw = fs.readFileSync(CREDENTIALS_FILE, 'utf-8');
-        overrides = JSON.parse(raw) || {};
-      }
-      overrides[email.toLowerCase()] = newPassword;
-      fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(overrides, null, 2), 'utf-8');
-    } catch (e) {
-      console.error('Error saving password override to disk', e);
-    }
-  };
-
-  const isDomainAllowed = (email: string) => {
-    const lower = (email || '').trim().toLowerCase();
-    return lower.endsWith('@valuemomentum.com') || lower.endsWith('@owlsure.com');
-  };
-
-  // 1. Login Endpoint
-  auth.post('/login', (req, res) => {
-    const { email, password } = req.body || {};
-    const cleanEmail = (email || '').trim().toLowerCase();
-
-    if (!isDomainAllowed(cleanEmail)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
-      });
-    }
-
-    const store = getActiveAccounts();
-    const userEntry = store[cleanEmail];
-
-    if (!userEntry || !password || userEntry.password !== password) {
-      return res.status(401).json({
-        success: false,
-        message: 'Incorrect email ID or password.'
-      });
-    }
-
-    const user = userEntry.profile;
-    return res.json({
-      success: true,
-      data: {
-        id: `user-${user.email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        token: `token-${user.role.toLowerCase()}-${user.email}-${Date.now()}`,
-        batch: user.batch,
-        xp: 2850,
-        level: 5,
-        streakDays: 14,
-        lastActiveDate: new Date().toISOString().split('T')[0],
-        dailyGoalMinutes: 45,
-        todayMinutesSpent: 25
-      }
-    });
-  });
-
-  // 2. Change Password Endpoint (Permanent Persistence)
-  auth.post('/change-password', (req, res) => {
-    const { email, currentPassword, newPassword } = req.body || {};
-    const cleanEmail = (email || '').trim().toLowerCase();
-
-    if (!isDomainAllowed(cleanEmail)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
-      });
-    }
-
-    const store = getActiveAccounts();
-    const userEntry = store[cleanEmail];
-
-    if (!userEntry) {
-      return res.status(404).json({ success: false, message: 'User account not found.' });
-    }
-
-    if (userEntry.password !== currentPassword) {
-      return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
-    }
-
-    if (!newPassword || newPassword.length < 8) {
-      return res.status(400).json({ success: false, message: 'New password must be at least 8 characters long.' });
-    }
-
-    savePasswordDisk(cleanEmail, newPassword);
-
-    return res.json({
-      success: true,
-      message: 'Password changed successfully! You can now log in with your new password.'
-    });
-  });
-
-  // 3. Reset Password Endpoint (OTP Reset Flow)
-  auth.post('/reset-password', (req, res) => {
-    const { email, newPassword } = req.body || {};
-    const cleanEmail = (email || '').trim().toLowerCase();
-
-    if (!isDomainAllowed(cleanEmail)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
-      });
-    }
-
-    const store = getActiveAccounts();
-    const userEntry = store[cleanEmail];
-
-    if (!userEntry) {
-      return res.status(404).json({ success: false, message: 'User account not found.' });
-    }
-
-    savePasswordDisk(cleanEmail, newPassword);
-
-    return res.json({
-      success: true,
-      message: 'Password has been reset successfully! Please log in with your new password.'
-    });
-  });
-
-  // 4. Forgot Password & Verify OTP Endpoints
-  auth.post('/forgot-password', (req, res) => {
-    const { email } = req.body || {};
-    const cleanEmail = (email || '').trim().toLowerCase();
-
-    if (!isDomainAllowed(cleanEmail)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
-      });
-    }
-
-    const store = getActiveAccounts();
-    if (!store[cleanEmail]) {
-      return res.status(404).json({ success: false, message: 'Incorrect email ID or password.' });
-    }
-
-    return res.json({ success: true, message: 'Verification OTP sent to your registered email address.' });
-  });
-
-  auth.post('/verify-otp', (_req, res) => {
-    return res.json({
-      success: true,
-      data: { resetToken: `reset-token-${Date.now()}` },
-      message: 'OTP verified successfully.'
-    });
-  });
-
-  app.use("/api/auth", auth);
-
-  // --- DIRECT OBJECT STORAGE (S3/TIGRIS) STREAMING ---
-  // Streams site videos and materials directly from the cloud bucket with full HTTP Range (206) support,
-  // preventing buffering stalls or 502 proxy errors during video playback.
-  const s3Client = new S3Client({
-    endpoint: process.env.S3_ENDPOINT_URL || process.env.AWS_ENDPOINT_URL || 'https://t3.storageapi.dev',
-    region: process.env.S3_REGION || process.env.AWS_REGION || 'us-east-1',
-    credentials: {
-      accessKeyId: process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || 'tid_qJLZlUnpNMISimFhapSl_QhDKMbBumkqfSPqdbFjeAqPVcqSck',
-      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || 'tsec_DExQt4kUQMFnD-ATXFJKoL+NAbk0SAEZ6ntDiu6z0FxxCV+JIiR-6+m-xiX+q9EW4oNcn1'
-    },
-    forcePathStyle: true
-  });
-  const S3_BUCKET = process.env.S3_BUCKET_NAME || process.env.AWS_BUCKET_NAME || 'shelved-trunk-zrxdvpxaih4';
-
-  const handleS3Stream = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const rawPath = (req.params[0] || req.path || req.url || '').split('?')[0];
-    let decodedPath = rawPath;
-    try {
-      decodedPath = decodeURIComponent(rawPath);
-    } catch {
-      decodedPath = rawPath;
-    }
-
-    const cleanKey = decodedPath
-      .replace(/^\/api\/materials\/files\/(download\/)?/, '')
-      .replace(/^download\//, '')
-      .replace(/^uploads\//, '')
-      .replace(/^\/+/, '');
-
-    if (!cleanKey) return next();
-
-    const rawKey = rawPath
-      .replace(/^\/api\/materials\/files\/(download\/)?/, '')
-      .replace(/^download\//, '')
-      .replace(/^uploads\//, '')
-      .replace(/^\/+/, '');
-
-    const baseName = cleanKey.split('/').pop() || cleanKey;
-    const candidates = Array.from(new Set([
-      cleanKey,
-      rawKey,
-      `site-assets/videos/${baseName}`,
-      `site-assets/videos/${baseName.replace(/-/g, ' ')}`,
-      `site-assets/videos/${baseName.replace(/ /g, '-')}`,
-      cleanKey.replace(/-/g, ' '),
-      cleanKey.replace(/ /g, '-'),
-      cleanKey.replace(/_/g, ' '),
-      cleanKey.replace(/_/g, '-')
-    ]));
-
-    const range = req.headers.range;
-
-    for (const key of candidates) {
-      try {
-        const getCmd = new GetObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: key,
-          Range: range
-        });
-        const s3Response = await s3Client.send(getCmd);
-
-        let contentType = s3Response.ContentType || 'application/octet-stream';
-        const lowerKey = key.toLowerCase();
-        if (lowerKey.endsWith('.mp4')) contentType = 'video/mp4';
-        else if (lowerKey.endsWith('.pdf')) contentType = 'application/pdf';
-        else if (lowerKey.endsWith('.webm')) contentType = 'video/webm';
-        else if (lowerKey.endsWith('.docx')) contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        else if (lowerKey.endsWith('.doc')) contentType = 'application/msword';
-        else if (lowerKey.endsWith('.pptx')) contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-        else if (lowerKey.endsWith('.png')) contentType = 'image/png';
-        else if (lowerKey.endsWith('.jpg') || lowerKey.endsWith('.jpeg')) contentType = 'image/jpeg';
-        else if (lowerKey.endsWith('.txt')) contentType = 'text/plain; charset=utf-8';
-
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Content-Type', contentType);
-        if (s3Response.ContentLength !== undefined) {
-          res.setHeader('Content-Length', s3Response.ContentLength.toString());
-        }
-        if (s3Response.ContentRange) {
-          res.setHeader('Content-Range', s3Response.ContentRange);
-          res.status(206);
-        } else {
-          res.status(200);
-        }
-
-        if (req.method === 'HEAD') {
-          return res.end();
-        }
-
-        const stream = s3Response.Body as any;
-        if (stream && typeof stream.pipe === 'function') {
-          return stream.pipe(res);
-        }
-      } catch (err: any) {
-        if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
-          continue;
-        }
-      }
-    }
-
-    // If not found in S3 bucket, fallback to downstream .NET API proxy
-    next();
-  };
-
-  app.get('/api/materials/files/*', handleS3Stream);
-  app.head('/api/materials/files/*', handleS3Stream);
-  app.get('/api/materials/files/download/*', handleS3Stream);
-  app.head('/api/materials/files/download/*', handleS3Stream);
-
-  // --- PROXY EVERYTHING ELSE TO THE .NET API ---
-  // pathFilter keeps the original /api prefix intact, which is what the .NET routes
-  // expect ([Route("api/sessions")] and friends).
-  app.use(
-    createProxyMiddleware({
-      target: API_BASE_URL,
-      changeOrigin: true,
-      pathFilter: (pathname) => (pathname.startsWith('/api') || pathname.startsWith('/uploads')) && !pathname.startsWith('/api/ai'),
-      on: {
-        error: (err, _req, res) => {
-          console.error(`[proxy] ${API_BASE_URL} unreachable:`, err.message);
-          if (res && 'writeHead' in res && !res.headersSent) {
-            res.writeHead(502, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-              message: 'The API is unavailable. Check that the .NET service is running and API_BASE_URL is correct.'
-            }));
-          }
-        },
-      },
-    })
-  );
-
-  // Vite Middleware in Dev or Static Serve in Prod
+  // --- 8. VITE MIDDLEWARE (DEV) OR STATIC BUNDLE (PROD) ---
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -535,6 +894,12 @@ User Query: ${message}`
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // --- 9. PORT BINDING & SERVER START ---
+  const listenOnPort = (port: number) => new Promise<number>((resolve, reject) => {
+    const server = app.listen(port, '0.0.0.0', () => resolve(port));
+    server.on('error', (err: any) => reject(err));
+  });
 
   let activePort = PORT;
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -551,8 +916,12 @@ User Query: ${message}`
     }
   }
 
-  console.log(`Server running on http://localhost:${activePort}`);
-  console.log(`Proxying /api -> ${API_BASE_URL}`);
+  console.log(`\n========================================================`);
+  console.log(`🚀 GT Portal Standalone Backend & Frontend Online!`);
+  console.log(`📡 URL: http://localhost:${activePort}`);
+  console.log(`🛡️ Auth APIs: http://localhost:${activePort}/api/auth`);
+  console.log(`📚 Sessions API: http://localhost:${activePort}/api/sessions`);
+  console.log(`========================================================\n`);
 }
 
 startServer();

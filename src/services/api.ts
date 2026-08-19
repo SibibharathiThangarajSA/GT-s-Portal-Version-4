@@ -72,91 +72,91 @@ export const normalizeSessionPayload = (raw: any): Session => {
 
   const topics = Array.isArray(raw?.topics)
     ? raw.topics.map((topic: any) => ({
-        id: topic?.id || `topic-${Math.random().toString(36).slice(2)}`,
-        title: topic?.title || 'Topic',
-        order: Number(topic?.order ?? topic?.orderIndex ?? 1),
-        orderIndex: Number(topic?.orderIndex ?? topic?.order ?? 1),
-        status: topic?.status || 'Unlocked',
-        description: topic?.description || '',
-        subtopics: Array.isArray(topic?.subtopics) ? topic.subtopics.map((sub: any) => ({
-          id: sub?.id || `subtopic-${Math.random().toString(36).slice(2)}`,
-          title: sub?.title || 'Subtopic',
-          durationMinutes: Number(sub?.durationMinutes || 0),
-          status: sub?.status || 'Unlocked',
-          description: sub?.description || '',
-          videoUrl: sub?.videoUrl || '',
-          documentUrl: sub?.documentUrl || '',
-          materialsUrl: sub?.materialsUrl || '',
-          assignment: sub?.assignment || ''
-        })) : [],
-        videoUrl: topic?.videoUrl || '',
-        documentUrl: topic?.documentUrl || '',
-        materialsUrl: topic?.materialsUrl || '',
-        assignment: topic?.assignment || ''
-      }))
+      id: topic?.id || `topic-${Math.random().toString(36).slice(2)}`,
+      title: topic?.title || 'Topic',
+      order: Number(topic?.order ?? topic?.orderIndex ?? 1),
+      orderIndex: Number(topic?.orderIndex ?? topic?.order ?? 1),
+      status: topic?.status || 'Unlocked',
+      description: topic?.description || '',
+      subtopics: Array.isArray(topic?.subtopics) ? topic.subtopics.map((sub: any) => ({
+        id: sub?.id || `subtopic-${Math.random().toString(36).slice(2)}`,
+        title: sub?.title || 'Subtopic',
+        durationMinutes: Number(sub?.durationMinutes || 0),
+        status: sub?.status || 'Unlocked',
+        description: sub?.description || '',
+        videoUrl: sub?.videoUrl || '',
+        documentUrl: sub?.documentUrl || '',
+        materialsUrl: sub?.materialsUrl || '',
+        assignment: sub?.assignment || ''
+      })) : [],
+      videoUrl: topic?.videoUrl || '',
+      documentUrl: topic?.documentUrl || '',
+      materialsUrl: topic?.materialsUrl || '',
+      assignment: topic?.assignment || ''
+    }))
     : [];
 
   const studyMaterials = Array.isArray(raw?.studyMaterials)
     ? raw.studyMaterials.map((item: any) => ({
-        id: item?.id || `material-${Math.random().toString(36).slice(2)}`,
-        topicId: item?.topicId || undefined,
-        sessionId: item?.sessionId || raw?.id || '',
-        title: item?.title || 'Study Material',
-        type: item?.type || 'PDF',
-        url: item?.url || '',
-        urlType: item?.urlType || 'Website',
-        materialCategory: item?.materialCategory || item?.materialType || 'Provided',
-        materialType: item?.materialType || item?.materialCategory || 'Provided',
-        fileName: item?.fileName || '',
-        fileType: item?.fileType || '',
-        fileSize: item?.fileSize || '',
-        course: item?.course || '',
-        module: item?.module || '',
-        description: item?.description || '',
-        durationOrPages: item?.durationOrPages || '',
-        webUrl: item?.webUrl || '',
-        downloadUrl: item?.downloadUrl || '',
-        currentVersion: Number(item?.currentVersion || 1),
-        versions: Array.isArray(item?.versions) ? item.versions.map((version: any) => ({
-          version: Number(version?.version ?? version?.versionNumber ?? 1),
-          updatedAt: version?.updatedAt || version?.createdAt || new Date().toISOString(),
-          updatedBy: version?.updatedBy || 'Admin',
-          changeLog: version?.changeLog || 'Initial version',
-          contentUrl: version?.contentUrl || ''
-        })) : [],
-        contentBody: item?.contentBody || '',
-        tags: Array.isArray(item?.tags) ? item.tags : []
-      }))
+      id: item?.id || `material-${Math.random().toString(36).slice(2)}`,
+      topicId: item?.topicId || undefined,
+      sessionId: item?.sessionId || raw?.id || '',
+      title: item?.title || 'Study Material',
+      type: item?.type || 'PDF',
+      url: item?.url || '',
+      urlType: item?.urlType || 'Website',
+      materialCategory: item?.materialCategory || item?.materialType || 'Provided',
+      materialType: item?.materialType || item?.materialCategory || 'Provided',
+      fileName: item?.fileName || '',
+      fileType: item?.fileType || '',
+      fileSize: item?.fileSize || '',
+      course: item?.course || '',
+      module: item?.module || '',
+      description: item?.description || '',
+      durationOrPages: item?.durationOrPages || '',
+      webUrl: item?.webUrl || '',
+      downloadUrl: item?.downloadUrl || '',
+      currentVersion: Number(item?.currentVersion || 1),
+      versions: Array.isArray(item?.versions) ? item.versions.map((version: any) => ({
+        version: Number(version?.version ?? version?.versionNumber ?? 1),
+        updatedAt: version?.updatedAt || version?.createdAt || new Date().toISOString(),
+        updatedBy: version?.updatedBy || 'Admin',
+        changeLog: version?.changeLog || 'Initial version',
+        contentUrl: version?.contentUrl || ''
+      })) : [],
+      contentBody: item?.contentBody || '',
+      tags: Array.isArray(item?.tags) ? item.tags : []
+    }))
     : [];
 
   const quizzes = Array.isArray(raw?.quizzes || raw?.Quizzes)
     ? (raw.quizzes || raw.Quizzes).map((item: any) => ({
-        id: item?.id || item?.Id || `quiz-${Math.random().toString(36).slice(2)}`,
-        sessionId: item?.sessionId || item?.SessionId || raw?.id || raw?.Id || '',
-        topicId: item?.topicId || item?.TopicId || undefined,
-        title: item?.title || item?.Title || 'Practice Quiz',
-        description: item?.description || item?.Description || '',
-        passingScorePercent: Number(item?.passingScorePercent ?? item?.PassingScorePercent ?? 70),
-        timeLimitMinutes: Number(item?.timeLimitMinutes ?? item?.TimeLimitMinutes ?? 15),
-        questions: Array.isArray(item?.questions || item?.Questions) ? (item.questions || item.Questions).map((question: any) => ({
-          id: question?.id || question?.Id || `question-${Math.random().toString(36).slice(2)}`,
-          type: question?.type || question?.Type || 'MCQ',
-          prompt: question?.prompt || question?.Prompt || '',
-          options: Array.isArray(question?.options)
-            ? question.options
-            : (Array.isArray(question?.Options) ? question.Options : []),
-          correctAnswer: question?.correctAnswer !== undefined && question?.correctAnswer !== null && question?.correctAnswer !== ''
-            ? question.correctAnswer
-            : (question?.CorrectAnswer !== undefined && question?.CorrectAnswer !== null && question?.CorrectAnswer !== ''
-                ? question.CorrectAnswer
-                : parseCorrectAnswer(question?.correctAnswerJson ?? question?.CorrectAnswerJson ?? question?.correctAnswer ?? question?.CorrectAnswer ?? '')),
-          explanation: question?.explanation || question?.Explanation || '',
-          points: Number(question?.points ?? question?.Points ?? 10),
-          codeSnippet: question?.codeSnippet || question?.CodeSnippet || '',
-          orderIndex: Number(question?.orderIndex ?? question?.OrderIndex ?? 1),
-          matchPairs: Array.isArray(question?.matchPairs || question?.MatchPairs) ? (question.matchPairs || question.MatchPairs) : []
-        })) : []
-      }))
+      id: item?.id || item?.Id || `quiz-${Math.random().toString(36).slice(2)}`,
+      sessionId: item?.sessionId || item?.SessionId || raw?.id || raw?.Id || '',
+      topicId: item?.topicId || item?.TopicId || undefined,
+      title: item?.title || item?.Title || 'Practice Quiz',
+      description: item?.description || item?.Description || '',
+      passingScorePercent: Number(item?.passingScorePercent ?? item?.PassingScorePercent ?? 70),
+      timeLimitMinutes: Number(item?.timeLimitMinutes ?? item?.TimeLimitMinutes ?? 15),
+      questions: Array.isArray(item?.questions || item?.Questions) ? (item.questions || item.Questions).map((question: any) => ({
+        id: question?.id || question?.Id || `question-${Math.random().toString(36).slice(2)}`,
+        type: question?.type || question?.Type || 'MCQ',
+        prompt: question?.prompt || question?.Prompt || '',
+        options: Array.isArray(question?.options)
+          ? question.options
+          : (Array.isArray(question?.Options) ? question.Options : []),
+        correctAnswer: question?.correctAnswer !== undefined && question?.correctAnswer !== null && question?.correctAnswer !== ''
+          ? question.correctAnswer
+          : (question?.CorrectAnswer !== undefined && question?.CorrectAnswer !== null && question?.CorrectAnswer !== ''
+            ? question.CorrectAnswer
+            : parseCorrectAnswer(question?.correctAnswerJson ?? question?.CorrectAnswerJson ?? question?.correctAnswer ?? question?.CorrectAnswer ?? '')),
+        explanation: question?.explanation || question?.Explanation || '',
+        points: Number(question?.points ?? question?.Points ?? 10),
+        codeSnippet: question?.codeSnippet || question?.CodeSnippet || '',
+        orderIndex: Number(question?.orderIndex ?? question?.OrderIndex ?? 1),
+        matchPairs: Array.isArray(question?.matchPairs || question?.MatchPairs) ? (question.matchPairs || question.MatchPairs) : []
+      })) : []
+    }))
     : [];
 
   const additionalMaterials = studyMaterials.filter((item) => {
@@ -171,21 +171,21 @@ export const normalizeSessionPayload = (raw: any): Session => {
 
   const assignments = Array.isArray(raw?.assignments)
     ? raw.assignments.map((item: any) => ({
-        id: item?.id || `assignment-${Math.random().toString(36).slice(2)}`,
-        sessionId: item?.sessionId || raw?.id || '',
-        topicId: item?.topicId || undefined,
-        title: item?.title || 'Assignment',
-        description: item?.description || '',
-        dueDate: item?.dueDate || '',
-        totalPoints: Number(item?.totalPoints || 0),
-        instructions: item?.instructions || '',
-        submissionFormat: item?.submissionFormat || '',
-        attachmentName: item?.attachmentName || '',
-        attachmentUrl: item?.attachmentUrl || '',
-        status: item?.status || 'Pending',
-        submittedUrl: item?.submittedUrl || '',
-        submittedAt: item?.submittedAt || ''
-      }))
+      id: item?.id || `assignment-${Math.random().toString(36).slice(2)}`,
+      sessionId: item?.sessionId || raw?.id || '',
+      topicId: item?.topicId || undefined,
+      title: item?.title || 'Assignment',
+      description: item?.description || '',
+      dueDate: item?.dueDate || '',
+      totalPoints: Number(item?.totalPoints || 0),
+      instructions: item?.instructions || '',
+      submissionFormat: item?.submissionFormat || '',
+      attachmentName: item?.attachmentName || '',
+      attachmentUrl: item?.attachmentUrl || '',
+      status: item?.status || 'Pending',
+      submittedUrl: item?.submittedUrl || '',
+      submittedAt: item?.submittedAt || ''
+    }))
     : [];
 
   return {
@@ -459,8 +459,8 @@ export const fetchQuizzesApi = async (sessionId?: string): Promise<Quiz[]> => {
       correctAnswer: question?.correctAnswer !== undefined && question?.correctAnswer !== null && question?.correctAnswer !== ''
         ? question.correctAnswer
         : (question?.CorrectAnswer !== undefined && question?.CorrectAnswer !== null && question?.CorrectAnswer !== ''
-            ? question.CorrectAnswer
-            : parseCorrectAnswer(question?.correctAnswerJson ?? question?.CorrectAnswerJson ?? question?.correctAnswer ?? question?.CorrectAnswer ?? '')),
+          ? question.CorrectAnswer
+          : parseCorrectAnswer(question?.correctAnswerJson ?? question?.CorrectAnswerJson ?? question?.correctAnswer ?? question?.CorrectAnswer ?? '')),
       explanation: question?.explanation || question?.Explanation || '',
       points: Number(question?.points ?? question?.Points ?? 10),
       codeSnippet: question?.codeSnippet || question?.CodeSnippet || '',
@@ -1098,6 +1098,209 @@ export const saveUserPersonalNotesApi = async (userId: string, sessionId: string
     console.warn('Failed to save user personal notes', err);
     return false;
   }
+};
+
+// ============================================================================
+// USER MANAGEMENT & MOBILE OTP AUTHENTICATION SERVICES
+// ============================================================================
+
+import {
+  getUserManagementRecords,
+  saveUserManagementRecords,
+  findUserByPhoneNumber
+} from './authCredentials';
+import { UserManagementRecord } from '../types';
+
+export const fetchUserManagementRecordsApi = async (): Promise<UserManagementRecord[]> => {
+  try {
+    const res = await fetch('/api/auth/users');
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && Array.isArray(data.data)) {
+        saveUserManagementRecords(data.data);
+        return data.data;
+      }
+    }
+  } catch {
+    // fallback to local storage
+  }
+  return getUserManagementRecords();
+};
+
+export const saveUserManagementRecordsApi = async (records: UserManagementRecord[]): Promise<boolean> => {
+  saveUserManagementRecords(records);
+  try {
+    fetch('/api/auth/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records })
+    }).catch(() => null);
+  } catch {
+    // ignore
+  }
+  return true;
+};
+
+export const requestMobileOtpApi = async (
+  phoneNumber: string
+): Promise<{ success: boolean; isEnterpriseUser?: boolean; otp?: string; message: string; user?: UserManagementRecord }> => {
+  const cleanPhone = (phoneNumber || '').replace(/\D/g, '').trim();
+
+  if (!cleanPhone || cleanPhone.length < 10) {
+    return {
+      success: false,
+      message: 'Please enter a valid 10-digit mobile number.'
+    };
+  }
+
+  // 1. Try server verification first
+  try {
+    const res = await fetch('/api/auth/request-mobile-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneNumber: cleanPhone })
+    });
+    const data = await res.json().catch(() => null);
+    if (data) {
+      if (data.isEnterpriseUser) {
+        return {
+          success: false,
+          isEnterpriseUser: true,
+          message: data.message || 'You have enterprise credentials registered. Please login with your official email and password.'
+        };
+      }
+      if (data.success) {
+        return {
+          success: true,
+          otp: data.otp || '482910',
+          message: data.message || 'OTP generated successfully.',
+          user: data.user
+        };
+      }
+      if (!data.success && data.message) {
+        return {
+          success: false,
+          message: data.message
+        };
+      }
+    }
+  } catch {
+    // fallback to local credentials evaluation
+  }
+
+  // 2. Local Fallback Verification
+  const user = findUserByPhoneNumber(cleanPhone);
+
+  if (!user) {
+    return {
+      success: false,
+      message: 'Mobile number not found. Please contact your L&D Administrator.'
+    };
+  }
+
+  // Enterprise Credentials Guard: Check if user has VAM ID or Email
+  const hasVamId = user.vamId && user.vamId !== '-' && user.vamId.trim() !== '';
+  const hasEmail = user.email && user.email !== '-' && user.email.includes('@');
+
+  if (hasVamId || hasEmail) {
+    return {
+      success: false,
+      isEnterpriseUser: true,
+      message: 'You have enterprise credentials registered. Please login with your official email and password.'
+    };
+  }
+
+  // Pure Associate without Email / VAM ID -> Allow OTP Generation
+  const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  sessionStorage.setItem(`gt_otp_${cleanPhone}`, generatedOtp);
+
+  return {
+    success: true,
+    otp: generatedOtp,
+    message: `OTP sent successfully to ${cleanPhone}.`,
+    user
+  };
+};
+
+export const verifyMobileOtpApi = async (
+  phoneNumber: string,
+  otp: string
+): Promise<{ success: boolean; data?: AuthUserDto; message: string }> => {
+  const cleanPhone = (phoneNumber || '').replace(/\D/g, '').trim();
+  const cleanOtp = (otp || '').trim();
+
+  if (cleanOtp.length !== 6) {
+    return {
+      success: false,
+      message: 'Please enter all 6 digits of the OTP code.'
+    };
+  }
+
+  // 1. Try server verification
+  try {
+    const res = await fetch('/api/auth/verify-mobile-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneNumber: cleanPhone, otp: cleanOtp })
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data && data.success && data.data) {
+      return {
+        success: true,
+        data: data.data,
+        message: 'OTP verified successfully.'
+      };
+    }
+  } catch {
+    // fallback
+  }
+
+  // 2. Local Fallback Verification
+  const user = findUserByPhoneNumber(cleanPhone);
+
+  if (!user) {
+    return {
+      success: false,
+      message: 'Mobile number not found. Please contact your L&D Administrator.'
+    };
+  }
+
+  const savedOtp = sessionStorage.getItem(`gt_otp_${cleanPhone}`);
+  // Accept generated OTP or demo OTP code '123456' or '482910'
+  const isValidOtp = cleanOtp === savedOtp || cleanOtp === '123456' || cleanOtp === '482910';
+
+  if (!isValidOtp) {
+    return {
+      success: false,
+      message: 'Invalid OTP code. Please enter the correct 6-digit code.'
+    };
+  }
+
+  sessionStorage.removeItem(`gt_otp_${cleanPhone}`);
+
+  const role: 'GT' | 'Admin' = user.role === 'Admin' ? 'Admin' : 'GT';
+  const fullName = user.name || 'Associate User';
+  const parts = fullName.split(' ');
+
+  return {
+    success: true,
+    data: {
+      id: user.id || `user-mobile-${cleanPhone}`,
+      email: user.email && user.email !== '-' ? user.email : `associate.${cleanPhone}@valuemomentum.com`,
+      firstName: parts[0] || fullName,
+      lastName: parts.slice(1).join(' ') || '',
+      role,
+      token: `token-mobile-${cleanPhone}-${Date.now()}`,
+      batch: user.batch || 'GT-2026-Batch-01',
+      xp: 1500,
+      level: 3,
+      streakDays: 7,
+      lastActiveDate: new Date().toISOString().split('T')[0],
+      dailyGoalMinutes: 45,
+      todayMinutesSpent: 15
+    },
+    message: 'OTP verified successfully! Logging you in...'
+  };
 };
 
 

@@ -67,12 +67,16 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               if (isAuthenticated) {
-                setActivePortal('GT');
+                if (currentUser.role === 'Admin' || activePortal === 'Admin') {
+                  setActivePortal('Admin');
+                } else {
+                  setActivePortal('GT');
+                }
               } else {
                 setActivePortal('Landing');
               }
             }}
-            className="flex items-center gap-3 group focus:outline-none"
+            className="flex items-center gap-3 group focus:outline-none cursor-pointer"
             data-inspect-id="PrimaryButton"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
@@ -88,38 +92,18 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </button>
 
-          {/* Current Active Portal Title Badge (GT Portal or Admin Portal) */}
+          {/* Current Active Portal Title Badge (Only shows Active Portal Title - No Switching) */}
           {isAuthenticated && (
             <div className="flex items-center gap-2">
-              {currentUser.role === 'Admin' ? (
-                <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
-                  <button
-                    onClick={() => setActivePortal('Admin')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activePortal === 'Admin'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>Admin Portal</span>
-                  </button>
-                  <button
-                    onClick={() => setActivePortal('GT')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activePortal === 'GT'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                  >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>GT View</span>
-                  </button>
+              {activePortal === 'Admin' || currentUser.role === 'Admin' ? (
+                <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 shadow-xs">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs font-bold text-emerald-800 tracking-tight">Admin Portal</span>
                 </div>
               ) : (
-                <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 shadow-inner">
-                  <span className="text-xs font-bold flex items-center gap-1.5 text-blue-700">
-                    <UserCheck className="w-4 h-4" />
-                    <span>GT Portal</span>
-                  </span>
+                <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-50 border border-blue-200/80 shadow-xs">
+                  <UserCheck className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-bold text-blue-800 tracking-tight">GT Portal</span>
                 </div>
               )}
             </div>

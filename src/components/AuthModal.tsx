@@ -1,6 +1,31 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Lock, Mail, ShieldCheck, UserCheck, Eye, EyeOff, ArrowRight, ArrowLeft, Key, CheckCircle2, AlertCircle, Check, RefreshCw, Timer } from 'lucide-react';
-import { loginApi, forgotPasswordApi, verifyOtpApi, resetPasswordApi } from '../services/api';
+import {
+  X,
+  Lock,
+  Mail,
+  ShieldCheck,
+  UserCheck,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ArrowLeft,
+  Key,
+  CheckCircle2,
+  AlertCircle,
+  Check,
+  RefreshCw,
+  Timer,
+  Phone,
+  Smartphone
+} from 'lucide-react';
+import {
+  loginApi,
+  forgotPasswordApi,
+  verifyOtpApi,
+  resetPasswordApi,
+  requestMobileOtpApi,
+  verifyMobileOtpApi
+} from '../services/api';
 import { useToast } from '../context/ToastContext';
 
 interface AuthModalProps {
@@ -10,7 +35,18 @@ interface AuthModalProps {
   onAuthSuccess: (role: 'GT' | 'Admin', userData?: { name: string; email: string; isGuest?: boolean }) => void;
 }
 
-type ModalView = 'login' | 'forgot-email' | 'verify-otp' | 'new-password';
+type ModalView = 'login' | 'forgot-email' | 'verify-otp' | 'new-password' | 'mobile-login' | 'mobile-otp-verify';
+
+const COUNTRY_CODES = [
+  { code: '+91', label: '🇮🇳 +91 (IN)' },
+  { code: '+1', label: '🇺🇸 +1 (US)' },
+  { code: '+44', label: '🇬🇧 +44 (UK)' },
+  { code: '+65', label: '🇸🇬 +65 (SG)' },
+  { code: '+971', label: '🇦🇪 +971 (UAE)' },
+  { code: '+61', label: '🇦🇺 +61 (AU)' },
+  { code: '+49', label: '🇩🇪 +49 (DE)' },
+  { code: '+81', label: '🇯🇵 +81 (JP)' }
+];
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
@@ -32,9 +68,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [hasNoCredentials, setHasNoCredentials] = useState(false);
 
-  // OTP & Reset Password Fields
+  // Mobile OTP Login Fields
+  const [mobileCountryCode, setMobileCountryCode] = useState('+91');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [mobileOtpDigits, setMobileOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const mobileOtpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [mobileOtpTimerSeconds, setMobileOtpTimerSeconds] = useState(300);
+  const [canResendMobileOtp, setCanResendMobileOtp] = useState(false);
+  const mobileTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // OTP & Reset Password Fields (Forgot Password Flow)
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '']);
   const [resetToken, setResetToken] = useState('');
@@ -60,17 +104,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setSuccessMsg('');
       setIsLoading(false);
       setOtpDigits(['', '', '', '']);
+      setMobileOtpDigits(['', '', '', '', '', '']);
+      setMobileNumber('');
       setResetToken('');
       setNewPassword('');
       setShowNewPassword(false);
       setConfirmPassword('');
       setShowConfirmPassword(false);
-      setHasNoCredentials(false);
       setShowPassword(false);
     }
   }, [isOpen, initialRole]);
 
-  // Handle OTP Timer Countdown
+  // Handle Forgot Password OTP Timer Countdown
   useEffect(() => {
     if (view === 'verify-otp') {
       setOtpTimerSeconds(300);
@@ -84,7 +129,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setCanResend(true);
             return 0;
           }
-          if (prev === 240) { // after 60s allow resend
+          if (prev === 240) {
             setCanResend(true);
           }
           return prev - 1;
@@ -96,6 +141,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [view]);
+
+  // Handle Mobile OTP Timer Countdown
+  useEffect(() => {
+    if (view === 'mobile-otp-verify') {
+      setMobileOtpTimerSeconds(300);
+      setCanResendMobileOtp(false);
+      if (mobileTimerRef.current) clearInterval(mobileTimerRef.current);
+
+      mobileTimerRef.current = setInterval(() => {
+        setMobileOtpTimerSeconds((prev) => {
+          if (prev <= 1) {
+            if (mobileTimerRef.current) clearInterval(mobileTimerRef.current);
+            setCanResendMobileOtp(true);
+            return 0;
+          }
+          if (prev === 240) {
+            setCanResendMobileOtp(true);
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (mobileTimerRef.current) clearInterval(mobileTimerRef.current);
+    }
+
+    return () => {
+      if (mobileTimerRef.current) clearInterval(mobileTimerRef.current);
     };
   }, [view]);
 
@@ -111,15 +185,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const isPasswordMatch = isConfirmFilled && newPassword === confirmPassword;
   const isPasswordMismatch = isConfirmFilled && newPassword !== confirmPassword;
 
-  // 4-digit combined OTP string
+  // 4-digit combined OTP string for Forgot Password
   const fullOtp = otpDigits.join('');
 
   // Submit button disabled states
-  const isGuestAccess = selectedRole === 'GT' && hasNoCredentials;
-  const isLoginDisabled = isLoading || (!isGuestAccess && (!email.trim() || !password.trim()));
+  const isLoginDisabled = isLoading || !email.trim() || !password.trim();
   const isSendOtpDisabled = isLoading || !recoveryEmail.trim() || !recoveryEmail.includes('@');
   const isVerifyOtpDisabled = isLoading || fullOtp.length !== 4;
   const isResetDisabled = isLoading || !isPasswordValid || !isPasswordMatch;
+
+  const isMobileLoginDisabled = isLoading || mobileNumber.replace(/\D/g, '').length < 10;
+  const isMobileVerifyDisabled = isLoading || mobileOtpDigits.join('').length !== 6;
 
   if (!isOpen) return null;
 
@@ -130,28 +206,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // --- Handlers ---
-
+  // --- Handlers: Standard Login ---
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
-
-    if (isGuestAccess) {
-      if (selectedRole !== 'GT') {
-        setErrorMsg('Guest access is only available for Associates.');
-        return;
-      }
-
-      localStorage.setItem('token', 'guest-associate-token');
-      onAuthSuccess('GT', {
-        name: 'Guest Associate',
-        email: 'guest@valuemomentum.com',
-        isGuest: true
-      });
-      addToast('success', 'You have entered the portal as a guest associate.');
-      return;
-    }
 
     if (!email.trim() || !password.trim()) {
       setErrorMsg('Please enter both email address and password.');
@@ -161,43 +220,182 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await loginApi(email.trim(), password);
-
-      if (!res.success || !res.data) {
-        setErrorMsg(res.message || 'Invalid credentials. Please verify your email and password.');
-        return;
-      }
-
-      // Strict RBAC between card selection and authenticated account role
-      if (selectedRole === 'Admin' && res.data.role !== 'Admin') {
-        setErrorMsg('Access Denied: This login card is for L&D users only. Please use the Associate card for employee accounts.');
-        return;
-      }
-      if (selectedRole === 'GT' && res.data.role !== 'GT') {
-        setErrorMsg('Access Denied: This login card is for Associates only. Please use the L&D card for admin accounts.');
-        return;
-      }
-
-      if (res.data.token) {
-        localStorage.setItem('token', res.data.token);
-      }
-
-      const fullName = res.data.firstName ? `${res.data.firstName} ${res.data.lastName}` : (selectedRole === 'Admin' ? 'L&D Admin' : 'Graduate Trainee');
-
-      onAuthSuccess(res.data.role, {
-        name: fullName,
-        email: res.data.email,
-        isGuest: false
-      });
-
-      addToast('success', `Welcome back, ${res.data.firstName || 'User'}! Logged in successfully.`);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Login failed. Please check your credentials.');
-    } finally {
+      const res = await loginApi(email.trim(), password.trim());
       setIsLoading(false);
+
+      if (res.success && res.data) {
+        // Strict Role Gate: Admin tab requires Admin role
+        if (selectedRole === 'Admin' && res.data.role !== 'Admin') {
+          setErrorMsg('Incorrect email ID or password.');
+          addToast('error', 'Incorrect email ID or password.');
+          return;
+        }
+
+        // Strict Role Gate: Associate tab requires Associate/Employee role (Blocks Admin)
+        if (selectedRole === 'GT' && res.data.role === 'Admin') {
+          setErrorMsg('Incorrect email ID or password.');
+          addToast('error', 'Incorrect email ID or password.');
+          return;
+        }
+
+        localStorage.setItem('token', res.data.token);
+        const fullName = `${res.data.firstName} ${res.data.lastName}`.trim();
+
+        onAuthSuccess(res.data.role as any, {
+          name: fullName || 'Enterprise User',
+          email: res.data.email,
+          isGuest: false
+        });
+
+        addToast('success', `Welcome back, ${res.data.firstName || 'User'}!`);
+      } else {
+        setErrorMsg('Incorrect email ID or password.');
+        addToast('error', 'Incorrect email ID or password.');
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMsg('Incorrect email ID or password.');
+      addToast('error', 'Incorrect email ID or password.');
     }
   };
 
+  // --- Handlers: Mobile OTP Flow ---
+  const handleRequestMobileOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const cleanPhone = mobileNumber.replace(/\D/g, '').trim();
+    if (!cleanPhone || cleanPhone.length < 10) {
+      setErrorMsg('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await requestMobileOtpApi(cleanPhone);
+      setIsLoading(false);
+
+      if (!res.success) {
+        setErrorMsg(res.message);
+        return;
+      }
+
+      setSuccessMsg(res.message || 'OTP generated successfully.');
+      if (res.otp) {
+        addToast('info', `Your verification code is: ${res.otp}`);
+      }
+      setView('mobile-otp-verify');
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMsg(err.message || 'Failed to request OTP.');
+    }
+  };
+
+  const handleResendMobileOtp = async () => {
+    if (!canResendMobileOtp || isResending) return;
+    setIsResending(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const res = await requestMobileOtpApi(mobileNumber);
+      setIsResending(false);
+
+      if (res.success) {
+        setSuccessMsg('A new OTP has been generated.');
+        setMobileOtpTimerSeconds(300);
+        setCanResendMobileOtp(false);
+        if (res.otp) {
+          addToast('info', `Your new verification code is: ${res.otp}`);
+        }
+      } else {
+        setErrorMsg(res.message || 'Failed to resend OTP.');
+      }
+    } catch (err: any) {
+      setIsResending(false);
+      setErrorMsg(err.message || 'Error resending OTP.');
+    }
+  };
+
+  const handleMobileOtpDigitChange = (index: number, value: string) => {
+    const val = value.replace(/\D/g, '').slice(-1);
+    const newDigits = [...mobileOtpDigits];
+    newDigits[index] = val;
+    setMobileOtpDigits(newDigits);
+
+    if (val && index < 5) {
+      mobileOtpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleMobileOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !mobileOtpDigits[index] && index > 0) {
+      mobileOtpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleMobileOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!pastedData) return;
+
+    const newDigits = [...mobileOtpDigits];
+    for (let i = 0; i < 6; i++) {
+      newDigits[i] = pastedData[i] || '';
+    }
+    setMobileOtpDigits(newDigits);
+    const focusIndex = Math.min(pastedData.length, 5);
+    mobileOtpInputRefs.current[focusIndex]?.focus();
+  };
+
+  const handleVerifyMobileOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const fullMobileOtp = mobileOtpDigits.join('');
+    if (fullMobileOtp.length !== 6) {
+      setErrorMsg('Please enter all 6 digits of the OTP code.');
+      return;
+    }
+
+    if (mobileOtpTimerSeconds <= 0) {
+      setErrorMsg('The verification code has expired. Please click Resend OTP.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await verifyMobileOtpApi(mobileNumber, fullMobileOtp);
+      setIsLoading(false);
+
+      if (res.success && res.data) {
+        localStorage.setItem('token', res.data.token);
+        const role = res.data.role as any;
+        const fullName = `${res.data.firstName} ${res.data.lastName}`.trim();
+
+        onAuthSuccess(role, {
+          name: fullName || 'Associate User',
+          email: res.data.email,
+          isGuest: false
+        });
+
+        addToast('success', `Welcome back, ${res.data.firstName || 'User'}! Logged in via Mobile OTP.`);
+      } else {
+        setErrorMsg('Incorrect OTP. Please try again.');
+        addToast('error', 'Incorrect OTP. Please try again.');
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMsg('Incorrect OTP. Please try again.');
+      addToast('error', 'Incorrect OTP. Please try again.');
+    }
+  };
+
+  // --- Handlers: Forgot Password Flow ---
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -205,6 +403,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (!recoveryEmail.trim() || !recoveryEmail.includes('@')) {
       setErrorMsg('Please enter a valid registered email address.');
+      addToast('error', 'Please enter a valid registered email address.');
       return;
     }
 
@@ -215,58 +414,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setIsLoading(false);
 
       if (res.success) {
-        setSuccessMsg(res.message || 'OTP has been sent to your registered email address.');
-        addToast('success', 'Verification OTP sent to your email.');
+        setSuccessMsg(res.message || 'OTP sent successfully!');
+        addToast('info', 'Verification code generated.');
         setView('verify-otp');
-        setOtpDigits(['', '', '', '']);
-        setTimeout(() => {
-          otpInputRefs.current[0]?.focus();
-        }, 100);
       } else {
-        setErrorMsg(res.message || 'Failed to send OTP. Please verify your email.');
+        setErrorMsg(res.message || 'Unable to send OTP.');
+        addToast('error', res.message || 'Unable to send OTP.');
       }
     } catch (err: any) {
       setIsLoading(false);
-      setErrorMsg(err.message || 'Error occurred while sending OTP.');
+      setErrorMsg(err.message || 'Error requesting OTP.');
+      addToast('error', err.message || 'Error requesting OTP.');
     }
   };
 
   const handleResendOtp = async () => {
-    if (isResending || !canResend) return;
+    if (!canResend || isResending) return;
+    setIsResending(true);
     setErrorMsg('');
     setSuccessMsg('');
-    setIsResending(true);
 
     try {
       const res = await forgotPasswordApi(recoveryEmail.trim());
       setIsResending(false);
 
       if (res.success) {
-        setSuccessMsg('A new verification code has been sent to your email.');
-        addToast('success', 'New verification OTP sent.');
-        setOtpDigits(['', '', '', '']);
+        setSuccessMsg('A new OTP has been sent.');
         setOtpTimerSeconds(300);
         setCanResend(false);
-        setTimeout(() => {
-          otpInputRefs.current[0]?.focus();
-        }, 100);
+        addToast('info', 'New verification code generated.');
       } else {
         setErrorMsg(res.message || 'Failed to resend OTP.');
+        addToast('error', res.message || 'Failed to resend OTP.');
       }
     } catch (err: any) {
       setIsResending(false);
-      setErrorMsg(err.message || 'Error occurred while resending OTP.');
+      setErrorMsg(err.message || 'Error resending OTP.');
+      addToast('error', err.message || 'Error resending OTP.');
     }
   };
 
   const handleOtpDigitChange = (index: number, value: string) => {
-    const numericValue = value.replace(/\D/g, '').slice(-1);
+    const val = value.replace(/\D/g, '').slice(-1);
     const newDigits = [...otpDigits];
-    newDigits[index] = numericValue;
+    newDigits[index] = val;
     setOtpDigits(newDigits);
-    setErrorMsg('');
 
-    if (numericValue && index < 3) {
+    if (val && index < 3) {
       otpInputRefs.current[index + 1]?.focus();
     }
   };
@@ -303,6 +497,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     if (otpTimerSeconds <= 0) {
       setErrorMsg('The verification code has expired. Please click Resend OTP.');
+      addToast('error', 'The verification code has expired. Please click Resend OTP.');
       return;
     }
 
@@ -318,11 +513,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         addToast('success', 'Verification successful.');
         setView('new-password');
       } else {
-        setErrorMsg(res.message || 'Invalid verification code. Please check and try again.');
+        setErrorMsg('Incorrect OTP. Please try again.');
+        addToast('error', 'Incorrect OTP. Please try again.');
       }
     } catch (err: any) {
       setIsLoading(false);
-      setErrorMsg(err.message || 'Error verifying OTP.');
+      setErrorMsg('Incorrect OTP. Please try again.');
+      addToast('error', 'Incorrect OTP. Please try again.');
     }
   };
 
@@ -358,206 +555,152 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setTimeout(() => {
           setView('login');
           setPassword('');
-          setNewPassword('');
-          setConfirmPassword('');
-          setRecoveryEmail('');
-          setResetToken('');
+          setErrorMsg('');
+          setSuccessMsg('');
         }, 1500);
       } else {
-        setErrorMsg(res.message || 'Failed to reset password. Please restart the recovery flow.');
+        setErrorMsg(res.message || 'Failed to reset password.');
       }
     } catch (err: any) {
       setIsLoading(false);
-      setErrorMsg(err.message || 'Error occurred while resetting password.');
+      setErrorMsg(err.message || 'Error resetting password.');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
-      <div className="relative bg-white/95 backdrop-blur-2xl border border-white/60 rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.25)] overflow-hidden text-slate-900 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl border border-slate-200 max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-6 text-slate-900 my-8 animate-fadeIn relative">
 
-        {/* Top Accent Line */}
-        <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${selectedRole === 'Admin' ? 'from-emerald-500 via-teal-400 to-emerald-600' : 'from-blue-600 via-cyan-400 to-indigo-600'
-          }`} />
-
-        {/* Close Button */}
+        {/* Top Close Button (Circular matching design) */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-slate-500 hover:text-slate-900 bg-slate-100/80 hover:bg-slate-200/90 rounded-full border border-slate-200/80 transition-colors shadow-sm cursor-pointer"
+          className="absolute right-4 top-4 w-9 h-9 rounded-full bg-slate-100/90 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center cursor-pointer shadow-xs"
+          title="Close modal"
         >
           <X className="w-4 h-4" />
         </button>
 
-        {/* Header */}
-        <div className="text-center space-y-1.5 mb-5">
-          {view === 'login' && (
-            <>
-              <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
+        {/* Global Success Banner */}
+        {successMsg && (
+          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-start gap-2.5 animate-fadeIn">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+            <span className="leading-relaxed font-medium">{successMsg}</span>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* VIEW 1: STANDARD EMAIL + PASSWORD LOGIN                  */}
+        {/* ======================================================== */}
+        {view === 'login' && (
+          <form onSubmit={handleLoginSubmit} className="space-y-5">
+
+            {/* Header Title & Subtitle Matching Screenshot */}
+            <div className="text-center space-y-1 pt-1">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">
                 Welcome to GT Companion
-              </h2>
-              <p className="text-xs text-slate-600 font-medium">
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
                 Enter your credentials to access your enterprise learning portal.
               </p>
-            </>
-          )}
+            </div>
 
-          {view === 'forgot-email' && (
-            <>
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mx-auto text-blue-600 shadow-inner mb-2">
-                <Mail className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
-                Forgot Password
-              </h2>
-              <p className="text-xs text-slate-600 font-medium max-w-xs mx-auto">
-                Enter your registered email address to receive a verification OTP.
-              </p>
-            </>
-          )}
-
-          {view === 'verify-otp' && (
-            <>
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto text-amber-600 shadow-inner mb-2">
-                <Key className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
-                Verify OTP
-              </h2>
-              <p className="text-xs text-slate-600 font-medium max-w-xs mx-auto">
-                Enter the 4-digit OTP sent to <span className="font-semibold text-slate-900">{recoveryEmail}</span>
-              </p>
-            </>
-          )}
-
-          {view === 'new-password' && (
-            <>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto text-emerald-600 shadow-inner mb-2">
-                <Lock className="w-6 h-6" />
-              </div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
-                Create New Password
-              </h2>
-              <p className="text-xs text-slate-600 font-medium max-w-xs mx-auto">
-                Enter your new secure password to finalize password recovery.
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* Role Selector Tabs (Only in Login View) */}
-        {view === 'login' && (
-          <div className="grid grid-cols-2 gap-2 bg-slate-100/80 p-1.5 rounded-xl border border-slate-200/80 mb-5">
-            <button
-              type="button"
-              onClick={() => { setSelectedRole('GT'); setErrorMsg(''); setEmail(''); setPassword(''); }}
-              className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${selectedRole === 'GT'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
+            {/* Role Switcher Pill Container Matching Screenshot */}
+            <div className="grid grid-cols-2 p-1.5 bg-[#f0f4f9] rounded-2xl border border-slate-200/80 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRole('GT');
+                  setErrorMsg('');
+                }}
+                className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  selectedRole === 'GT'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Associates</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setSelectedRole('Admin'); setErrorMsg(''); setEmail(''); setPassword(''); }}
-              className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${selectedRole === 'Admin'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Associates</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRole('Admin');
+                  setErrorMsg('');
+                }}
+                className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  selectedRole === 'Admin'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Learning & Development</span>
-            </button>
-          </div>
-        )}
+              >
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <span className="text-center text-[11px] sm:text-xs leading-tight">Learning & Development</span>
+              </button>
+            </div>
 
-        {/* Feedback Alerts */}
-        {errorMsg && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 p-2.5 rounded-xl text-xs flex items-center gap-2 mb-3.5 animate-fadeIn">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-2.5 rounded-xl text-xs flex items-center gap-2 mb-3.5 animate-fadeIn">
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        {/* ======================================================== */}
-        {/* VIEW 1: CLEAN LOGIN FORM (NO QUICK LOGIN, NO CHANGE PW) */}
-        {/* ======================================================== */}
-        {view === 'login' && (
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-
-            {/* Email / Username field */}
+            {/* Email Field */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Employee Email / Username
-              </label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Official Email Address *</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
                 <input
                   type="email"
-                  placeholder={selectedRole === 'Admin' ? 'e.g.  employee.name@valuemomentum.com' : 'e.g.  employee.name@valuemomentum.com'}
+                  placeholder="e.g. employee.name@valuemomentum.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isGuestAccess}
-                  className="w-full pl-9 pr-3 py-2.5 bg-white/90 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm disabled:bg-slate-100 disabled:text-slate-500"
-                  required={!isGuestAccess}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
+                  className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${
+                    errorMsg
+                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
+                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
+                  }`}
+                  required
                 />
               </div>
             </div>
 
-            {/* Password field */}
+            {/* Password Field */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Password
-              </label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Password *</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <Lock className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isGuestAccess}
-                  className="w-full pl-9 pr-10 py-2.5 bg-white/90 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm disabled:bg-slate-100 disabled:text-slate-500"
-                  required={!isGuestAccess}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
+                  className={`w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all ${
+                    errorMsg
+                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
+                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
+                  }`}
+                  required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+
+              {/* Google-style inline error message directly under password */}
+              {errorMsg && (
+                <div className="flex items-center gap-1.5 text-rose-600 text-xs font-semibold mt-1.5 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
             </div>
 
-            {selectedRole === 'GT' && (
-              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-600 font-medium">
-                <input
-                  type="checkbox"
-                  checked={hasNoCredentials}
-                  onChange={(e) => setHasNoCredentials(e.target.checked)}
-                  className="rounded border-slate-300 bg-white text-blue-600 focus:ring-0 cursor-pointer"
-                />
-                <span>I don't have credentials</span>
-              </label>
-            )}
-
-            {isGuestAccess && (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] text-blue-700">
-                You can continue into the Associate portal as a guest user.
-              </div>
-            )}
-
-            {/* Remember Me & Forgot Password Link */}
+            {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between text-xs text-slate-600 font-medium pt-0.5">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
@@ -582,7 +725,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </button>
             </div>
 
-            {/* Login Button */}
+            {/* Login Submit Button */}
             <button
               type="submit"
               disabled={isLoginDisabled}
@@ -597,17 +740,242 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>Authenticating...</span>
               ) : (
                 <>
-                  <span>{isGuestAccess ? 'Continue as Guest' : (selectedRole === 'Admin' ? 'Login as L&D Admin' : 'Login as Associate')}</span>
+                  <span>{selectedRole === 'Admin' ? 'Login as L&D Admin' : 'Login as Associate'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
 
+            {/* Mobile OTP Button */}
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setView('mobile-login');
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                  setMobileNumber('');
+                  setMobileOtpDigits(['', '', '', '', '', '']);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                <span>I don't have credentials / Login with Mobile OTP</span>
+              </button>
+            </div>
+
           </form>
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 2: FORGOT PASSWORD — STEP 1: ENTER EMAIL           */}
+        {/* VIEW 2: MOBILE OTP LOGIN — STEP 1: ENTER PHONE NUMBER    */}
+        {/* ======================================================== */}
+        {view === 'mobile-login' && (
+          <form onSubmit={handleRequestMobileOtp} className="space-y-4 animate-fadeIn">
+            <div className="text-center pb-1">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center mx-auto mb-2 shadow-xs">
+                <Phone className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-extrabold text-slate-900">Mobile OTP Login</h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Enter your registered 10-digit mobile number to verify your identity.
+              </p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-700">
+                  Registered Mobile Number (10 Digits) *
+                </label>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {mobileNumber.length}/10
+                </span>
+              </div>
+              <div className={`flex rounded-xl border bg-white overflow-hidden shadow-xs focus-within:ring-2 transition-all ${
+                errorMsg
+                  ? 'border-rose-400 focus-within:border-rose-500 focus-within:ring-rose-500/20'
+                  : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-blue-500/20'
+              }`}>
+                <select
+                  value={mobileCountryCode}
+                  onChange={(e) => setMobileCountryCode(e.target.value)}
+                  className="bg-slate-100/90 px-2.5 py-2.5 text-xs font-bold text-slate-800 border-r border-slate-300 focus:outline-none cursor-pointer"
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  maxLength={10}
+                  // placeholder="e.g. 9894242460"
+                  value={mobileNumber}
+                  onChange={(e) => {
+                    setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10));
+                    if (errorMsg) setErrorMsg('');
+                  }}
+                  className="w-full px-3 py-2.5 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:outline-none"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {/* Inline Google-style error under mobile input */}
+              {errorMsg && (
+                <div className="flex items-center gap-1.5 text-rose-600 text-xs font-semibold mt-1.5 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isMobileLoginDisabled}
+              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isMobileLoginDisabled
+                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+                }`}
+            >
+              {isLoading ? (
+                <span>Checking credentials...</span>
+              ) : (
+                <>
+                  <span>Generate OTP</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setErrorMsg('');
+                setSuccessMsg('');
+                setView('login');
+              }}
+              className="w-full py-2.5 rounded-xl font-semibold text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all text-center cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Official Email Login</span>
+            </button>
+          </form>
+        )}
+
+        {/* ======================================================== */}
+        {/* VIEW 3: MOBILE OTP LOGIN — STEP 2: VERIFY 6-DIGIT OTP    */}
+        {/* ======================================================== */}
+        {view === 'mobile-otp-verify' && (
+          <form onSubmit={handleVerifyMobileOtp} className="space-y-4 animate-fadeIn">
+            <div className="text-center pb-1">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto mb-2 shadow-xs">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-extrabold text-slate-900">Enter 6-Digit OTP</h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Verification code sent to <strong className="font-mono text-slate-800">{mobileCountryCode} {mobileNumber}</strong>
+              </p>
+            </div>
+
+            {/* 6-Box OTP Inputs */}
+            <div>
+              <div className="flex items-center justify-center gap-2" onPaste={handleMobileOtpPaste}>
+                {mobileOtpDigits.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => { mobileOtpInputRefs.current[idx] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => {
+                      handleMobileOtpDigitChange(idx, e.target.value);
+                      if (errorMsg) setErrorMsg('');
+                    }}
+                    onKeyDown={(e) => handleMobileOtpKeyDown(idx, e)}
+                    className={`w-10 h-12 text-center text-lg font-extrabold font-mono bg-white border rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all text-slate-900 ${
+                      errorMsg
+                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
+                        : 'border-slate-300 focus:border-blue-600 focus:ring-blue-500/20'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Inline error for OTP */}
+              {errorMsg && (
+                <div className="flex items-center justify-center gap-1.5 text-rose-600 text-xs font-semibold mt-2 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+            </div>
+
+            {/* OTP Expiry Countdown & Resend Option */}
+            <div className="flex items-center justify-between text-xs px-1 pt-1">
+              <div className="flex items-center gap-1.5 text-slate-600 font-mono">
+                <Timer className="w-3.5 h-3.5 text-amber-600" />
+                <span>
+                  Expires in:{' '}
+                  <strong className={mobileOtpTimerSeconds < 60 ? 'text-rose-600 font-bold' : 'text-slate-800'}>
+                    {formatTimer(mobileOtpTimerSeconds)}
+                  </strong>
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleResendMobileOtp}
+                disabled={!canResendMobileOtp || isResending}
+                className={`font-semibold transition-colors flex items-center gap-1 cursor-pointer ${canResendMobileOtp && !isResending
+                    ? 'text-blue-600 hover:text-blue-800 hover:underline'
+                    : 'text-slate-400 cursor-not-allowed'
+                  }`}
+              >
+                <RefreshCw className={`w-3 h-3 ${isResending ? 'animate-spin' : ''}`} />
+                <span>{isResending ? 'Resending...' : 'Resend OTP'}</span>
+              </button>
+            </div>
+
+            {/* Verify & Login Button */}
+            <button
+              type="submit"
+              disabled={isMobileVerifyDisabled}
+              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isMobileVerifyDisabled
+                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                }`}
+            >
+              {isLoading ? (
+                <span>Verifying Code...</span>
+              ) : (
+                <>
+                  <span>Verify OTP & Login</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+
+            {/* Back Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setErrorMsg('');
+                setSuccessMsg('');
+                setView('mobile-login');
+              }}
+              className="w-full py-2.5 rounded-xl font-semibold text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all text-center cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Change Mobile Number</span>
+            </button>
+          </form>
+        )}
+
+        {/* ======================================================== */}
+        {/* VIEW 4: FORGOT PASSWORD — STEP 1: ENTER EMAIL            */}
         {/* ======================================================== */}
         {view === 'forgot-email' && (
           <form onSubmit={handleSendOtp} className="space-y-4">
@@ -616,17 +984,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 Registered Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
                 <input
                   type="email"
                   placeholder="e.g. employee.name@valuemomentum.com"
                   value={recoveryEmail}
-                  onChange={(e) => setRecoveryEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-white/90 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm"
+                  onChange={(e) => {
+                    setRecoveryEmail(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
+                  className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${
+                    errorMsg
+                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
+                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
+                  }`}
                   required
                   autoFocus
                 />
               </div>
+
+              {/* Inline error for email */}
+              {errorMsg && (
+                <div className="flex items-center gap-1.5 text-rose-600 text-xs font-semibold mt-1.5 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
             </div>
 
             <button
@@ -663,12 +1046,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 3: FORGOT PASSWORD — STEP 2: VERIFY 4-DIGIT OTP     */}
+        {/* VIEW 5: FORGOT PASSWORD — STEP 2: VERIFY 4-DIGIT OTP     */}
         {/* ======================================================== */}
         {view === 'verify-otp' && (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
-
-            {/* 6-Digit OTP Inputs */}
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-2 text-center">
                 Enter 4-Digit Verification Code
@@ -682,12 +1063,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     inputMode="numeric"
                     maxLength={1}
                     value={digit}
-                    onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                    onChange={(e) => {
+                      handleOtpDigitChange(idx, e.target.value);
+                      if (errorMsg) setErrorMsg('');
+                    }}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    className="w-11 h-12 text-center text-lg font-bold font-mono bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all"
+                    className={`w-11 h-12 text-center text-lg font-bold font-mono bg-white border rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all ${
+                      errorMsg
+                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
+                        : 'border-slate-300 focus:border-blue-600 focus:ring-blue-500/20'
+                    }`}
                   />
                 ))}
               </div>
+
+              {/* Inline error for 4-digit OTP */}
+              {errorMsg && (
+                <div className="flex items-center justify-center gap-1.5 text-rose-600 text-xs font-semibold mt-2 animate-fadeIn">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
             </div>
 
             {/* OTP Expiry Countdown & Resend Option */}
@@ -743,17 +1139,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Change Email</span>
             </button>
-
           </form>
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 4: FORGOT PASSWORD — STEP 3: CREATE NEW PASSWORD     */}
+        {/* VIEW 6: FORGOT PASSWORD — STEP 3: CREATE NEW PASSWORD    */}
         {/* ======================================================== */}
         {view === 'new-password' && (
           <form onSubmit={handleResetPassword} className="space-y-3.5">
-
-            {/* New Password */}
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1">New Password</label>
               <div className="relative">
@@ -763,7 +1156,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   placeholder="••••••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-9 pr-10 py-2.5 bg-white/90 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm"
+                  className="w-full pl-9 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm"
                   required
                   autoFocus
                 />
@@ -771,7 +1164,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="button"
                   onClick={() => setShowNewPassword((prev) => !prev)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
                 >
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -779,7 +1171,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             {/* Password Requirements Checklist */}
-            <div className="p-3 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-2 animate-fadeIn">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 animate-fadeIn">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-700 font-mono uppercase tracking-wider">
                   Password Requirements
@@ -793,41 +1185,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 text-[11px]">
-                <div className={`flex items-center gap-1.5 transition-colors ${hasMinLength ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all ${hasMinLength ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-400'
-                    }`}>
+                <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${hasMinLength ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
                     {hasMinLength ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : '•'}
                   </div>
                   <span>At least 8 characters</span>
                 </div>
 
-                <div className={`flex items-center gap-1.5 transition-colors ${hasUpperCase ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all ${hasUpperCase ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-400'
-                    }`}>
+                <div className={`flex items-center gap-1.5 ${hasUpperCase ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${hasUpperCase ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
                     {hasUpperCase ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : '•'}
                   </div>
                   <span>One uppercase letter</span>
                 </div>
 
-                <div className={`flex items-center gap-1.5 transition-colors ${hasLowerCase ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all ${hasLowerCase ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-400'
-                    }`}>
+                <div className={`flex items-center gap-1.5 ${hasLowerCase ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${hasLowerCase ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
                     {hasLowerCase ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : '•'}
                   </div>
                   <span>One lowercase letter</span>
                 </div>
 
-                <div className={`flex items-center gap-1.5 transition-colors ${hasNumber ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all ${hasNumber ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-400'
-                    }`}>
+                <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${hasNumber ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
                     {hasNumber ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : '•'}
                   </div>
                   <span>One number</span>
                 </div>
 
-                <div className={`flex items-center gap-1.5 transition-colors col-span-1 sm:col-span-2 ${hasSpecialChar ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all ${hasSpecialChar ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-200 text-slate-400'
-                    }`}>
+                <div className={`flex items-center gap-1.5 col-span-1 sm:col-span-2 ${hasSpecialChar ? 'text-emerald-700 font-semibold' : 'text-slate-500'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${hasSpecialChar ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
                     {hasSpecialChar ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : '•'}
                   </div>
                   <span>One special character (@, #, $, %, &, *, !)</span>
@@ -845,7 +1232,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   placeholder="••••••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full pl-9 pr-10 py-2.5 bg-white/90 border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm ${isPasswordMismatch
+                  className={`w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm ${isPasswordMismatch
                       ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20'
                       : isPasswordMatch
                         ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/20'
@@ -857,24 +1244,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
 
-              {/* Match Indicator */}
               {isConfirmFilled && (
-                <div className={`text-[11px] font-medium flex items-center gap-1.5 mt-1.5 animate-fadeIn ${isPasswordMatch ? 'text-emerald-600' : 'text-rose-600'
-                  }`}>
+                <div className={`text-[11px] font-medium flex items-center gap-1.5 mt-1.5 ${isPasswordMatch ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {isPasswordMatch ? (
                     <>
-                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                       <span>Passwords match</span>
                     </>
                   ) : (
                     <>
-                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-rose-600" />
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
                       <span>Passwords do not match</span>
                     </>
                   )}
@@ -882,7 +1266,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
             </div>
 
-            {/* Submit Reset Button */}
             <button
               type="submit"
               disabled={isResetDisabled}
@@ -913,7 +1296,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Cancel & Back to Login</span>
             </button>
-
           </form>
         )}
 

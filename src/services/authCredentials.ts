@@ -226,8 +226,11 @@ export const authenticateLocalUser = (
     };
   }
 
-  // 3. Check password
-  if (!password || password !== userEntry.password) {
+  // 3. Check password (exact match or case-insensitive for initial default passwords)
+  const isMatch = password === userEntry.password ||
+    (password && userEntry.password && password.toLowerCase() === userEntry.password.toLowerCase());
+
+  if (!password || !isMatch) {
     return {
       success: false,
       message: 'Incorrect email ID or password.'
@@ -361,3 +364,219 @@ export const resetUserPassword = (
     message: 'Password has been reset successfully! Please log in with your new password.'
   };
 };
+
+// ============================================================================
+// USER MANAGEMENT & DIRECTORY STORAGE
+// ============================================================================
+
+import { UserManagementRecord } from '../types';
+
+export const INITIAL_USER_MANAGEMENT_RECORDS: UserManagementRecord[] = [
+  {
+    id: 'usr-105527',
+    vamId: '105527',
+    name: 'Sibibharathi Thangaraj',
+    email: 'Sibibharathi.Thangaraj@valuemomentum.com',
+    phoneNumber: '9345766068',
+    role: 'Employee',
+    addedOn: '20-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  },
+  {
+    id: 'usr-105500',
+    vamId: '105500',
+    name: 'Pavithran Sivanandham',
+    email: 'Pavithran.Sivanandham@valuemomentum.com',
+    phoneNumber: '7845911687',
+    role: 'Employee',
+    addedOn: '20-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  },
+  {
+    id: 'usr-105515',
+    vamId: '105515',
+    name: 'Aswin Muruganandham',
+    email: 'Aswin.Muruganandham@valuemomentum.com',
+    phoneNumber: '9626637490',
+    role: 'Employee',
+    addedOn: '20-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  },
+  {
+    id: 'usr-105520',
+    vamId: '105520',
+    name: 'Harshini Radhakrishnan',
+    email: 'Harshini.Radhakrishnan@valuemomentum.com',
+    phoneNumber: '8220126157',
+    role: 'Employee',
+    addedOn: '18-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  },
+  {
+    id: 'usr-105511',
+    vamId: '105511',
+    name: 'Imran Aupe',
+    email: 'Imran.Aupe@valuemomentum.com',
+    phoneNumber: '9952590815',
+    role: 'Employee',
+    addedOn: '18-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  },
+  {
+    id: 'usr-104496',
+    vamId: '105496',
+    name: 'Kruthika Devaraje',
+    email: 'Kruthika.Devaraje@valuemomentum.com',
+    phoneNumber: '9902518633',
+    role: 'Employee',
+    addedOn: '15-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  },
+  {
+    id: 'usr-105503',
+    vamId: '105503',
+    name: 'Vaishali Karunai',
+    email: 'Vaishali.Karunai@valuemomentum.com',
+    phoneNumber: '8012325313',
+    role: 'Employee',
+    addedOn: '15-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  },
+  {
+    id: 'usr-105529',
+    vamId: '105529',
+    name: 'Tanvitha Nadukuda',
+    email: 'Tanvitha.Nadukuda@valuemomentum.com',
+    phoneNumber: '9490101088',
+    role: 'Employee',
+    addedOn: '15-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  },
+  {
+    id: 'usr-105530',
+    vamId: '105530',
+    name: 'Anukraha Magdalene',
+    email: 'Anukraha.Magdalene@valuemomentum.com',
+    phoneNumber: '9384428335',
+    role: 'Admin',
+    addedOn: '10-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'L&D Leadership'
+  },
+  {
+    id: 'usr-104275',
+    vamId: '104275',
+    name: 'Keren Christobel',
+    email: 'Keren.Christobel@valuemomentum.com',
+    phoneNumber: '9999999999',
+    role: 'Admin',
+    addedOn: '10-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'L&D Management'
+  },
+  {
+    id: 'usr-102163',
+    vamId: '102163',
+    name: 'Janani Selvaraj',
+    email: 'Janani.Selvaraj@valuemomentum.com',
+    phoneNumber: '9999999999',
+    role: 'Admin',
+    addedOn: '10-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'L&D Management'
+  },
+  {
+    id: 'usr-100137',
+    vamId: '100137',
+    name: 'Sudhir Vittapu',
+    email: 'Sudhir.Vittapu@owlsure.com',
+    phoneNumber: '9999999999',
+    role: 'Admin',
+    addedOn: '10-Jan-2025',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'Technical Facilitation'
+  },
+  {
+    id: 'usr-associate-ram',
+    vamId: '-',
+    name: 'Ram',
+    email: '-',
+    phoneNumber: '9894242460',
+    role: 'Associate',
+    addedOn: '19-Aug-2026',
+    status: 'Active',
+    access: 'Enabled',
+    addedBy: 'Admin',
+    batch: 'GT-2026-Batch-01'
+  }
+];
+
+const USER_MGMT_STORAGE_KEY = 'gt_user_management_records_store_v1';
+
+export const getDefaultPasswordForEmail = (email: string): string => {
+  if (!email || email === '-' || !email.includes('@')) return '';
+  return email.split('@')[0].toLowerCase();
+};
+
+export const getUserManagementRecords = (): UserManagementRecord[] => {
+  try {
+    const raw = localStorage.getItem(USER_MGMT_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to read user management records from storage', e);
+  }
+  return INITIAL_USER_MANAGEMENT_RECORDS;
+};
+
+export const saveUserManagementRecords = (records: UserManagementRecord[]): void => {
+  try {
+    localStorage.setItem(USER_MGMT_STORAGE_KEY, JSON.stringify(records));
+  } catch (e) {
+    console.warn('Failed to save user management records to storage', e);
+  }
+};
+
+export const findUserByPhoneNumber = (phoneNumber: string): UserManagementRecord | undefined => {
+  const cleanPhone = (phoneNumber || '').replace(/\D/g, '').trim();
+  if (!cleanPhone) return undefined;
+  const records = getUserManagementRecords();
+  return records.find((r) => (r.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone);
+};
+

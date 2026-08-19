@@ -30,12 +30,13 @@ import { RoadmapBuilder } from './components/Admin/RoadmapBuilder';
 import { MaterialUploader } from './components/Admin/MaterialUploader';
 import { QuizBuilder } from './components/Admin/QuizBuilder';
 import { SessionTracker } from './components/Admin/SessionTracker';
+import { UserManagement } from './components/Admin/UserManagement';
 import { AdminAuthGate } from './components/Admin/AdminAuthGate';
 import { AIAssistant } from './components/AIAssistant';
 import { InspectModeOverlay } from './components/InspectModeOverlay';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { UserGuideModal } from './components/UserGuideModal';
-import { X, LayoutDashboard, BookOpen, Terminal, GraduationCap, Sparkles, Table } from 'lucide-react';
+import { X, LayoutDashboard, BookOpen, Terminal, GraduationCap, Sparkles, Table, Users } from 'lucide-react';
 import { useToast } from './context/ToastContext';
 
 // Helpers for URL Hash Sync & Route Persistence
@@ -593,6 +594,17 @@ export function App() {
                     <span>Session Tracker</span>
                   </button>
                   <button
+                    onClick={() => setAdminViewMode('user-management')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                      adminViewMode === 'user-management'
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                        : 'text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-700/70'
+                    }`}
+                  >
+                    <Users className={`w-3.5 h-3.5 ${adminViewMode === 'user-management' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                    <span>User Management</span>
+                  </button>
+                  <button
                     onClick={() => setAdminViewMode('sessions')}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
                       adminViewMode === 'sessions'
@@ -638,6 +650,8 @@ export function App() {
                       setSelectedSessionId(id);
                     }}
                   />
+                ) : adminViewMode === 'user-management' ? (
+                  <UserManagement />
                 ) : adminViewMode === 'sessions' ? (
                   <SessionManager
                     sessions={sessions}
@@ -686,7 +700,9 @@ export function App() {
                     }}
                     onBack={() => setAdminViewMode('sessions')}
                   />
-                ) : null}
+                ) : (
+                  <UserManagement />
+                )}
 
               </div>
             )}
