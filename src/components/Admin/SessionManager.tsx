@@ -184,7 +184,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       id: '',
       name: '',
       description: '',
-      category: '.NET with C#',
+      category: '',
       trainerName: '',
       durationHours: 0,
       difficulty: 'Intermediate',
