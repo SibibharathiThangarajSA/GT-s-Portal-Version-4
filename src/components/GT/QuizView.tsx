@@ -124,17 +124,19 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
     try {
       const res = await submitQuizApi(quiz.id, answers);
       
-      const finalScorePercent = typeof res?.scorePercent === 'number'
+      const serverScore = typeof res?.scorePercent === 'number' && !isNaN(res.scorePercent)
         ? res.scorePercent
-        : typeof res?.percentage === 'number'
-        ? res.percentage
-        : verifiedPercent;
+        : (typeof res?.percentage === 'number' && !isNaN(res.percentage) ? res.percentage : undefined);
 
-      const finalPassed = typeof res?.passed === 'boolean'
-        ? res.passed
-        : typeof res?.isPassed === 'boolean'
-        ? res.isPassed
-        : finalScorePercent >= passingPercent;
+      const serverCorrect = typeof res?.correctCount === 'number'
+        ? res.correctCount
+        : (typeof res?.correctAnswers === 'number' ? res.correctAnswers : undefined);
+
+      const useClientEvaluation = (serverCorrect === 0 && verifiedCorrect > 0) || (serverScore === 0 && verifiedPercent > 0) || serverScore === undefined || serverCorrect === undefined;
+
+      const finalScorePercent = useClientEvaluation ? verifiedPercent : serverScore;
+      const finalCorrectCount = useClientEvaluation ? verifiedCorrect : serverCorrect;
+      const finalPassed = useClientEvaluation ? (verifiedPercent >= passingPercent) : (typeof res?.passed === 'boolean' ? res.passed : (finalScorePercent >= passingPercent));
 
       const enrichedResult = {
         ...(typeof res === 'object' && res !== null ? res : {}),
@@ -142,8 +144,9 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
         percentage: finalScorePercent,
         passed: finalPassed,
         isPassed: finalPassed,
-        totalQuestions: typeof res?.totalQuestions === 'number' ? res.totalQuestions : verifiedTotal,
-        correctCount: typeof res?.correctCount === 'number' ? res.correctCount : (typeof res?.correctAnswers === 'number' ? res.correctAnswers : verifiedCorrect),
+        totalQuestions: typeof res?.totalQuestions === 'number' && res.totalQuestions > 0 ? res.totalQuestions : verifiedTotal,
+        correctCount: finalCorrectCount,
+        correctAnswers: finalCorrectCount,
       };
 
       setResult(enrichedResult);
@@ -208,27 +211,37 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
     const passingThreshold = Number(quiz.passingScorePercent) || 70;
 
     const rawScore = result.scorePercent ?? result.percentage ?? (result as any).score;
-    const scorePercent = typeof rawScore === 'number' && !isNaN(rawScore)
+    const serverScore = typeof rawScore === 'number' && !isNaN(rawScore)
       ? rawScore
-      : (typeof rawScore === 'string' && !isNaN(Number(rawScore)) ? Number(rawScore) : localPercent);
+      : (typeof rawScore === 'string' && !isNaN(Number(rawScore)) ? Number(rawScore) : undefined);
+
+    const rawCorrect = typeof result.correctCount === 'number'
+      ? result.correctCount
+      : typeof (result as any).correctAnswers === 'number'
+      ? (result as any).correctAnswers
+      : undefined;
+
+    const overrideWithClient = (rawCorrect === 0 && localCorrectCount > 0) || (serverScore === 0 && localPercent > 0) || serverScore === undefined || rawCorrect === undefined;
 
     const totalQuestions = typeof result.totalQuestions === 'number' && result.totalQuestions > 0
       ? result.totalQuestions
       : calculatedTotal;
 
-    const correctCount = typeof result.correctCount === 'number'
-      ? result.correctCount
-      : typeof (result as any).correctAnswers === 'number'
-      ? (result as any).correctAnswers
-      : (totalQuestions > 0 && typeof scorePercent === 'number' && !isNaN(scorePercent)
-          ? Math.round((scorePercent / 100) * totalQuestions)
-          : localCorrectCount);
+    const correctCount = overrideWithClient
+      ? localCorrectCount
+      : rawCorrect;
 
-    const passed = typeof result.passed === 'boolean'
-      ? result.passed
-      : typeof result.isPassed === 'boolean'
-      ? result.isPassed
-      : scorePercent >= passingThreshold;
+    const scorePercent = overrideWithClient
+      ? localPercent
+      : serverScore;
+
+    const passed = overrideWithClient
+      ? (scorePercent >= passingThreshold)
+      : (typeof result.passed === 'boolean'
+          ? result.passed
+          : (typeof result.isPassed === 'boolean'
+              ? result.isPassed
+              : scorePercent >= passingThreshold));
 
     if (showReviewPage) {
       return (
