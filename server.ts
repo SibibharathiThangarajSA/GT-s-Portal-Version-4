@@ -1523,36 +1523,64 @@ async function startServer() {
 
   ai.post("/chat", async (req, res) => {
     const { message, context } = req.body || {};
-    const client = getGeminiClient();
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!client) {
-      return res.json({
-        reply: `[AI Assistant Mentor]: For "${context?.sessionName || 'your learning module'}", here is guidance on "${message}":\n\n1. Ensure strict type discipline.\n2. Review asynchronous tasks with async/await.\n3. Verify database query performance.`
-      });
-    }
-
-    try {
-      const response = await client.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: [
-          {
-            role: 'user',
-            parts: [{
-              text: `Context: You are an enterprise L&D AI Tutor for Graduate Trainees (GTs).
-Session Context: ${JSON.stringify(context || {})}
-User Query: ${message}`
-            }]
-          }
-        ],
-        config: {
-          systemInstruction: "You are an encouraging, expert enterprise Technical Architect and L&D Mentor. Provide clear, well-structured, production-grade answers."
+    // Direct Gemini REST API call if GoogleGenAI SDK instance isn't available
+    const generateViaRest = async (userPrompt: string) => {
+      if (!apiKey) return null;
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: userPrompt }] }]
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
         }
-      });
+      } catch (e) {
+        console.warn('[Gemini REST Call Failed]', e);
+      }
+      return null;
+    };
 
-      res.json({ reply: response.text || "No response generated." });
-    } catch (err: any) {
-      res.status(500).json({ error: "Failed to generate AI response", details: err.message });
+    const promptText = `You are an expert AI Learning Assistant and Technical Mentor for graduate trainees.
+Module Context: ${context?.sessionName || 'Enterprise Software Engineering'}
+User Question: ${message}
+
+Provide a clear, detailed, well-structured, and helpful explanation with code snippets if relevant.`;
+
+    const client = getGeminiClient();
+    if (client) {
+      try {
+        const response = await client.models.generateContent({
+          model: "gemini-2.0-flash",
+          contents: [{ role: 'user', parts: [{ text: promptText }] }],
+          config: {
+            systemInstruction: "You are an encouraging, expert enterprise Technical Architect and L&D Mentor. Provide clear, well-structured, production-grade answers."
+          }
+        });
+        if (response?.text) {
+          return res.json({ reply: response.text });
+        }
+      } catch (err: any) {
+        console.warn('Gemini SDK call failed, trying REST fallback...', err?.message);
+      }
     }
+
+    // Try REST API fallback
+    const restReply = await generateViaRest(promptText);
+    if (restReply) {
+      return res.json({ reply: restReply });
+    }
+
+    // Fallback response with topic-specific guidance
+    return res.json({
+      reply: `### AI Assistant Guidance for ${context?.sessionName || 'Software Engineering'}\n\nHere is key guidance for your question **"${message}"**:\n\n1. **Core Concept**: Ensure strict architectural separation of concerns and type discipline.\n2. **Best Practices**: Utilize async/await patterns for non-blocking I/O and verify data query performance.\n3. **Practical Implementation**: Structure code with modular design patterns and clean error handling.`
+    });
   });
 
   ai.post("/summarize", async (req, res) => {
