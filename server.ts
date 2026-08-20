@@ -1590,7 +1590,7 @@ async function startServer() {
 Module Context: ${context?.sessionName || 'Enterprise Software Engineering'}
 User Question: ${message}
 
-Provide a clear, detailed, well-structured, production-grade explanation with code snippets, architecture diagrams, or step-by-step guides where relevant. Format nicely in markdown.`;
+CRITICAL DIRECTIVE: Always observe the user's specific formatting, brevity, or length requests strictly. If the user asks for a 1-line answer, single sentence, bullet points, or summary, answer in that EXACT length. Only provide detailed multi-section explanations if no length limit is requested. Format nicely using markdown.`;
 
     const client = getGeminiClient(apiKey);
     if (client) {
@@ -1600,7 +1600,7 @@ Provide a clear, detailed, well-structured, production-grade explanation with co
             model: modelName,
             contents: [{ role: 'user', parts: [{ text: promptText }] }],
             config: {
-              systemInstruction: "You are an encouraging, expert enterprise Technical Architect and L&D Mentor. Provide clear, well-structured, production-grade answers."
+              systemInstruction: "You are an encouraging, expert enterprise Technical Architect and L&D Mentor. Always observe the user's length and line-count instructions strictly."
             }
           });
           if (response?.text) {
