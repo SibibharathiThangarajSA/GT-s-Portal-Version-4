@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Quiz, QuizQuestion } from '../../types';
 import { submitQuizApi } from '../../services/api';
-import { QuizReview } from './QuizReview';
+import { QuizReview, isUserAnswerCorrect } from './QuizReview';
 import { HelpCircle, CheckCircle2, XCircle, Award, RefreshCw, ChevronRight, ArrowLeft, Zap, Sparkles } from 'lucide-react';
 
 interface QuizViewProps {
@@ -114,14 +114,57 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
   const handleSubmit = async () => {
     if (submitted || submitting) return;
     setSubmitting(true);
+
+    const questionsList = Array.isArray(quiz.questions) ? quiz.questions : [];
+    const verifiedTotal = questionsList.length;
+    const verifiedCorrect = questionsList.filter(q => isUserAnswerCorrect(q, answers[q.id])).length;
+    const verifiedPercent = verifiedTotal > 0 ? Math.round((verifiedCorrect / verifiedTotal) * 100) : 0;
+    const passingPercent = Number(quiz.passingScorePercent) || 70;
+
     try {
       const res = await submitQuizApi(quiz.id, answers);
-      setResult(res);
+      
+      const finalScorePercent = typeof res?.scorePercent === 'number'
+        ? res.scorePercent
+        : typeof res?.percentage === 'number'
+        ? res.percentage
+        : verifiedPercent;
+
+      const finalPassed = typeof res?.passed === 'boolean'
+        ? res.passed
+        : typeof res?.isPassed === 'boolean'
+        ? res.isPassed
+        : finalScorePercent >= passingPercent;
+
+      const enrichedResult = {
+        ...(typeof res === 'object' && res !== null ? res : {}),
+        scorePercent: finalScorePercent,
+        percentage: finalScorePercent,
+        passed: finalPassed,
+        isPassed: finalPassed,
+        totalQuestions: typeof res?.totalQuestions === 'number' ? res.totalQuestions : verifiedTotal,
+        correctCount: typeof res?.correctCount === 'number' ? res.correctCount : (typeof res?.correctAnswers === 'number' ? res.correctAnswers : verifiedCorrect),
+      };
+
+      setResult(enrichedResult);
       setSubmitted(true);
-      sessionStorage.setItem(storageKey, JSON.stringify({ answers, result: res, quizId: quiz.id, showReviewPage: false }));
-      if (onQuizCompleted) onQuizCompleted(res.scorePercent);
+      sessionStorage.setItem(storageKey, JSON.stringify({ answers, result: enrichedResult, quizId: quiz.id, showReviewPage: false }));
+      if (onQuizCompleted) onQuizCompleted(finalScorePercent);
     } catch (err) {
-      console.error(err);
+      console.error('Quiz submission API call error, using local evaluation:', err);
+      const localResult = {
+        scorePercent: verifiedPercent,
+        percentage: verifiedPercent,
+        passed: verifiedPercent >= passingPercent,
+        isPassed: verifiedPercent >= passingPercent,
+        totalQuestions: verifiedTotal,
+        correctCount: verifiedCorrect,
+        correctAnswers: verifiedCorrect
+      };
+      setResult(localResult);
+      setSubmitted(true);
+      sessionStorage.setItem(storageKey, JSON.stringify({ answers, result: localResult, quizId: quiz.id, showReviewPage: false }));
+      if (onQuizCompleted) onQuizCompleted(verifiedPercent);
     } finally {
       setSubmitting(false);
     }
@@ -158,6 +201,35 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
   };
 
   if (submitted && result) {
+    const questionsList = Array.isArray(quiz.questions) ? quiz.questions : [];
+    const calculatedTotal = questionsList.length;
+    const localCorrectCount = questionsList.filter(q => isUserAnswerCorrect(q, answers[q.id])).length;
+    const localPercent = calculatedTotal > 0 ? Math.round((localCorrectCount / calculatedTotal) * 100) : 0;
+    const passingThreshold = Number(quiz.passingScorePercent) || 70;
+
+    const rawScore = result.scorePercent ?? result.percentage ?? (result as any).score;
+    const scorePercent = typeof rawScore === 'number' && !isNaN(rawScore)
+      ? rawScore
+      : (typeof rawScore === 'string' && !isNaN(Number(rawScore)) ? Number(rawScore) : localPercent);
+
+    const totalQuestions = typeof result.totalQuestions === 'number' && result.totalQuestions > 0
+      ? result.totalQuestions
+      : calculatedTotal;
+
+    const correctCount = typeof result.correctCount === 'number'
+      ? result.correctCount
+      : typeof (result as any).correctAnswers === 'number'
+      ? (result as any).correctAnswers
+      : (totalQuestions > 0 && typeof scorePercent === 'number' && !isNaN(scorePercent)
+          ? Math.round((scorePercent / 100) * totalQuestions)
+          : localCorrectCount);
+
+    const passed = typeof result.passed === 'boolean'
+      ? result.passed
+      : typeof result.isPassed === 'boolean'
+      ? result.isPassed
+      : scorePercent >= passingThreshold;
+
     if (showReviewPage) {
       return (
         <QuizReviewErrorBoundary onReset={() => setShowReviewPage(false)} onGoToCourse={onBack}>
@@ -167,17 +239,12 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
             onBack={() => setShowReviewPage(false)}
             onRetry={handleRetryQuiz}
             onGoToCourse={onBack}
-            scorePercent={result.scorePercent}
-            passed={result.passed}
+            scorePercent={scorePercent}
+            passed={passed}
           />
         </QuizReviewErrorBoundary>
       );
     }
-
-    const totalQuestions = result.totalQuestions ?? (Array.isArray(quiz.questions) ? quiz.questions.length : 0);
-    const correctCount = result.correctCount ?? (result as any).correctAnswers ?? (
-      totalQuestions > 0 ? Math.round(((Number(result.scorePercent) || 0) / 100) * totalQuestions) : 0
-    );
 
     return (
       <div className="max-w-3xl mx-auto space-y-8 animate-fadeIn">
@@ -191,16 +258,16 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
         {/* Quiz Score Summary Card */}
         <div className="bg-white/90 backdrop-blur-xl border border-slate-200 rounded-3xl p-8 text-center space-y-6 shadow-xl relative overflow-hidden">
           <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full border-4 text-2xl font-black shadow-inner ${
-            result.passed
+            passed
               ? 'bg-emerald-50 border-emerald-400 text-emerald-600'
               : 'bg-rose-50 border-rose-400 text-rose-600'
           }`}>
-            {result.scorePercent}%
+            {scorePercent}%
           </div>
 
           <div>
             <h2 className="text-2xl font-extrabold text-slate-900">
-              {result.passed ? '🎉 Quiz Passed Successfully!' : 'Needs Revision — Keep Practicing'}
+              {passed ? '🎉 Quiz Passed Successfully!' : 'Needs Revision — Keep Practicing'}
             </h2>
             <p className="text-slate-500 text-xs mt-1 font-medium">
               You answered <span className="font-bold text-slate-800">{correctCount}</span> out of <span className="font-bold text-slate-800">{totalQuestions}</span> questions correctly.
@@ -214,14 +281,14 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
             </div>
             <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200 shadow-xs">
               <p className="text-slate-500 font-mono uppercase tracking-widest text-[10px] font-bold">Percentage</p>
-              <p className="mt-2 text-2xl font-black text-blue-600">{result.scorePercent}%</p>
+              <p className="mt-2 text-2xl font-black text-blue-600">{scorePercent}%</p>
             </div>
             <div className={`p-5 rounded-2xl border shadow-xs ${
-              result.passed ? 'border-emerald-200 bg-emerald-50/70' : 'border-rose-200 bg-rose-50/70'
+              passed ? 'border-emerald-200 bg-emerald-50/70' : 'border-rose-200 bg-rose-50/70'
             }`}>
               <p className="text-slate-500 font-mono uppercase tracking-widest text-[10px] font-bold">Status</p>
-              <p className={`mt-2 text-2xl font-black ${result.passed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {result.passed ? 'Passed' : 'Failed'}
+              <p className={`mt-2 text-2xl font-black ${passed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {passed ? 'Passed' : 'Failed'}
               </p>
             </div>
           </div>

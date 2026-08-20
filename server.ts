@@ -996,6 +996,70 @@ async function startServer() {
     res.json({ message: "Quiz deleted successfully" });
   });
 
+  // Helper functions for robust quiz answer grading
+  const normalizeQuizAnswerArray = (answer: any): string[] => {
+    if (Array.isArray(answer)) return answer.map(String).filter(Boolean);
+    if (answer === undefined || answer === null || answer === '') return [];
+    if (typeof answer === 'string') {
+      try {
+        const parsed = JSON.parse(answer);
+        if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+        if (typeof parsed === 'string' && parsed.trim() !== '') return [parsed.trim()];
+      } catch {
+        // not json, use raw
+      }
+      return [answer.trim()];
+    }
+    return [String(answer).trim()];
+  };
+
+  const resolveQuizCorrectAnswerText = (question: any): string[] => {
+    const raw = question.correctAnswer ?? question.correctAnswerJson ?? question.CorrectAnswerJson ?? question.CorrectAnswer;
+    const rawList = normalizeQuizAnswerArray(raw);
+    const options = question.options || question.Options || [];
+
+    if (rawList.length === 0) {
+      return [];
+    }
+
+    return rawList.map((item: string) => {
+      const trimmed = item.trim();
+      const num = parseInt(trimmed, 10);
+      if (!isNaN(num) && num >= 0 && num < options.length && String(num) === trimmed) {
+        return options[num];
+      }
+      if (trimmed.length === 1 && /^[a-dA-D]$/.test(trimmed)) {
+        const letterIdx = trimmed.toUpperCase().charCodeAt(0) - 65;
+        if (letterIdx >= 0 && letterIdx < options.length) {
+          return options[letterIdx];
+        }
+      }
+      return trimmed;
+    });
+  };
+
+  const isServerAnswerCorrect = (question: any, userAnswer: any): boolean => {
+    const userList = normalizeQuizAnswerArray(userAnswer).map(a => a.trim().toLowerCase()).sort();
+    const correctResolved = resolveQuizCorrectAnswerText(question).map(a => a.trim().toLowerCase()).sort();
+    const rawCorrect = normalizeQuizAnswerArray(question.correctAnswer ?? question.correctAnswerJson ?? question.CorrectAnswerJson ?? question.CorrectAnswer).map(a => a.trim().toLowerCase()).sort();
+
+    if (userList.length === 0) return false;
+
+    if (userList.join('|') === correctResolved.join('|')) return true;
+    if (userList.join('|') === rawCorrect.join('|')) return true;
+
+    const options = (question.options || question.Options || []).map((o: string) => o.trim().toLowerCase());
+    const userResolvedFromOptions = userList.map(u => {
+      const idx = parseInt(u, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < options.length && String(idx) === u) {
+        return options[idx];
+      }
+      return u;
+    }).sort();
+
+    return userResolvedFromOptions.join('|') === correctResolved.join('|');
+  };
+
   // Submit and grade quiz
   app.post("/api/quizzes/:id/submit", (req, res) => {
     const { userAnswers, userId } = req.body || {};
@@ -1021,6 +1085,7 @@ async function startServer() {
     const questions = foundQuiz.questions || [];
     let totalScore = 0;
     let maxScore = 0;
+    let correctCount = 0;
     const questionResults: any[] = [];
 
     questions.forEach((q: any, idx: number) => {
@@ -1028,29 +1093,26 @@ async function startServer() {
       const points = Number(q.points || 10);
       maxScore += points;
       const userAnswer = userAnswers ? userAnswers[qId] : undefined;
-      const correctAnswer = q.correctAnswer;
 
-      let isCorrect = false;
-      if (userAnswer !== undefined && correctAnswer !== undefined) {
-        if (Array.isArray(correctAnswer)) {
-          const userArr = Array.isArray(userAnswer) ? userAnswer.map(String) : [String(userAnswer)];
-          isCorrect = correctAnswer.length === userArr.length && correctAnswer.every((val: any) => userArr.includes(String(val)));
-        } else {
-          isCorrect = String(userAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
-        }
+      const isCorrect = isServerAnswerCorrect(q, userAnswer);
+
+      if (isCorrect) {
+        totalScore += points;
+        correctCount++;
       }
 
-      if (isCorrect) totalScore += points;
       questionResults.push({
         questionId: qId,
         isCorrect,
         userAnswer,
-        correctAnswer,
+        correctAnswer: q.correctAnswer ?? q.correctAnswerJson,
         pointsAwarded: isCorrect ? points : 0
       });
     });
 
-    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 100;
+    const totalQuestions = questions.length;
+    const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 100;
+    const scorePercent = percentage;
     const isPassed = percentage >= (Number(foundQuiz.passingScorePercent) || 70);
 
     // Record user progress
@@ -1076,10 +1138,15 @@ async function startServer() {
     return res.json({
       success: true,
       quizId: foundQuiz.id,
+      scorePercent,
+      percentage,
+      passed: isPassed,
+      isPassed,
+      totalQuestions,
+      correctCount,
+      correctAnswers: correctCount,
       totalScore,
       maxScore,
-      percentage,
-      isPassed,
       questionResults
     });
   });
