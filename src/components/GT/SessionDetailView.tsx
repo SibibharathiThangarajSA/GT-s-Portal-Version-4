@@ -375,7 +375,6 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const selectedTopic = (session?.topics || []).find(t => t.id === selectedTopicId) || (session?.topics || [])[0];
   const activeQuiz = quizzesList[0] || (session?.quizzes || [])[0];
   const assignmentsCount = assignmentsList.length;
-  const quizzesCount = quizzesList.length;
 
   const handleSummarize = async (matId: string, title: string, desc: string) => {
     setSummarizingId(matId);
@@ -716,7 +715,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
             }`}
         >
           <HelpCircle className={`w-4 h-4 ${activeTab === 'quiz' ? 'text-white' : 'text-blue-600'}`} />
-          <span>Quiz ({quizzesCount})</span>
+          <span>Quiz</span>
         </button>
 
         <div className="h-6 w-px bg-slate-300 my-auto mx-1" />
@@ -1054,7 +1053,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
               <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
               <span>Official Session Assessment</span>
             </div>
-            <h3 className="text-lg font-extrabold text-slate-900">Session Quiz ({quizzesCount})</h3>
+            <h3 className="text-lg font-extrabold text-slate-900">Session Quiz</h3>
             <p className="text-slate-600 text-xs font-medium">
               Complete the session assessment to validate your understanding and earn XP points.
             </p>
