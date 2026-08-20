@@ -19,8 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileSpreadsheet,
   Key
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { UserManagementRecord } from '../../types';
 import {
   fetchUserManagementRecordsApi,
@@ -448,35 +450,48 @@ export const UserManagement: React.FC = () => {
     addToast('info', `Removed ${userToRemove.name} from roster.`);
   };
 
-  // Export CSV
-  const handleExportCSV = () => {
+  // Export Excel (.xlsx)
+  const handleExportExcel = () => {
     if (users.length === 0) {
       addToast('error', 'No records to export.');
       return;
     }
 
-    const headers = ['S.No.', 'VAM ID', 'Emp Name', 'Phone Number', 'Mail ID', 'Added On', 'Role', 'Designation', 'Status'];
-    const rows = users.map((u, i) => [
-      i + 1,
-      `"${u.vamId || '-'}"`,
-      `"${u.name || '-'}"`,
-      `"${u.phoneNumber || '-'}"`,
-      `"${u.email || '-'}"`,
-      `"${u.addedOn || '-'}"`,
-      `"${u.role || '-'}"`,
-      `"${u.designation || '-'}"`,
-      `"${u.status || 'Active'}"`
-    ]);
+    const dataToExport = users.map((u, i) => ({
+      'S.No.': i + 1,
+      'VAM ID': u.vamId && u.vamId !== '-' ? u.vamId : '-',
+      'Emp Name': u.name || '-',
+      'Phone Number': u.phoneNumber || '-',
+      'Mail ID': u.email && u.email !== '-' ? u.email : '-',
+      'Added On': u.addedOn || '-',
+      'Role': u.role || 'Employee',
+      'Designation': u.designation || (u.role === 'Admin' ? 'Lead - L&D Leadership' : u.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee'),
+      'Status': u.status || 'Active',
+      'Access': u.access || 'Enabled'
+    }));
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `User_Credentials_Roster_${getTodayFormatted()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    addToast('success', 'User roster CSV exported successfully.');
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    // Auto-fit column widths for a clean Excel appearance
+    const colWidths = [
+      { wch: 8 },  // S.No.
+      { wch: 14 }, // VAM ID
+      { wch: 28 }, // Emp Name
+      { wch: 16 }, // Phone Number
+      { wch: 38 }, // Mail ID
+      { wch: 14 }, // Added On
+      { wch: 14 }, // Role
+      { wch: 30 }, // Designation
+      { wch: 12 }, // Status
+      { wch: 12 }  // Access
+    ];
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'User Roster');
+
+    XLSX.writeFile(workbook, `User_Credentials_Roster_${getTodayFormatted()}.xlsx`);
+    addToast('success', 'User roster Excel workbook (.xlsx) exported successfully.');
   };
 
   // Role Badge Styling
@@ -514,14 +529,14 @@ export const UserManagement: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          {/* Export CSV */}
+          {/* Export Excel */}
           <button
-            onClick={handleExportCSV}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all flex items-center gap-2 shadow-xs cursor-pointer"
-            title="Download CSV"
+            onClick={handleExportExcel}
+            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+            title="Download Excel Workbook (.xlsx)"
           >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span className="hidden sm:inline">Export CSV</span>
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span className="hidden sm:inline">Export Excel</span>
           </button>
 
           {/* Add Credential Button */}
@@ -1020,7 +1035,7 @@ export const UserManagement: React.FC = () => {
 
                       {/* 7. Added On (Timestamp, Fixed) */}
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1.5">Added On (Timestamp)</label>
+                        <label className="block text-slate-700 font-bold mb-1.5">Added On</label>
                         <input
                           type="text"
                           readOnly
@@ -1211,7 +1226,7 @@ export const UserManagement: React.FC = () => {
               {/* Designation (ALWAYS ENABLED) */}
               <div>
                 <label className="block text-slate-700 font-bold mb-1.5">
-                  Designation <span className="text-blue-600 font-bold">(Always Enabled)</span>
+                  Designation
                 </label>
                 <div className="relative">
                   <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />

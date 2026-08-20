@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { SessionTrackerRecord, Session } from '../../types';
 import { mockSessionTrackerRecords } from '../../data/mockData';
 import {
@@ -204,43 +205,43 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
     setEditingRecord(null);
   };
 
-  // Excel Export (.xlsx / UTF-8 BOM)
+  // Excel Export (.xlsx)
   const handleExportExcel = () => {
-    const headers = [
-      'S.No.',
-      'Session Code',
-      'Session Name',
-      'Category',
-      'Trainer',
-      'Schedule Date',
-      'Schedule Time',
-      'Duration (Hrs)',
-      'Session Remarks'
+    if (trackerRecords.length === 0) {
+      return;
+    }
+
+    const dataToExport = trackerRecords.map((r, index) => ({
+      'S.No.': index + 1,
+      'Session Code': r.sessionCode || '-',
+      'Session Name': r.sessionName || '-',
+      'Category': r.category || '-',
+      'Trainer': r.trainerName || '-',
+      'Schedule Date': r.scheduleDate || '-',
+      'Schedule Time': r.scheduleTime || '-',
+      'Duration (Hrs)': r.durationHours || 0,
+      'Session Remarks': r.notes || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+
+    const colWidths = [
+      { wch: 8 },  // S.No.
+      { wch: 16 }, // Session Code
+      { wch: 32 }, // Session Name
+      { wch: 20 }, // Category
+      { wch: 24 }, // Trainer
+      { wch: 14 }, // Schedule Date
+      { wch: 16 }, // Schedule Time
+      { wch: 16 }, // Duration (Hrs)
+      { wch: 32 }  // Session Remarks
     ];
+    worksheet['!cols'] = colWidths;
 
-    const rows = trackerRecords.map((r, index) => [
-      index + 1,
-      r.sessionCode,
-      r.sessionName,
-      r.category,
-      r.trainerName,
-      r.scheduleDate,
-      r.scheduleTime,
-      r.durationHours,
-      r.notes || ''
-    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Session Tracker');
 
-    const BOM = '\uFEFF';
-    const csvContent = BOM + [headers.join('\t'), ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join('\t'))].join('\n');
-    const blob = new Blob([csvContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `GT_Session_Tracker_${new Date().toISOString().split('T')[0]}.xlsx`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    XLSX.writeFile(workbook, `GT_Session_Tracker_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const getStatusBadge = (status: string) => {
