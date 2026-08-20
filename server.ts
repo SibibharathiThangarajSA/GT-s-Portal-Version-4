@@ -231,7 +231,7 @@ async function startServer() {
       const status = res.statusCode;
       const isHealth = req.path === '/api/health' || req.path === '/api/ai/health';
       const statusIcon = status < 400 ? '🟢' : (status < 500 ? '🟡' : '🔴');
-      
+
       // Log all API traffic and errors (quiet healthchecks under 400 to prevent log clutter)
       if (!isHealth || status >= 400) {
         console.log(`${statusIcon} [HTTP] ${req.method.padEnd(6)} ${req.originalUrl} -> ${status} (${duration}ms) [IP: ${ip}]`);
@@ -410,13 +410,13 @@ async function startServer() {
     let users = getAllUsers();
     const targetId = decodeURIComponent(req.params.id || '').trim();
     const userToDelete = users.find((u: any) => u.id === targetId || u.vamId === targetId || (u.email && u.email.toLowerCase() === targetId.toLowerCase()));
-    
+
     if (userToDelete && userToDelete.email) {
       const overrides = readJsonFile<Record<string, string>>(CREDENTIALS_FILE, {});
       delete overrides[userToDelete.email.toLowerCase()];
       writeJsonFile(CREDENTIALS_FILE, overrides);
     }
-    
+
     users = users.filter((u: any) => u.id !== targetId && u.vamId !== targetId && (!u.email || u.email.toLowerCase() !== targetId.toLowerCase()));
     saveAllUsers(users);
     return res.json({ success: true, message: 'User permanently removed from roster.' });
@@ -627,11 +627,11 @@ async function startServer() {
     const sessionId = newSession.id || `session-${Date.now()}`;
 
     // Deduplicate: If session with this ID or (Name + Category) already exists, update in-place
-    const existingIdx = sessions.findIndex((s: any) => 
-      (newSession.id && s.id === newSession.id) || 
+    const existingIdx = sessions.findIndex((s: any) =>
+      (newSession.id && s.id === newSession.id) ||
       (newSession.name && s.name && s.name.trim().toLowerCase() === newSession.name.trim().toLowerCase() && s.category === newSession.category)
     );
-    
+
     if (existingIdx !== -1) {
       sessions[existingIdx] = {
         ...sessions[existingIdx],
@@ -731,8 +731,8 @@ async function startServer() {
 
     if (targetSession) {
       if (!Array.isArray(targetSession.studyMaterials)) targetSession.studyMaterials = [];
-      const existingMatIdx = targetSession.studyMaterials.findIndex((m: any) => 
-        (newMat.id && m.id === newMat.id) || 
+      const existingMatIdx = targetSession.studyMaterials.findIndex((m: any) =>
+        (newMat.id && m.id === newMat.id) ||
         (newMat.title && m.title && m.title.trim().toLowerCase() === newMat.title.trim().toLowerCase() && (m.materialCategory || m.materialType) === (newMat.materialCategory || newMat.materialType))
       );
       if (existingMatIdx !== -1) {
@@ -793,9 +793,9 @@ async function startServer() {
     saveAllSessions(sessions);
 
     if (deletedMaterial) {
-      const s3Key = deletedMaterial.driveItemId || 
-        (deletedMaterial.url && deletedMaterial.url.startsWith('/api/materials/files/') 
-          ? decodeURIComponent(deletedMaterial.url.replace('/api/materials/files/', '')) 
+      const s3Key = deletedMaterial.driveItemId ||
+        (deletedMaterial.url && deletedMaterial.url.startsWith('/api/materials/files/')
+          ? decodeURIComponent(deletedMaterial.url.replace('/api/materials/files/', ''))
           : null);
       if (s3Key) {
         try {
@@ -1249,8 +1249,8 @@ async function startServer() {
     saveAllSessions(sessions);
 
     if (deletedAssign && deletedAssign.attachmentUrl) {
-      const s3Key = deletedAssign.attachmentUrl.startsWith('/api/materials/files/') 
-        ? decodeURIComponent(deletedAssign.attachmentUrl.replace('/api/materials/files/', '')) 
+      const s3Key = deletedAssign.attachmentUrl.startsWith('/api/materials/files/')
+        ? decodeURIComponent(deletedAssign.attachmentUrl.replace('/api/materials/files/', ''))
         : null;
       if (s3Key) {
         try {
@@ -1425,7 +1425,7 @@ async function startServer() {
     const cleanUser = (userId || 'active-user').toString().toLowerCase();
     const cleanSession = (sessionId || '').toString();
 
-    const existingIdx = progressList.findIndex((p: any) => 
+    const existingIdx = progressList.findIndex((p: any) =>
       p.userId?.toLowerCase() === cleanUser && p.sessionId === cleanSession
     );
 
@@ -1503,7 +1503,7 @@ async function startServer() {
     }
 
     const sessions = getAllSessions();
-    const matchedSessions = sessions.filter((s: any) => 
+    const matchedSessions = sessions.filter((s: any) =>
       s.name?.toLowerCase().includes(query) ||
       s.category?.toLowerCase().includes(query) ||
       s.description?.toLowerCase().includes(query) ||

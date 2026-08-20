@@ -228,15 +228,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (res.success && res.data) {
         // Strict Role Gate: Admin tab requires Admin role
         if (selectedRole === 'Admin' && res.data.role !== 'Admin') {
-          setErrorMsg('Incorrect email ID or password.');
-          addToast('error', 'Incorrect email ID or password.');
+          const msg = `Access Denied: Account '${res.data.email}' has ${res.data.role} privileges. Please switch to the 'Associates' login tab, or change role to Admin in User Management.`;
+          setErrorMsg(msg);
+          addToast('error', msg);
           return;
         }
 
         // Strict Role Gate: Associate tab requires Associate/Employee role (Blocks Admin)
         if (selectedRole === 'GT' && res.data.role === 'Admin') {
-          setErrorMsg('Incorrect email ID or password.');
-          addToast('error', 'Incorrect email ID or password.');
+          const msg = `Access Denied: Account '${res.data.email}' has L&D Admin privileges. Please switch to the 'Learning & Development' login tab.`;
+          setErrorMsg(msg);
+          addToast('error', msg);
           return;
         }
 

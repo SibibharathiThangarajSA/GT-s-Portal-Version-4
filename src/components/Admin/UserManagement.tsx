@@ -364,6 +364,9 @@ export const UserManagement: React.FC = () => {
     setUsers(combined);
     await saveUserManagementRecordsApi(combined);
 
+    setFormEntries([]);
+    sessionStorage.removeItem('gt_admin_user_form_entries');
+    sessionStorage.removeItem('gt_admin_user_add_modal_open');
     setIsAddModalOpen(false);
     addToast('success', `${newRecords.length} credential record(s) added successfully.`);
   };
@@ -954,11 +957,10 @@ export const UserManagement: React.FC = () => {
                           return (
                             <div>
                               <div
-                                className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${
-                                  isPhoneError
+                                className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${isPhoneError
                                     ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
                                     : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
-                                }`}
+                                  }`}
                               >
                                 <select
                                   value={entry.countryCode || '+91'}
@@ -1173,11 +1175,10 @@ export const UserManagement: React.FC = () => {
                   return (
                     <div>
                       <div
-                        className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${
-                          isError
+                        className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${isError
                             ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
                             : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
-                        }`}
+                          }`}
                       >
                         <select
                           value={editCountryCode}
