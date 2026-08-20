@@ -638,7 +638,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   }
                 }}
                 className={`py-3 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${selectedRole === 'Admin'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                     : 'text-slate-600 hover:text-slate-900'
                   }`}
               >
@@ -651,7 +651,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1">Official Email Address *</label>
               <div className="relative">
-                <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
+                <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : selectedRole === 'Admin' ? 'text-emerald-500' : 'text-blue-500'}`} />
                 <input
                   type="email"
                   placeholder="e.g. employee.name@valuemomentum.com"
@@ -662,7 +662,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   }}
                   className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
                       ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
-                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
+                      : selectedRole === 'Admin'
+                        ? 'border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
                     }`}
                   required
                 />
@@ -673,7 +675,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1">Password *</label>
               <div className="relative">
-                <Lock className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
+                <Lock className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : selectedRole === 'Admin' ? 'text-emerald-500' : 'text-blue-500'}`} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••••••"
@@ -682,9 +684,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setPassword(e.target.value);
                     if (errorMsg) setErrorMsg('');
                   }}
-                  className={`w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all ${errorMsg
+                  className={`w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
                       ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
-                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
+                      : selectedRole === 'Admin'
+                        ? 'border-slate-300 focus:border-emerald-500 focus:ring-emerald-500/20'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
                     }`}
                   required
                 />
@@ -713,7 +717,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-slate-300 bg-white text-blue-600 focus:ring-0 cursor-pointer"
+                  className={`rounded border-slate-300 bg-white focus:ring-0 cursor-pointer ${selectedRole === 'Admin' ? 'text-emerald-600' : 'text-blue-600'}`}
                 />
                 <span>Remember me</span>
               </label>
@@ -725,7 +729,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   setSuccessMsg('');
                   setView('forgot-email');
                 }}
-                className="text-blue-600 font-semibold hover:text-blue-800 hover:underline cursor-pointer"
+                className={`font-semibold hover:underline cursor-pointer ${selectedRole === 'Admin' ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-800'}`}
               >
                 Forgot Password?
               </button>
