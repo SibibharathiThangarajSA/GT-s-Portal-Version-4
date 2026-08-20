@@ -244,8 +244,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         localStorage.setItem('token', res.data.token);
         const fullName = `${res.data.firstName} ${res.data.lastName}`.trim();
+        const targetRole: 'GT' | 'Admin' = res.data.role === 'Admin' ? 'Admin' : 'GT';
 
-        onAuthSuccess(res.data.role as any, {
+        onAuthSuccess(targetRole, {
           name: fullName || 'Enterprise User',
           email: res.data.email,
           isGuest: false
@@ -378,10 +379,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       if (res.success && res.data) {
         localStorage.setItem('token', res.data.token);
-        const role = res.data.role as any;
+        const targetRole: 'GT' | 'Admin' = res.data.role === 'Admin' ? 'Admin' : 'GT';
         const fullName = `${res.data.firstName} ${res.data.lastName}`.trim();
 
-        onAuthSuccess(role, {
+        onAuthSuccess(targetRole, {
           name: fullName || 'Associate User',
           email: res.data.email,
           isGuest: false

@@ -216,19 +216,20 @@ export function App() {
     setIsChangePasswordOpen(true);
   };
 
-  const handleAuthSuccess = (role: 'GT' | 'Admin', userData?: { name: string; email: string; isGuest?: boolean }) => {
+  const handleAuthSuccess = (role: 'GT' | 'Admin' | 'Associate' | string, userData?: { name: string; email: string; isGuest?: boolean }) => {
     setIsAuthenticated(true);
+    const mappedPortal: 'GT' | 'Admin' = role === 'Admin' ? 'Admin' : 'GT';
     if (userData) {
       setCurrentUser(prev => ({
         ...prev,
         name: userData.name,
         email: userData.email,
-        role: role,
+        role: role as any,
         isGuest: userData.isGuest ?? prev.isGuest
       }));
     }
-    setActivePortal(role);
-    if (role === 'Admin') {
+    setActivePortal(mappedPortal);
+    if (mappedPortal === 'Admin') {
       setIsAdminAuthenticated(true);
       setAdminViewMode('tracker');
     } else {
