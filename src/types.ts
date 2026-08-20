@@ -283,6 +283,7 @@ export interface UserManagementRecord {
   email: string;
   phoneNumber: string;
   role: 'Employee' | 'Admin' | 'Associate' | string;
+  designation?: string;
   addedOn: string;
   status: 'Active' | 'Inactive' | string;
   access: 'Enabled' | 'Disabled' | string;
@@ -290,6 +291,7 @@ export interface UserManagementRecord {
   batch: string;
   password?: string;
 }
+
 
 
 

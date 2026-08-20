@@ -49,6 +49,7 @@ interface FormCredentialEntry {
   countryCode?: string;
   phoneNumber: string;
   email: string;
+  designation: string;
   addedOn: string;
 }
 
@@ -57,6 +58,7 @@ export const UserManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'Employee' | 'Admin' | 'Associate'>('ALL');
+  const [designationFilter, setDesignationFilter] = useState<string>('ALL');
 
   // Edit modal country code state
   const [editCountryCode, setEditCountryCode] = useState('+91');
@@ -120,10 +122,23 @@ export const UserManagement: React.FC = () => {
     loadRecords();
   }, []);
 
+  // Compute unique designations for filter dropdown
+  const uniqueDesignations = useMemo(() => {
+    const set = new Set<string>();
+    users.forEach((u) => {
+      const desig = (u.designation || '').trim();
+      if (desig) set.add(desig);
+    });
+    return Array.from(set).sort();
+  }, [users]);
+
   // Filtered and searched records
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
+      const matchesDesignation =
+        designationFilter === 'ALL' ||
+        (u.designation || '').trim().toLowerCase() === designationFilter.trim().toLowerCase();
 
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -132,11 +147,12 @@ export const UserManagement: React.FC = () => {
         (u.vamId && u.vamId.toLowerCase().includes(q)) ||
         (u.email && u.email.toLowerCase().includes(q)) ||
         (u.phoneNumber && u.phoneNumber.includes(q)) ||
-        (u.role && u.role.toLowerCase().includes(q));
+        (u.role && u.role.toLowerCase().includes(q)) ||
+        (u.designation && u.designation.toLowerCase().includes(q));
 
-      return matchesRole && matchesSearch;
+      return matchesRole && matchesDesignation && matchesSearch;
     });
-  }, [users, roleFilter, searchQuery]);
+  }, [users, roleFilter, designationFilter, searchQuery]);
 
   // Paginated records
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
@@ -148,7 +164,7 @@ export const UserManagement: React.FC = () => {
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, roleFilter, pageSize]);
+  }, [searchQuery, roleFilter, designationFilter, pageSize]);
 
   // Open Add Modal with 1 fresh row
   const handleOpenAddModal = () => {
@@ -161,6 +177,7 @@ export const UserManagement: React.FC = () => {
         countryCode: '+91',
         phoneNumber: '',
         email: '',
+        designation: 'Graduate Trainee',
         addedOn: getTodayFormatted()
       }
     ]);
@@ -173,12 +190,13 @@ export const UserManagement: React.FC = () => {
       ...prev,
       {
         id: `entry-${Date.now()}-${prev.length}`,
-        role: 'Associate',
+        role: 'Employee',
         vamId: '',
         name: '',
         countryCode: '+91',
         phoneNumber: '',
         email: '',
+        designation: 'Graduate Trainee',
         addedOn: getTodayFormatted()
       }
     ]);
@@ -197,9 +215,22 @@ export const UserManagement: React.FC = () => {
       const entry = { ...updated[index], [field]: value };
 
       // If switching to Associate: blank out VAM ID and Mail ID
-      if (field === 'role' && value === 'Associate') {
-        entry.vamId = '';
-        entry.email = '';
+      if (field === 'role') {
+        if (value === 'Associate') {
+          entry.vamId = '';
+          entry.email = '';
+          if (!entry.designation || entry.designation === 'Graduate Trainee' || entry.designation === 'Lead - L&D Leadership') {
+            entry.designation = 'Associate Trainee';
+          }
+        } else if (value === 'Admin') {
+          if (!entry.designation || entry.designation === 'Graduate Trainee' || entry.designation === 'Associate Trainee') {
+            entry.designation = 'Lead - L&D Leadership';
+          }
+        } else if (value === 'Employee') {
+          if (!entry.designation || entry.designation === 'Associate Trainee' || entry.designation === 'Lead - L&D Leadership') {
+            entry.designation = 'Graduate Trainee';
+          }
+        }
       }
 
       updated[index] = entry;
@@ -297,6 +328,7 @@ export const UserManagement: React.FC = () => {
       const cleanEmail = entry.role === 'Associate' ? '-' : entry.email.trim();
       const cleanVam = entry.role === 'Associate' ? '-' : (entry.vamId.trim() || '-');
       const defaultPw = cleanEmail !== '-' ? getDefaultPasswordForEmail(cleanEmail) : undefined;
+      const defaultDesig = entry.role === 'Admin' ? 'Lead - L&D Leadership' : entry.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee';
 
       return {
         id: `usr-${Date.now()}-${idx}`,
@@ -304,6 +336,7 @@ export const UserManagement: React.FC = () => {
         name: entry.name.trim(),
         phoneNumber: entry.phoneNumber.replace(/\D/g, '').trim(),
         email: cleanEmail,
+        designation: entry.designation?.trim() || defaultDesig,
         addedOn: entry.addedOn || getTodayFormatted(),
         role: entry.role,
         status: 'Active',
@@ -377,6 +410,8 @@ export const UserManagement: React.FC = () => {
       }
     }
 
+    const defaultDesig = editingUser.role === 'Admin' ? 'Lead - L&D Leadership' : editingUser.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee';
+
     const updatedUsers = users.map((u) => {
       if (u.id === editingUser.id) {
         const cleanEmail = editingUser.role === 'Associate' ? '-' : editingUser.email;
@@ -388,6 +423,7 @@ export const UserManagement: React.FC = () => {
           phoneNumber: cleanPhone,
           vamId: cleanVam,
           email: cleanEmail,
+          designation: editingUser.designation?.trim() || defaultDesig,
           password: u.password || defaultPw
         };
       }
@@ -400,52 +436,98 @@ export const UserManagement: React.FC = () => {
     addToast('success', `Credentials for ${editingUser.name} updated successfully.`);
   };
 
-  // Confirm Delete
+  // Delete User Confirmation
   const handleConfirmDelete = async () => {
     if (!deletingUser) return;
     const userToRemove = deletingUser;
     const updated = users.filter((u) => u.id !== userToRemove.id);
     setUsers(updated);
+    setDeletingUser(null);
     await deleteUserManagementRecordApi(userToRemove.id);
     await saveUserManagementRecordsApi(updated);
-    addToast('info', `Permanently removed credentials for ${userToRemove.name}.`);
-    setDeletingUser(null);
+    addToast('info', `Removed ${userToRemove.name} from roster.`);
   };
 
+  // Export CSV
+  const handleExportCSV = () => {
+    if (users.length === 0) {
+      addToast('error', 'No records to export.');
+      return;
+    }
+
+    const headers = ['S.No.', 'VAM ID', 'Emp Name', 'Phone Number', 'Mail ID', 'Added On', 'Role', 'Designation', 'Status'];
+    const rows = users.map((u, i) => [
+      i + 1,
+      `"${u.vamId || '-'}"`,
+      `"${u.name || '-'}"`,
+      `"${u.phoneNumber || '-'}"`,
+      `"${u.email || '-'}"`,
+      `"${u.addedOn || '-'}"`,
+      `"${u.role || '-'}"`,
+      `"${u.designation || '-'}"`,
+      `"${u.status || 'Active'}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `User_Credentials_Roster_${getTodayFormatted()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addToast('success', 'User roster CSV exported successfully.');
+  };
+
+  // Role Badge Styling
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'Admin':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'Employee':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'Associate':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'Employee':
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
     }
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header & Action Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200">
-            <Users className="w-5 h-5" />
+    <div className="space-y-6">
+      {/* Top Banner & Action Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-extrabold uppercase tracking-wide">
+              Directory & Authentication
+            </span>
+            <span className="text-xs text-slate-400 font-medium">
+              Total: {users.length} registered accounts
+            </span>
           </div>
-          <div>
-            <h3 className="text-xl font-extrabold text-slate-900 leading-tight">User Management</h3>
-            <p className="text-xs text-slate-600 mt-0.5 font-medium">
-              Showing <span className="font-bold text-slate-900">{filteredUsers.length}</span> of {users.length} total trainees
-            </p>
-          </div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+            User Management & Roster
+          </h2>
+          <p className="text-xs text-slate-500 max-w-2xl">
+            Manage enterprise employee accounts, associate mobile access, L&D leadership credentials, and designations.
+          </p>
         </div>
 
-        {/* Top Right Action Buttons */}
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Export CSV */}
+          <button
+            onClick={handleExportCSV}
+            className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+            title="Download CSV"
+          >
+            <Download className="w-4 h-4 text-slate-500" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
+
+          {/* Add Credential Button */}
           <button
             onClick={handleOpenAddModal}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 hover:shadow-blue-600/30 hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition-all flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Credential</span>
@@ -455,7 +537,7 @@ export const UserManagement: React.FC = () => {
 
       {/* Filter & Search Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
 
           {/* Global Search Input */}
           <div className="relative flex-1 max-w-md">
@@ -464,7 +546,7 @@ export const UserManagement: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Name, VAM ID, Phone, Email..."
+              placeholder="Search by Name, VAM ID, Phone, Email, Designation..."
               className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 transition-all font-medium"
             />
             {searchQuery && (
@@ -477,14 +559,15 @@ export const UserManagement: React.FC = () => {
             )}
           </div>
 
-          {/* Role Filter Buttons / Dropdown */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {/* Filters Row: Role Buttons + Designation Dropdown */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Role Filter Buttons */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               {(['ALL', 'Employee', 'Associate', 'Admin'] as const).map((r) => (
                 <button
                   key={r}
                   onClick={() => setRoleFilter(r)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${roleFilter === r
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${roleFilter === r
                     ? 'bg-white text-blue-600 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                     }`}
@@ -493,6 +576,40 @@ export const UserManagement: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {/* Designation Filter Dropdown */}
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <div className="flex items-center gap-1 pl-2 text-slate-500">
+                <Briefcase className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold">Designation:</span>
+              </div>
+              <select
+                value={designationFilter}
+                onChange={(e) => setDesignationFilter(e.target.value)}
+                className="bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none focus:border-blue-600 shadow-xs cursor-pointer"
+              >
+                <option value="ALL">All Designations</option>
+                {uniqueDesignations.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Clear Filters Button (If active) */}
+            {(roleFilter !== 'ALL' || designationFilter !== 'ALL' || searchQuery) && (
+              <button
+                onClick={() => {
+                  setRoleFilter('ALL');
+                  setDesignationFilter('ALL');
+                  setSearchQuery('');
+                }}
+                className="px-2.5 py-1 text-xs font-bold text-slate-500 hover:text-rose-600 underline transition-colors cursor-pointer"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -501,7 +618,7 @@ export const UserManagement: React.FC = () => {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
-            {/* Table Header matching the screenshot */}
+            {/* Table Header with Designation Column */}
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-[11px]">
               <tr>
                 <th className="py-4 px-4 text-center w-12 text-slate-700">S.No.</th>
@@ -511,6 +628,7 @@ export const UserManagement: React.FC = () => {
                 <th className="py-4 px-4 text-slate-700">Mail ID</th>
                 <th className="py-4 px-4 text-slate-700">Added On</th>
                 <th className="py-4 px-4 text-slate-700">Role</th>
+                <th className="py-4 px-4 text-slate-700">Designation</th>
                 <th className="py-4 px-4 text-right text-slate-700">Actions</th>
               </tr>
             </thead>
@@ -519,7 +637,7 @@ export const UserManagement: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
               {paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={9} className="py-12 text-center text-slate-500">
                     <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                     <p className="font-bold text-slate-800">No users found</p>
                     <p className="text-xs text-slate-400 mt-1">Try resetting your filters or add new credentials.</p>
@@ -528,6 +646,8 @@ export const UserManagement: React.FC = () => {
               ) : (
                 paginatedUsers.map((u, index) => {
                   const sNo = (currentPage - 1) * pageSize + index + 1;
+                  const displayDesignation = u.designation || (u.role === 'Admin' ? 'Lead - L&D Leadership' : u.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee');
+
                   return (
                     <tr key={u.id} className="hover:bg-blue-50/30 transition-colors">
                       {/* S.No */}
@@ -595,19 +715,29 @@ export const UserManagement: React.FC = () => {
                         </span>
                       </td>
 
+                      {/* Designation */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <Briefcase className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span className="text-slate-900 font-bold text-xs">
+                            {displayDesignation}
+                          </span>
+                        </div>
+                      </td>
+
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => setEditingUser({ ...u })}
-                            className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors"
+                            onClick={() => setEditingUser({ ...u, designation: displayDesignation })}
+                            className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors cursor-pointer"
                             title="Edit Credentials"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setDeletingUser(u)}
-                            className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500 transition-colors cursor-pointer"
                             title="Delete User"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -622,12 +752,12 @@ export const UserManagement: React.FC = () => {
           </table>
         </div>
 
-        {/* Table Footer / Pagination matching screenshot */}
+        {/* Table Footer / Pagination */}
         <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
           <div>
             Showing <span className="font-bold text-slate-900">{filteredUsers.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to{' '}
             <span className="font-bold text-slate-900">{Math.min(currentPage * pageSize, filteredUsers.length)}</span> of{' '}
-            <span className="font-bold text-slate-900">{filteredUsers.length}</span> trainees
+            <span className="font-bold text-slate-900">{filteredUsers.length}</span> records
           </div>
 
           <div className="flex items-center gap-3">
@@ -681,11 +811,11 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* POPUP MODAL: ADD CREDENTIAL (WITH MULTI-ROW "+ ADD ANOTHER")              */}
+      {/* POPUP MODAL: ADD CREDENTIAL (CLEAN VERTICAL FORM LAYOUT)                  */}
       {/* ========================================================================= */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-6 text-slate-900 my-8 animate-fadeIn max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-3xl border border-slate-200 max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 text-slate-900 my-8 animate-fadeIn max-h-[90vh] flex flex-col">
 
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-200 pb-4">
@@ -696,19 +826,19 @@ export const UserManagement: React.FC = () => {
                 <div>
                   <h3 className="text-xl font-extrabold text-slate-900">Add User Credentials</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Assign roles, enter enterprise details, and configure auto-passwords.
+                    Configure role, enterprise credentials, phone verification, and designation.
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Form Scroll Body */}
+            {/* Modal Form Scroll Body (Vertical Layout) */}
             <form onSubmit={handleSaveAddModal} className="flex-1 overflow-y-auto pr-1 space-y-6">
               {formEntries.map((entry, index) => {
                 const isAssociate = entry.role === 'Associate';
@@ -716,16 +846,16 @@ export const UserManagement: React.FC = () => {
                 return (
                   <div
                     key={entry.id}
-                    className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-4 relative"
+                    className="p-6 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-4 relative shadow-xs"
                   >
                     {/* Entry Header */}
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                       <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                           {index + 1}
                         </span>
-                        <span className="font-extrabold text-xs text-slate-800">
-                          Credential #{index + 1} ({entry.role})
+                        <span className="font-black text-sm text-slate-800">
+                          Credential Entry #{index + 1} ({entry.role})
                         </span>
                       </div>
 
@@ -733,7 +863,7 @@ export const UserManagement: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleRemoveRow(index)}
-                          className="text-xs text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 hover:underline"
+                          className="text-xs text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Remove</span>
@@ -741,26 +871,39 @@ export const UserManagement: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Entry Inputs Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                    {/* Entry Vertical Fields Container */}
+                    <div className="flex flex-col space-y-4 text-xs">
 
-                      {/* Role Dropdown */}
+                      {/* 1. Role Dropdown */}
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1">Role *</label>
+                        <label className="block text-slate-700 font-bold mb-1.5">Role *</label>
                         <select
                           value={entry.role}
                           onChange={(e) => handleUpdateEntry(index, 'role', e.target.value)}
-                          className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 font-bold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
+                          className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-bold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
                         >
-                          <option value="Employee">Employee (Enterprise)</option>
-                          <option value="Associate">Associate (Mobile Only)</option>
-                          <option value="Admin">Admin (L&D Leader)</option>
+                          <option value="Employee">Employee (Enterprise Email Login)</option>
+                          <option value="Associate">Associate (Mobile Number OTP Login)</option>
+                          <option value="Admin">Admin (L&D Leadership Access)</option>
                         </select>
                       </div>
 
-                      {/* VAM ID (Blocked for Associate) */}
+                      {/* 2. Emp Name */}
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1">
+                        <label className="block text-slate-700 font-bold mb-1.5">Emp Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={entry.name}
+                          onChange={(e) => handleUpdateEntry(index, 'name', e.target.value)}
+                          placeholder="e.g. Sibibharathi Thangaraj"
+                          className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
+                        />
+                      </div>
+
+                      {/* 3. VAM ID (Blocked for Associate) */}
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1.5">
                           VAM ID {isAssociate && <span className="text-slate-400 font-normal">(Blocked for Associate)</span>}
                         </label>
                         <input
@@ -769,29 +912,16 @@ export const UserManagement: React.FC = () => {
                           value={isAssociate ? '' : entry.vamId}
                           onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value)}
                           placeholder={isAssociate ? '— Disabled for Associate —' : 'e.g. 105527'}
-                          className={`w-full border rounded-xl px-3 py-2 font-medium focus:outline-none shadow-xs ${isAssociate
+                          className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs ${isAssociate
                             ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
                             : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
                             }`}
                         />
                       </div>
 
-                      {/* Emp Name */}
+                      {/* 4. Phone Number with Country Code Dropdown */}
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1">Emp Name *</label>
-                        <input
-                          type="text"
-                          required
-                          value={entry.name}
-                          onChange={(e) => handleUpdateEntry(index, 'name', e.target.value)}
-                          placeholder="Enter your name"
-                          className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
-                        />
-                      </div>
-
-                      {/* Phone Number with Country Code Dropdown */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center justify-between mb-1.5">
                           <label className="block text-slate-700 font-bold">Phone Number (10 Digits) *</label>
                           <span className="text-[10px] font-mono text-slate-400">
                             {entry.phoneNumber.length}/10
@@ -815,7 +945,7 @@ export const UserManagement: React.FC = () => {
                                 <select
                                   value={entry.countryCode || '+91'}
                                   onChange={(e) => handleUpdateEntry(index, 'countryCode', e.target.value)}
-                                  className="bg-slate-100/90 px-2.5 py-2 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
+                                  className="bg-slate-100/90 px-3 py-2.5 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
                                 >
                                   {COUNTRY_CODES.map((c) => (
                                     <option key={c.code} value={c.code}>
@@ -830,7 +960,7 @@ export const UserManagement: React.FC = () => {
                                   value={entry.phoneNumber}
                                   onChange={(e) => handleUpdateEntry(index, 'phoneNumber', e.target.value.replace(/\D/g, '').slice(0, 10))}
                                   placeholder="9345766068"
-                                  className="w-full px-3 py-2 font-mono font-medium text-slate-900 placeholder-slate-400 focus:outline-none"
+                                  className="w-full px-3.5 py-2.5 font-mono font-medium text-slate-900 placeholder-slate-400 focus:outline-none"
                                 />
                               </div>
 
@@ -852,9 +982,9 @@ export const UserManagement: React.FC = () => {
                         })()}
                       </div>
 
-                      {/* Mail ID (Blocked for Associate) */}
+                      {/* 5. Mail ID (Blocked for Associate) */}
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1">
+                        <label className="block text-slate-700 font-bold mb-1.5">
                           Mail ID {!isAssociate ? '*' : <span className="text-slate-400 font-normal">(Blocked for Associate)</span>}
                         </label>
                         <input
@@ -864,21 +994,38 @@ export const UserManagement: React.FC = () => {
                           value={isAssociate ? '' : entry.email}
                           onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
                           placeholder={isAssociate ? '— Disabled for Associate —' : 'e.g. name@valuemomentum.com'}
-                          className={`w-full border rounded-xl px-3 py-2 font-medium focus:outline-none shadow-xs ${isAssociate
+                          className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs ${isAssociate
                             ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
                             : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
                             }`}
                         />
                       </div>
 
-                      {/* Added On (Timestamp, Fixed) */}
+                      {/* 6. Designation (ALWAYS ENABLED for all roles) */}
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1">Added On (Timestamp)</label>
+                        <label className="block text-slate-700 font-bold mb-1.5">
+                          Designation <span className="text-blue-600 font-bold">(Always Enabled)</span>
+                        </label>
+                        <div className="relative">
+                          <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                          <input
+                            type="text"
+                            value={entry.designation || ''}
+                            onChange={(e) => handleUpdateEntry(index, 'designation', e.target.value)}
+                            placeholder="e.g. Graduate Trainee, Associate Software Engineer, Lead - L&D"
+                            className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl pl-10 pr-4 py-2.5 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* 7. Added On (Timestamp, Fixed) */}
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1.5">Added On (Timestamp)</label>
                         <input
                           type="text"
                           readOnly
                           value={entry.addedOn}
-                          className="w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3 py-2 font-medium cursor-not-allowed"
+                          className="w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3.5 py-2.5 font-medium cursor-not-allowed"
                         />
                       </div>
 
@@ -886,10 +1033,10 @@ export const UserManagement: React.FC = () => {
 
                     {/* Default Password Hint */}
                     {!isAssociate && entry.email && entry.email.includes('@') && (
-                      <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 text-[11px] text-blue-800 flex items-center gap-2">
-                        <Key className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 flex items-center gap-2">
+                        <Key className="w-4 h-4 text-blue-600 shrink-0" />
                         <span>
-                          Default login password will be auto-set to: <strong className="font-mono text-blue-900">{getDefaultPasswordForEmail(entry.email)}</strong>
+                          Default login password will be auto-set to: <strong className="font-mono text-blue-900 bg-blue-100/80 px-1.5 py-0.5 rounded border border-blue-300">{getDefaultPasswordForEmail(entry.email)}</strong>
                         </span>
                       </div>
                     )}
@@ -905,7 +1052,7 @@ export const UserManagement: React.FC = () => {
                   className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-300 transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <Plus className="w-4 h-4 text-blue-600" />
-                  <span>Add Another</span>
+                  <span>Add Another Credential</span>
                 </button>
               </div>
 
@@ -932,7 +1079,7 @@ export const UserManagement: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* POPUP MODAL: EDIT CREDENTIAL                                              */}
+      {/* POPUP MODAL: EDIT CREDENTIAL (VERTICAL FORM LAYOUT)                       */}
       {/* ========================================================================= */}
       {editingUser && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -947,52 +1094,55 @@ export const UserManagement: React.FC = () => {
               </div>
               <button
                 onClick={() => setEditingUser(null)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs flex flex-col">
+              {/* Role */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Role *</label>
+                <label className="block text-slate-700 font-bold mb-1.5">Role *</label>
                 <select
                   value={editingUser.role}
                   onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as any })}
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 font-bold focus:outline-none focus:border-blue-600"
+                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-bold focus:outline-none focus:border-blue-600 shadow-xs"
                 >
-                  <option value="Employee">Employee</option>
-                  <option value="Associate">Associate</option>
-                  <option value="Admin">Admin</option>
+                  <option value="Employee">Employee (Enterprise)</option>
+                  <option value="Associate">Associate (Mobile Only)</option>
+                  <option value="Admin">Admin (L&D Leader)</option>
                 </select>
               </div>
 
+              {/* Emp Name */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1">VAM ID</label>
+                <label className="block text-slate-700 font-bold mb-1.5">Emp Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium shadow-xs focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              {/* VAM ID */}
+              <div>
+                <label className="block text-slate-700 font-bold mb-1.5">VAM ID</label>
                 <input
                   type="text"
                   disabled={editingUser.role === 'Associate'}
                   value={editingUser.role === 'Associate' ? '' : (editingUser.vamId || '')}
                   onChange={(e) => setEditingUser({ ...editingUser, vamId: e.target.value })}
                   placeholder={editingUser.role === 'Associate' ? '— Disabled for Associate —' : 'Enter your VAM ID'}
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Emp Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingUser.name}
-                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 font-medium"
+                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed shadow-xs focus:outline-none focus:border-blue-600"
                 />
               </div>
 
               {/* Phone Number with Country Code Dropdown */}
               <div>
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-slate-700 font-bold">Phone Number (10 Digits) *</label>
                   <span className="text-[10px] font-mono text-slate-400">
                     {(editingUser.phoneNumber || '').replace(/\D/g, '').length}/10
@@ -1015,7 +1165,7 @@ export const UserManagement: React.FC = () => {
                         <select
                           value={editCountryCode}
                           onChange={(e) => setEditCountryCode(e.target.value)}
-                          className="bg-slate-100/90 px-2.5 py-2 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
+                          className="bg-slate-100/90 px-3 py-2.5 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
                         >
                           {COUNTRY_CODES.map((c) => (
                             <option key={c.code} value={c.code}>
@@ -1030,7 +1180,7 @@ export const UserManagement: React.FC = () => {
                           value={editingUser.phoneNumber}
                           onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                           placeholder="Enter Mobile Number"
-                          className="w-full px-3 py-2 font-mono text-slate-900 focus:outline-none"
+                          className="w-full px-3.5 py-2.5 font-mono text-slate-900 focus:outline-none"
                         />
                       </div>
 
@@ -1045,29 +1195,47 @@ export const UserManagement: React.FC = () => {
                 })()}
               </div>
 
+              {/* Mail ID */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Mail ID</label>
+                <label className="block text-slate-700 font-bold mb-1.5">Mail ID</label>
                 <input
                   type="email"
                   disabled={editingUser.role === 'Associate'}
                   value={editingUser.role === 'Associate' ? '' : (editingUser.email || '')}
                   onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                   placeholder={editingUser.role === 'Associate' ? '— Disabled for Associate —' : 'e.g. name@valuemomentum.com'}
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3 py-2 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed shadow-xs focus:outline-none focus:border-blue-600"
                 />
+              </div>
+
+              {/* Designation (ALWAYS ENABLED) */}
+              <div>
+                <label className="block text-slate-700 font-bold mb-1.5">
+                  Designation <span className="text-blue-600 font-bold">(Always Enabled)</span>
+                </label>
+                <div className="relative">
+                  <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={editingUser.designation || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, designation: e.target.value })}
+                    placeholder="e.g. Graduate Trainee, Associate Software Engineer, L&D Lead"
+                    className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl pl-10 pr-4 py-2.5 font-medium shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold"
+                  className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-600/20"
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-600/20 cursor-pointer"
                 >
                   Update Credential
                 </button>
@@ -1097,13 +1265,13 @@ export const UserManagement: React.FC = () => {
             <div className="flex items-center gap-3 pt-2">
               <button
                 onClick={() => setDeletingUser(null)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs"
+                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20"
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 cursor-pointer"
               >
                 Confirm Delete
               </button>
