@@ -13,7 +13,7 @@ import { AuthUserDto } from '../services/api';
 export interface RegisteredCredential {
   email: string;
   defaultPassword: string;
-  role: 'GT' | 'Admin';
+  role: 'GT' | 'Admin' | 'Associate';
   name: string;
   firstName: string;
   lastName: string;
@@ -169,12 +169,14 @@ export const getCredentialsStore = (): Record<string, { password: string; profil
     const defaultPw = (lowerEmail.split('@')[0] || '').toLowerCase();
     const parts = (u.name || '').trim().split(' ');
 
+    const userRole: 'Admin' | 'GT' | 'Associate' = u.role === 'Admin' ? 'Admin' : u.role === 'Associate' ? 'Associate' : 'GT';
+
     store[lowerEmail] = {
       password: u.password || defaultPw,
       profile: {
         email: u.email.trim(),
         defaultPassword: defaultPw,
-        role: u.role === 'Admin' ? 'Admin' : 'GT',
+        role: userRole,
         name: u.name,
         firstName: parts[0] || u.name,
         lastName: parts.slice(1).join(' ') || '',
@@ -208,12 +210,16 @@ export const getCredentialsStore = (): Record<string, { password: string; profil
 };
 
 /**
- * Checks if the email domain is strictly @valuemomentum.com or @owlsure.com
+ * Checks if the email domain is permitted (@valuemomentum.com, @owlsure.com, or registered in User Management)
  */
 export const isAllowedDomain = (email: string): boolean => {
   if (!email || typeof email !== 'string') return false;
   const lower = email.trim().toLowerCase();
-  return lower.endsWith('@valuemomentum.com') || lower.endsWith('@owlsure.com');
+  if (lower.endsWith('@valuemomentum.com') || lower.endsWith('@owlsure.com')) {
+    return true;
+  }
+  const records = getUserManagementRecords();
+  return records.some((r) => r.email && r.email !== '-' && r.email.trim().toLowerCase() === lower);
 };
 
 /**

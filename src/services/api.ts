@@ -1394,7 +1394,7 @@ export const verifyMobileOtpApi = async (
 
   sessionStorage.removeItem(`gt_otp_${cleanPhone}`);
 
-  const role: 'GT' | 'Admin' = user.role === 'Admin' ? 'Admin' : 'GT';
+  const role: 'GT' | 'Admin' | 'Associate' = user.role === 'Admin' ? 'Admin' : user.role === 'Associate' ? 'Associate' : 'GT';
   const fullName = user.name || 'Associate User';
   const parts = fullName.split(' ');
 

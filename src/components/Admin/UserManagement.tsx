@@ -229,11 +229,9 @@ export const UserManagement: React.FC = () => {
       const updated = [...prev];
       const entry = { ...updated[index], [field]: value };
 
-      // If switching to Associate: blank out VAM ID and Mail ID
+      // Handle role change designation defaults
       if (field === 'role') {
         if (value === 'Associate') {
-          entry.vamId = '';
-          entry.email = '';
           if (!entry.designation || entry.designation === 'Graduate Trainee' || entry.designation === 'Lead - L&D Leadership') {
             entry.designation = 'Associate Trainee';
           }
@@ -340,9 +338,9 @@ export const UserManagement: React.FC = () => {
     }
 
     const newRecords: UserManagementRecord[] = formEntries.map((entry, idx) => {
-      const cleanEmail = entry.role === 'Associate' ? '-' : entry.email.trim();
-      const cleanVam = entry.role === 'Associate' ? '-' : (entry.vamId.trim() || '-');
-      const defaultPw = cleanEmail !== '-' ? getDefaultPasswordForEmail(cleanEmail) : undefined;
+      const cleanEmail = (entry.email && entry.email.trim()) ? entry.email.trim() : '-';
+      const cleanVam = (entry.vamId && entry.vamId.trim()) ? entry.vamId.trim() : '-';
+      const defaultPw = cleanEmail !== '-' ? (entry.password || getDefaultPasswordForEmail(cleanEmail)) : undefined;
       const defaultDesig = entry.role === 'Admin' ? 'Lead - L&D Leadership' : entry.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee';
 
       return {
@@ -429,9 +427,9 @@ export const UserManagement: React.FC = () => {
 
     const updatedUsers = users.map((u) => {
       if (u.id === editingUser.id) {
-        const cleanEmail = editingUser.role === 'Associate' ? '-' : editingUser.email;
-        const cleanVam = editingUser.role === 'Associate' ? '-' : (editingUser.vamId || '-');
-        const defaultPw = cleanEmail !== '-' ? getDefaultPasswordForEmail(cleanEmail!) : undefined;
+        const cleanEmail = (editingUser.email && editingUser.email.trim()) ? editingUser.email.trim() : '-';
+        const cleanVam = (editingUser.vamId && editingUser.vamId.trim()) ? editingUser.vamId.trim() : '-';
+        const defaultPw = cleanEmail !== '-' ? (editingUser.password || u.password || getDefaultPasswordForEmail(cleanEmail)) : undefined;
 
         return {
           ...editingUser,
@@ -439,7 +437,7 @@ export const UserManagement: React.FC = () => {
           vamId: cleanVam,
           email: cleanEmail,
           designation: editingUser.designation?.trim() || defaultDesig,
-          password: u.password || defaultPw
+          password: defaultPw
         };
       }
       return u;
@@ -925,21 +923,17 @@ export const UserManagement: React.FC = () => {
                         />
                       </div>
 
-                      {/* 3. VAM ID (Blocked for Associate) */}
+                      {/* 3. VAM ID */}
                       <div>
                         <label className="block text-slate-700 font-bold mb-1.5">
-                          VAM ID {isAssociate && <span className="text-slate-400 font-normal">(Blocked for Associate)</span>}
+                          VAM ID {isAssociate && <span className="text-slate-400 font-normal">(Optional for Associate)</span>}
                         </label>
                         <input
                           type="text"
-                          disabled={isAssociate}
-                          value={isAssociate ? '' : entry.vamId}
+                          value={entry.vamId || ''}
                           onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value)}
-                          placeholder={isAssociate ? '— Disabled for Associate —' : 'e.g. 105527'}
-                          className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs ${isAssociate
-                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
-                            : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
-                            }`}
+                          placeholder={isAssociate ? 'e.g. 105527 (Optional)' : 'e.g. 105527'}
+                          className="w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                         />
                       </div>
 
@@ -1006,22 +1000,18 @@ export const UserManagement: React.FC = () => {
                         })()}
                       </div>
 
-                      {/* 5. Mail ID (Blocked for Associate) */}
+                      {/* 5. Mail ID */}
                       <div>
                         <label className="block text-slate-700 font-bold mb-1.5">
-                          Mail ID {!isAssociate ? '*' : <span className="text-slate-400 font-normal">(Blocked for Associate)</span>}
+                          Mail ID {!isAssociate ? '*' : <span className="text-slate-400 font-normal">(Optional for Associate)</span>}
                         </label>
                         <input
                           type="email"
-                          disabled={isAssociate}
                           required={!isAssociate}
-                          value={isAssociate ? '' : entry.email}
+                          value={entry.email || ''}
                           onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
-                          placeholder={isAssociate ? '— Disabled for Associate —' : 'e.g. name@valuemomentum.com'}
-                          className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs ${isAssociate
-                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed italic'
-                            : 'bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
-                            }`}
+                          placeholder={isAssociate ? 'e.g. name@valuemomentum.com (Optional)' : 'e.g. name@valuemomentum.com'}
+                          className="w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                         />
                       </div>
 
@@ -1154,11 +1144,10 @@ export const UserManagement: React.FC = () => {
                 <label className="block text-slate-700 font-bold mb-1.5">VAM ID</label>
                 <input
                   type="text"
-                  disabled={editingUser.role === 'Associate'}
-                  value={editingUser.role === 'Associate' ? '' : (editingUser.vamId || '')}
+                  value={editingUser.vamId || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, vamId: e.target.value })}
-                  placeholder={editingUser.role === 'Associate' ? '— Disabled for Associate —' : 'Enter your VAM ID'}
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed shadow-xs focus:outline-none focus:border-blue-600"
+                  placeholder="Enter VAM ID"
+                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none focus:border-blue-600"
                 />
               </div>
 
@@ -1222,11 +1211,10 @@ export const UserManagement: React.FC = () => {
                 <label className="block text-slate-700 font-bold mb-1.5">Mail ID</label>
                 <input
                   type="email"
-                  disabled={editingUser.role === 'Associate'}
-                  value={editingUser.role === 'Associate' ? '' : (editingUser.email || '')}
+                  value={editingUser.email || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  placeholder={editingUser.role === 'Associate' ? '— Disabled for Associate —' : 'e.g. name@valuemomentum.com'}
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed shadow-xs focus:outline-none focus:border-blue-600"
+                  placeholder="e.g. name@valuemomentum.com"
+                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none focus:border-blue-600"
                 />
               </div>
 
