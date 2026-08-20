@@ -1178,8 +1178,8 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 onClick={handleAddNote}
                 disabled={!newNoteText.trim()}
                 className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-md ${newNoteText.trim()
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25 hover:-translate-y-0.5 cursor-pointer'
-                    : 'bg-slate-200 text-slate-400 shadow-none cursor-not-allowed'
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25 hover:-translate-y-0.5 cursor-pointer'
+                  : 'bg-slate-200 text-slate-400 shadow-none cursor-not-allowed'
                   }`}
               >
                 <Plus className="w-4 h-4" />
@@ -1249,8 +1249,8 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     <div
                       key={note.id}
                       className={`bg-white border rounded-2xl p-5 text-xs space-y-3 transition-all duration-200 ${note.isPinned
-                          ? 'border-amber-300 bg-gradient-to-br from-amber-50/30 to-white shadow-md'
-                          : 'border-slate-200/90 hover:border-slate-300 shadow-sm'
+                        ? 'border-amber-300 bg-gradient-to-br from-amber-50/30 to-white shadow-md'
+                        : 'border-slate-200/90 hover:border-slate-300 shadow-sm'
                         }`}
                     >
                       <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">

@@ -897,17 +897,38 @@ async function startServer() {
         return res.status(400).json({ message: 'File path not specified' });
       }
 
-      // 1. Try S3 Tigris Object Storage
       const rangeHeader = req.headers.range;
-      const cmd = new GetObjectCommand({
-        Bucket: S3_BUCKET,
-        Key: unescaped,
-        Range: rangeHeader
-      });
 
-      try {
-        const s3Res = await s3Client.send(cmd);
+      // Candidate S3 Bucket Keys to search
+      const candidateS3Keys = [
+        unescaped,
+        `uploads/${unescaped}`,
+        `uploads/site-assets/videos/${path.basename(unescaped)}`,
+        `site-assets/videos/${path.basename(unescaped)}`,
+        `videos/${path.basename(unescaped)}`,
+        path.basename(unescaped)
+      ];
 
+      const uniqueS3Keys = Array.from(new Set(candidateS3Keys));
+      let s3Res: any = null;
+
+      for (const keyCandidate of uniqueS3Keys) {
+        try {
+          const cmd = new GetObjectCommand({
+            Bucket: S3_BUCKET,
+            Key: keyCandidate,
+            Range: rangeHeader
+          });
+          s3Res = await s3Client.send(cmd);
+          if (s3Res && s3Res.Body) {
+            break;
+          }
+        } catch {
+          // Try next candidate S3 key
+        }
+      }
+
+      if (s3Res && s3Res.Body) {
         res.setHeader('Accept-Ranges', 'bytes');
         if (s3Res.ContentType) res.setHeader('Content-Type', s3Res.ContentType);
         if (s3Res.ContentLength !== undefined) res.setHeader('Content-Length', s3Res.ContentLength.toString());
@@ -918,30 +939,40 @@ async function startServer() {
           res.status(200);
         }
 
-        if (s3Res.Body) {
-          (s3Res.Body as any).pipe(res);
-        } else {
-          res.status(404).end();
-        }
-        return;
-      } catch (s3Err: any) {
-        // Fallback to local files
-        const candidatePaths = [
-          path.join(process.cwd(), 'public', 'uploads', unescaped),
-          path.join(process.cwd(), 'public', unescaped),
-          path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', unescaped),
-          path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', 'site-assets', 'videos', path.basename(unescaped))
-        ];
-
-        for (const localPath of candidatePaths) {
-          if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
-            return res.sendFile(localPath);
+        try {
+          if (typeof (s3Res.Body as any).pipe === 'function') {
+            (s3Res.Body as any).pipe(res);
+          } else if (typeof (s3Res.Body as any).transformToByteArray === 'function') {
+            const bytes = await (s3Res.Body as any).transformToByteArray();
+            res.send(Buffer.from(bytes));
+          } else {
+            for await (const chunk of s3Res.Body as any) {
+              res.write(chunk);
+            }
+            res.end();
           }
+          return;
+        } catch (streamErr) {
+          console.warn('Error piping S3 body stream to response:', streamErr);
         }
-
-        console.warn(`File not found in S3 or local disk: ${unescaped}`);
-        return res.status(404).json({ message: `File not found: ${unescaped}` });
       }
+
+      // Fallback to local files
+      const candidatePaths = [
+        path.join(process.cwd(), 'public', 'uploads', unescaped),
+        path.join(process.cwd(), 'public', unescaped),
+        path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', unescaped),
+        path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', 'site-assets', 'videos', path.basename(unescaped))
+      ];
+
+      for (const localPath of candidatePaths) {
+        if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+          return res.sendFile(localPath);
+        }
+      }
+
+      console.warn(`File not found in S3 or local disk: ${unescaped}`);
+      return res.status(404).json({ message: `File not found: ${unescaped}` });
     } catch (err: any) {
       console.error('File stream error:', err);
       return res.status(500).json({ message: 'Internal server error while streaming file' });
