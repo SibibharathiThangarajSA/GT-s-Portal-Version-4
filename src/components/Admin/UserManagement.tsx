@@ -918,7 +918,7 @@ export const UserManagement: React.FC = () => {
                           required
                           value={entry.name}
                           onChange={(e) => handleUpdateEntry(index, 'name', e.target.value)}
-                          placeholder="e.g. Sibibharathi Thangaraj"
+                          placeholder="e.g. Name"
                           className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
                         />
                       </div>
@@ -932,7 +932,7 @@ export const UserManagement: React.FC = () => {
                           type="text"
                           value={entry.vamId || ''}
                           onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value)}
-                          placeholder={isAssociate ? 'e.g. 105527 (Optional)' : 'e.g. 105527'}
+                          placeholder={isAssociate ? 'VAM ID (Optional)' : 'VAM ID'}
                           className="w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                         />
                       </div>
@@ -977,7 +977,7 @@ export const UserManagement: React.FC = () => {
                                   maxLength={10}
                                   value={entry.phoneNumber}
                                   onChange={(e) => handleUpdateEntry(index, 'phoneNumber', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                  placeholder="9345766068"
+                                  placeholder="mobile number"
                                   className="w-full px-3.5 py-2.5 font-mono font-medium text-slate-900 placeholder-slate-400 focus:outline-none"
                                 />
                               </div>
