@@ -13,7 +13,6 @@ import {
   Mail,
   ShieldCheck,
   UserCheck,
-  Briefcase,
   Calendar,
   Layers,
   ChevronLeft,
@@ -609,7 +608,6 @@ export const UserManagement: React.FC = () => {
             {/* Designation Filter Dropdown */}
             <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
               <div className="flex items-center gap-1 pl-2 text-slate-500">
-                <Briefcase className="w-3.5 h-3.5" />
                 <span className="text-[11px] font-bold">Designation:</span>
               </div>
               <select
@@ -617,15 +615,12 @@ export const UserManagement: React.FC = () => {
                 onChange={(e) => setDesignationFilter(e.target.value)}
                 className="bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none focus:border-blue-600 shadow-xs cursor-pointer"
               >
-                <option value="ALL">All Designations ({users.length})</option>
-                {uniqueDesignations.map((d) => {
-                  const count = users.filter((u) => getEffectiveDesignation(u).toLowerCase() === d.toLowerCase()).length;
-                  return (
-                    <option key={d} value={d}>
-                      {d} ({count})
-                    </option>
-                  );
-                })}
+                <option value="ALL">All Designations ({uniqueDesignations.length})</option>
+                {uniqueDesignations.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -749,12 +744,9 @@ export const UserManagement: React.FC = () => {
 
                       {/* Designation */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <Briefcase className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span className="text-slate-900 font-bold text-xs">
-                            {displayDesignation}
-                          </span>
-                        </div>
+                        <span className="text-slate-900 font-bold text-xs">
+                          {displayDesignation}
+                        </span>
                       </td>
 
                       {/* Actions */}
@@ -1036,19 +1028,16 @@ export const UserManagement: React.FC = () => {
                       {/* 6. Designation (ALWAYS ENABLED for all roles) */}
                       <div>
                         <label className="block text-slate-700 font-bold mb-1.5">
-                          Designation <span className="text-blue-600 font-bold">(Always Enabled)</span>
+                          Designation
                         </label>
-                        <div className="relative">
-                          <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                          <input
-                            type="text"
-                            list="designation-suggestions"
-                            value={entry.designation || ''}
-                            onChange={(e) => handleUpdateEntry(index, 'designation', e.target.value)}
-                            placeholder="e.g. Graduate Trainee, Associate Software Engineer, Lead - L&D"
-                            className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl pl-10 pr-4 py-2.5 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
-                          />
-                        </div>
+                        <input
+                          type="text"
+                          list="designation-suggestions"
+                          value={entry.designation || ''}
+                          onChange={(e) => handleUpdateEntry(index, 'designation', e.target.value)}
+                          placeholder="e.g. Graduate Trainee, Associate Software Engineer, Lead - L&D"
+                          className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
+                        />
                       </div>
 
                       {/* 7. Added On (Timestamp, Fixed) */}
@@ -1246,17 +1235,14 @@ export const UserManagement: React.FC = () => {
                 <label className="block text-slate-700 font-bold mb-1.5">
                   Designation
                 </label>
-                <div className="relative">
-                  <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                  <input
-                    type="text"
-                    list="designation-suggestions"
-                    value={editingUser.designation || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, designation: e.target.value })}
-                    placeholder="e.g. Graduate Trainee, Associate Software Engineer, L&D Lead"
-                    className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl pl-10 pr-4 py-2.5 font-medium shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
-                  />
-                </div>
+                <input
+                  type="text"
+                  list="designation-suggestions"
+                  value={editingUser.designation || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, designation: e.target.value })}
+                  placeholder="e.g. Graduate Trainee, Associate Software Engineer, L&D Lead"
+                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
+                />
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
