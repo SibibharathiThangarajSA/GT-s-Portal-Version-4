@@ -1524,7 +1524,23 @@ async function startServer() {
 
   ai.post("/chat", async (req, res) => {
     const { message, context } = req.body || {};
-    const apiKey = process.env.GEMINI_API_KEY;
+    let apiKey = process.env.GEMINI_API_KEY;
+
+    // Dynamically read .env file if process.env doesn't have GEMINI_API_KEY yet
+    if (!apiKey) {
+      try {
+        const envPath = path.join(process.cwd(), '.env');
+        if (fs.existsSync(envPath)) {
+          const envRaw = fs.readFileSync(envPath, 'utf-8');
+          const match = envRaw.match(/GEMINI_API_KEY\s*=\s*(.+)/);
+          if (match && match[1]) {
+            apiKey = match[1].trim();
+          }
+        }
+      } catch (e) {
+        console.warn('Could not read .env dynamically:', e);
+      }
+    }
 
     // Direct Gemini REST API call with candidate models
     const generateViaRest = async (userPrompt: string) => {
