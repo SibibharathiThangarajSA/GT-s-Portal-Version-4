@@ -1226,20 +1226,48 @@ import {
 } from './authCredentials';
 import { UserManagementRecord } from '../types';
 
+export const mergeUserRosters = (
+  serverRecords: UserManagementRecord[],
+  localRecords: UserManagementRecord[]
+): UserManagementRecord[] => {
+  const map = new Map<string, UserManagementRecord>();
+
+  const getRecordKey = (r: UserManagementRecord): string => {
+    if (r.id) return r.id;
+    if (r.email && r.email !== '-') return `email:${r.email.trim().toLowerCase()}`;
+    if (r.phoneNumber) return `phone:${r.phoneNumber.replace(/\D/g, '').trim()}`;
+    return `name:${r.name}`;
+  };
+
+  // Add server records first
+  serverRecords.forEach((r) => {
+    map.set(getRecordKey(r), r);
+  });
+
+  // Overlay local records so newly added local records or edits take precedence and are never lost!
+  localRecords.forEach((r) => {
+    map.set(getRecordKey(r), r);
+  });
+
+  return Array.from(map.values());
+};
+
 export const fetchUserManagementRecordsApi = async (): Promise<UserManagementRecord[]> => {
+  const localRecords = getUserManagementRecords();
   try {
     const res = await fetch('/api/auth/users');
     if (res.ok) {
       const data = await res.json().catch(() => null);
       if (data && Array.isArray(data.data)) {
-        saveUserManagementRecords(data.data);
-        return data.data;
+        const merged = mergeUserRosters(data.data, localRecords);
+        saveUserManagementRecords(merged);
+        return merged;
       }
     }
   } catch {
     // fallback to local storage
   }
-  return getUserManagementRecords();
+  return localRecords;
 };
 
 export const saveUserManagementRecordsApi = async (records: UserManagementRecord[]): Promise<boolean> => {

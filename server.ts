@@ -390,7 +390,7 @@ async function startServer() {
     const seenPhones = new Set<string>();
     for (const rec of records) {
       const cleanPhone = (rec.phoneNumber || '').replace(/\D/g, '').trim();
-      if (cleanPhone && cleanPhone.length === 10) {
+      if (cleanPhone && cleanPhone.length === 10 && cleanPhone !== '9999999999') {
         if (seenPhones.has(cleanPhone)) {
           return res.status(400).json({
             success: false,
