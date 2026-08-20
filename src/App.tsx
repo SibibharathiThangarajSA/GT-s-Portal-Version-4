@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Session, Quiz, RoadmapTopic, StudyMaterial } from './types';
-import { fetchSessionsApi, createSessionApi, updateSessionApi, deleteSessionApi, saveFullSessionApi, logActivityApi } from './services/api';
+import { fetchSessionsApi, createSessionApi, updateSessionApi, deleteSessionApi, saveFullSessionApi, logActivityApi, fetchUserManagementRecordsApi } from './services/api';
 
 const defaultGuestUser: User = {
   id: 'guest-user',
@@ -197,6 +197,11 @@ export function App() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // Sync user management roster from server on app mount for all new sessions & browsers
+  useEffect(() => {
+    fetchUserManagementRecordsApi().catch(() => {});
   }, []);
 
 

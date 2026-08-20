@@ -996,7 +996,14 @@ import {
 export const loginApi = async (email: string, password?: string): Promise<{ success: boolean; data?: AuthUserDto; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
 
-  // 1. Strict Domain Validation
+  // 1. Sync latest user roster from backend server to support new sessions/browsers
+  try {
+    await fetchUserManagementRecordsApi();
+  } catch {
+    // Proceed
+  }
+
+  // 2. Strict Domain Validation
   if (!isAllowedDomain(cleanEmail)) {
     return {
       success: false,
@@ -1004,7 +1011,7 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
     };
   }
 
-  // 2. Try Server API first
+  // 3. Try Server API first
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -1019,7 +1026,7 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
     // Proceed to verified credentials store fallback
   }
 
-  // 3. Fallback to verified local credentials store (supports newly added credentials in User Management)
+  // 4. Fallback to verified local credentials store (supports newly added credentials in User Management)
   const localResult = authenticateLocalUser(cleanEmail, password);
   if (localResult.success) {
     return localResult;
@@ -1310,7 +1317,13 @@ export const requestMobileOtpApi = async (
   }
 
   // 2. Local Fallback Verification
-  const user = findUserByPhoneNumber(cleanPhone);
+  let user = findUserByPhoneNumber(cleanPhone);
+  if (!user) {
+    try {
+      await fetchUserManagementRecordsApi();
+      user = findUserByPhoneNumber(cleanPhone);
+    } catch {}
+  }
 
   if (!user) {
     return {
@@ -1377,7 +1390,13 @@ export const verifyMobileOtpApi = async (
   }
 
   // 2. Local Fallback Verification
-  const user = findUserByPhoneNumber(cleanPhone);
+  let user = findUserByPhoneNumber(cleanPhone);
+  if (!user) {
+    try {
+      await fetchUserManagementRecordsApi();
+      user = findUserByPhoneNumber(cleanPhone);
+    } catch {}
+  }
 
   if (!user) {
     return {
