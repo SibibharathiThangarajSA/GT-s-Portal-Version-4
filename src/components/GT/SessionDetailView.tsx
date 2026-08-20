@@ -1055,7 +1055,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
             </div>
             <h3 className="text-lg font-extrabold text-slate-900">Session Quiz</h3>
             <p className="text-slate-600 text-xs font-medium">
-              Complete the session assessment to validate your understanding and earn XP points.
+              Complete the session assessment to validate your understanding.
             </p>
           </div>
 
@@ -1177,11 +1177,10 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
               <button
                 onClick={handleAddNote}
                 disabled={!newNoteText.trim()}
-                className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-md ${
-                  newNoteText.trim()
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-md ${newNoteText.trim()
                     ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25 hover:-translate-y-0.5 cursor-pointer'
                     : 'bg-slate-200 text-slate-400 shadow-none cursor-not-allowed'
-                }`}
+                  }`}
               >
                 <Plus className="w-4 h-4" />
                 <span>Save Private Note</span>
@@ -1249,11 +1248,10 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   return (
                     <div
                       key={note.id}
-                      className={`bg-white border rounded-2xl p-5 text-xs space-y-3 transition-all duration-200 ${
-                        note.isPinned
+                      className={`bg-white border rounded-2xl p-5 text-xs space-y-3 transition-all duration-200 ${note.isPinned
                           ? 'border-amber-300 bg-gradient-to-br from-amber-50/30 to-white shadow-md'
                           : 'border-slate-200/90 hover:border-slate-300 shadow-sm'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1274,9 +1272,8 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                           {/* Pin Button */}
                           <button
                             onClick={() => handleTogglePinNote(note.id)}
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              note.isPinned ? 'text-amber-600 bg-amber-50' : 'hover:bg-slate-100 hover:text-slate-700'
-                            }`}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${note.isPinned ? 'text-amber-600 bg-amber-50' : 'hover:bg-slate-100 hover:text-slate-700'
+                              }`}
                             title={note.isPinned ? 'Unpin note' : 'Pin note to top'}
                           >
                             <Pin className={`w-3.5 h-3.5 ${note.isPinned ? 'fill-amber-500' : ''}`} />
