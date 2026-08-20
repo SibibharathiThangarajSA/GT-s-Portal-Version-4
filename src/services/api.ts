@@ -833,7 +833,33 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
   return await fetchSessionById(targetSessionId);
 };
 
+const RAG_SERVICE_URL = (import.meta as any).env?.VITE_RAG_API_URL || 'https://trainee-rag-api.up.railway.app';
+
 export const sendAiChatMessageApi = async (message: string, context?: any, chatHistory?: any[]) => {
+  try {
+    // 1. Primary: Direct RAG call to deployed FastAPI microservice on Railway
+    const res = await fetch(`${RAG_SERVICE_URL}/api/rag/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: message, top_k: 5 })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      let replyText = data.answer || data.reply || "No response generated.";
+      if (data.sources && Array.isArray(data.sources) && data.sources.length > 0) {
+        const citationsText = data.sources
+          .map((s: any) => `\n• **[${s.ref}] ${s.title}** (${Math.round((s.similarity || 0.9) * 100)}% match)`)
+          .join('');
+        replyText += `\n\n📌 **Sources & References:**${citationsText}`;
+      }
+      return { reply: replyText, sources: data.sources };
+    }
+  } catch (err) {
+    console.warn('RAG FastAPI direct call failed, attempting fallback...', err);
+  }
+
+  // 2. Fallback to local /api/ai/chat proxy
   try {
     const res = await fetch('/api/ai/chat', {
       method: 'POST',
