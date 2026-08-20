@@ -405,7 +405,15 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 Configure overview details, roadmap flow, materials, assignments, notes, and quiz assessments.
               </p>
             </div>
-            <span className="text-xs font-mono font-bold text-blue-700 uppercase bg-blue-50 px-3 py-1 rounded-full border border-blue-200 self-start sm:self-auto shadow-sm">
+            <span
+              className={`text-xs font-mono font-bold uppercase px-3 py-1 rounded-full border self-start sm:self-auto shadow-sm transition-colors ${
+                editingSession.status === 'Publish' || editingSession.status === 'Published'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : editingSession.status === 'Archive' || editingSession.status === 'Archived'
+                  ? 'bg-violet-50 text-violet-700 border-violet-200'
+                  : 'bg-orange-50 text-orange-700 border-orange-200'
+              }`}
+            >
               {editingSession.status || 'Draft'} Mode
             </span>
           </div>
@@ -542,7 +550,33 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-slate-700 font-bold block mb-1">Session Status *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-700 font-bold block">Session Status *</label>
+                  <span
+                    className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 shadow-2xs transition-all ${
+                      editingSession.status === 'Publish' || editingSession.status === 'Published'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : editingSession.status === 'Archive' || editingSession.status === 'Archived'
+                        ? 'bg-violet-50 text-violet-700 border-violet-200'
+                        : 'bg-orange-50 text-orange-700 border-orange-200'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        editingSession.status === 'Publish' || editingSession.status === 'Published'
+                          ? 'bg-blue-600 animate-pulse'
+                          : editingSession.status === 'Archive' || editingSession.status === 'Archived'
+                          ? 'bg-violet-600'
+                          : 'bg-orange-500'
+                      }`}
+                    />
+                    {editingSession.status === 'Publish' || editingSession.status === 'Published'
+                      ? 'Publish'
+                      : editingSession.status === 'Archive' || editingSession.status === 'Archived'
+                      ? 'Archive'
+                      : 'Draft'}
+                  </span>
+                </div>
                 <select
                   value={
                     editingSession.status === 'Published' || editingSession.status === 'Publish'
@@ -559,7 +593,13 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       isPublished: val === 'Publish' || val === 'Published'
                     });
                   }}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-bold"
+                  className={`w-full bg-white border rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-4 shadow-sm font-bold transition-all ${
+                    editingSession.status === 'Publish' || editingSession.status === 'Published'
+                      ? 'border-blue-300 focus:border-blue-600 focus:ring-blue-500/12'
+                      : editingSession.status === 'Archive' || editingSession.status === 'Archived'
+                      ? 'border-violet-300 focus:border-violet-600 focus:ring-violet-500/12'
+                      : 'border-orange-300 focus:border-orange-500 focus:ring-orange-500/12'
+                  }`}
                 >
                   <option value="Publish">Publish</option>
                   <option value="Draft">Draft</option>
@@ -1600,7 +1640,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
               onClick={() => setFilterStatus(st)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 filterStatus === st
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  ? st === 'Draft'
+                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                    : st === 'Archived'
+                    ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20'
+                    : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'text-slate-700 hover:text-blue-700 hover:bg-slate-200/80'
               }`}
             >
@@ -1643,13 +1687,11 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                   )}
                   <span
                     className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                      (session.status || (session.isPublished !== false ? 'Published' : 'Draft')) === 'Published'
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                        : (session.status === 'Archived' || session.status === 'Archive')
-                        ? 'bg-slate-100 text-slate-700 border-slate-300'
-                        : session.status === 'Publish'
+                      (session.status || (session.isPublished !== false ? 'Published' : 'Draft')) === 'Published' || session.status === 'Publish'
                         ? 'bg-blue-50 text-blue-800 border-blue-300'
-                        : 'bg-amber-50 text-amber-800 border-amber-300'
+                        : session.status === 'Archived' || session.status === 'Archive'
+                        ? 'bg-violet-50 text-violet-800 border-violet-300'
+                        : 'bg-orange-50 text-orange-800 border-orange-300'
                     }`}
                   >
                     {session.status || (session.isPublished !== false ? 'Published' : 'Draft')}

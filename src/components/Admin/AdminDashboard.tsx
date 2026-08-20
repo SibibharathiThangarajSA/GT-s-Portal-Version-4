@@ -363,11 +363,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                         {/* Status Badge */}
                         <span
-                          className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${(session.status || (session.isPublished !== false ? 'Published' : 'Draft')) === 'Published'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                              : (session.status === 'Archived')
-                                ? 'bg-slate-100 text-slate-700 border-slate-300'
-                                : 'bg-amber-50 text-amber-800 border-amber-300'
+                          className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border ${
+                            (session.status || (session.isPublished !== false ? 'Published' : 'Draft')) === 'Published' || session.status === 'Publish'
+                              ? 'bg-blue-50 text-blue-800 border-blue-300'
+                              : session.status === 'Archived' || session.status === 'Archive'
+                              ? 'bg-violet-50 text-violet-800 border-violet-300'
+                              : 'bg-orange-50 text-orange-800 border-orange-300'
                             }`}
                         >
                           {session.status || (session.isPublished !== false ? 'Published' : 'Draft')}

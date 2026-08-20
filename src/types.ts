@@ -56,7 +56,9 @@ export type CategoryType =
   | 'Microservices'
   | 'Testing'
   | 'Quality Assurance'
-  | 'Architecture';
+  | 'Architecture'
+  | ''
+  | (string & {});
 
 export type RoadmapNodeStatus = 'Locked' | 'Unlocked' | 'In Progress' | 'Completed';
 
