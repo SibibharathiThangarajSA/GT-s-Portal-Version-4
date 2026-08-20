@@ -1015,15 +1015,20 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
     if (res.ok && data.success && data.data) {
       return { success: true, data: data.data };
     }
-    if (!res.ok && data.message) {
-      return { success: false, message: data.message };
-    }
   } catch {
     // Proceed to verified credentials store fallback
   }
 
-  // 3. Fallback to verified local credentials store
-  return authenticateLocalUser(cleanEmail, password);
+  // 3. Fallback to verified local credentials store (supports newly added credentials in User Management)
+  const localResult = authenticateLocalUser(cleanEmail, password);
+  if (localResult.success) {
+    return localResult;
+  }
+
+  return {
+    success: false,
+    message: 'Incorrect email ID or password.'
+  };
 };
 
 export const forgotPasswordApi = async (email: string): Promise<{ success: boolean; message?: string }> => {

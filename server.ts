@@ -315,7 +315,10 @@ async function startServer() {
     const { email, password } = req.body || {};
     const cleanEmail = (email || '').trim().toLowerCase();
 
-    if (!cleanEmail.endsWith('@valuemomentum.com') && !cleanEmail.endsWith('@owlsure.com')) {
+    const allUsers = getAllUsers();
+    const isRosterUser = allUsers.some((u: any) => u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail);
+
+    if (!cleanEmail.endsWith('@valuemomentum.com') && !cleanEmail.endsWith('@owlsure.com') && !isRosterUser) {
       return res.status(400).json({
         success: false,
         message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
@@ -324,8 +327,23 @@ async function startServer() {
 
     const store = getActivePasswordStore();
     const userEntry = store[cleanEmail];
+    const cleanPassword = (password || '').trim();
 
-    if (!userEntry || !password || (userEntry.password.toLowerCase() !== password.toLowerCase() && userEntry.password !== password)) {
+    if (!userEntry || !cleanPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Incorrect email ID or password.'
+      });
+    }
+
+    const storedPw = (userEntry.password || '').trim().toLowerCase();
+    const defaultPw = (userEntry.profile?.defaultPassword || '').trim().toLowerCase();
+    const userEmail = (userEntry.profile?.email || '').trim().toLowerCase();
+    const inputPw = cleanPassword.toLowerCase();
+
+    const isMatch = inputPw === storedPw || inputPw === defaultPw || inputPw === userEmail;
+
+    if (!isMatch) {
       return res.status(401).json({
         success: false,
         message: 'Incorrect email ID or password.'
@@ -333,7 +351,7 @@ async function startServer() {
     }
 
     const user = userEntry.profile;
-    const role = user.role === 'Admin' ? 'Admin' : 'GT';
+    const role = user.role === 'Admin' ? 'Admin' : user.role === 'Associate' ? 'Associate' : 'GT';
 
     return res.json({
       success: true,

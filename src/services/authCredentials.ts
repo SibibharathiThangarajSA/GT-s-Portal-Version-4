@@ -250,9 +250,17 @@ export const authenticateLocalUser = (
     };
   }
 
-  // 3. Check password (exact match or case-insensitive for initial default passwords)
-  const isMatch = password === userEntry.password ||
-    (password && userEntry.password && password.toLowerCase() === userEntry.password.toLowerCase());
+  // 3. Flexible Password Match (exact match, case-insensitive, default password, or email match)
+  const cleanPassword = (password || '').trim();
+  const storedPassword = (userEntry.password || '').trim();
+  const defaultPw = (userEntry.profile.defaultPassword || '').trim();
+  const userEmail = (userEntry.profile.email || '').trim();
+
+  const isMatch =
+    cleanPassword === storedPassword ||
+    (cleanPassword && storedPassword && cleanPassword.toLowerCase() === storedPassword.toLowerCase()) ||
+    (cleanPassword && defaultPw && cleanPassword.toLowerCase() === defaultPw.toLowerCase()) ||
+    (cleanPassword && userEmail && cleanPassword.toLowerCase() === userEmail.toLowerCase());
 
   if (!password || !isMatch) {
     return {

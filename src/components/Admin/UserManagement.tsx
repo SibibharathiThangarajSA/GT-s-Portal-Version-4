@@ -1013,6 +1013,12 @@ export const UserManagement: React.FC = () => {
                           placeholder={isAssociate ? 'e.g. name@valuemomentum.com (Optional)' : 'e.g. name@valuemomentum.com'}
                           className="w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                         />
+                        {entry.email && entry.email.includes('@') && (
+                          <p className="text-[11px] text-blue-600 font-semibold mt-1.5 flex items-center gap-1">
+                            <Key className="w-3 h-3 shrink-0" />
+                            <span>Initial Login Password: <strong>{getDefaultPasswordForEmail(entry.email)}</strong></span>
+                          </p>
+                        )}
                       </div>
 
                       {/* 6. Designation (ALWAYS ENABLED for all roles) */}
