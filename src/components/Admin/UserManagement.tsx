@@ -55,6 +55,14 @@ interface FormCredentialEntry {
   addedOn: string;
 }
 
+export const getEffectiveDesignation = (user: { designation?: string; role?: string }): string => {
+  const d = (user.designation || '').trim();
+  if (d && d !== '-') return d;
+  if (user.role === 'Admin') return 'Lead - L&D Leadership';
+  if (user.role === 'Associate') return 'Associate Trainee';
+  return 'Graduate Trainee';
+};
+
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserManagementRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,7 +122,12 @@ export const UserManagement: React.FC = () => {
       setIsLoading(true);
       try {
         const records = await fetchUserManagementRecordsApi();
-        setUsers(records);
+        // Normalize any record missing designation so everything is standardized
+        const normalized = records.map((u) => ({
+          ...u,
+          designation: getEffectiveDesignation(u)
+        }));
+        setUsers(normalized);
       } catch (e) {
         console.error('Failed to load user roster', e);
       } finally {
@@ -124,23 +137,24 @@ export const UserManagement: React.FC = () => {
     loadRecords();
   }, []);
 
-  // Compute unique designations for filter dropdown
+  // Dynamically extract every distinct designation present in the table records
   const uniqueDesignations = useMemo(() => {
     const set = new Set<string>();
     users.forEach((u) => {
-      const desig = (u.designation || '').trim();
+      const desig = getEffectiveDesignation(u);
       if (desig) set.add(desig);
     });
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [users]);
 
   // Filtered and searched records
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
+      const uDesignation = getEffectiveDesignation(u);
       const matchesDesignation =
         designationFilter === 'ALL' ||
-        (u.designation || '').trim().toLowerCase() === designationFilter.trim().toLowerCase();
+        uDesignation.trim().toLowerCase() === designationFilter.trim().toLowerCase();
 
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -150,7 +164,7 @@ export const UserManagement: React.FC = () => {
         (u.email && u.email.toLowerCase().includes(q)) ||
         (u.phoneNumber && u.phoneNumber.includes(q)) ||
         (u.role && u.role.toLowerCase().includes(q)) ||
-        (u.designation && u.designation.toLowerCase().includes(q));
+        (uDesignation && uDesignation.toLowerCase().includes(q));
 
       return matchesRole && matchesDesignation && matchesSearch;
     });
@@ -603,12 +617,15 @@ export const UserManagement: React.FC = () => {
                 onChange={(e) => setDesignationFilter(e.target.value)}
                 className="bg-white border border-slate-200 text-slate-800 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none focus:border-blue-600 shadow-xs cursor-pointer"
               >
-                <option value="ALL">All Designations</option>
-                {uniqueDesignations.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
+                <option value="ALL">All Designations ({users.length})</option>
+                {uniqueDesignations.map((d) => {
+                  const count = users.filter((u) => getEffectiveDesignation(u).toLowerCase() === d.toLowerCase()).length;
+                  return (
+                    <option key={d} value={d}>
+                      {d} ({count})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -1025,6 +1042,7 @@ export const UserManagement: React.FC = () => {
                           <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                           <input
                             type="text"
+                            list="designation-suggestions"
                             value={entry.designation || ''}
                             onChange={(e) => handleUpdateEntry(index, 'designation', e.target.value)}
                             placeholder="e.g. Graduate Trainee, Associate Software Engineer, Lead - L&D"
@@ -1232,6 +1250,7 @@ export const UserManagement: React.FC = () => {
                   <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
+                    list="designation-suggestions"
                     value={editingUser.designation || ''}
                     onChange={(e) => setEditingUser({ ...editingUser, designation: e.target.value })}
                     placeholder="e.g. Graduate Trainee, Associate Software Engineer, L&D Lead"
@@ -1294,6 +1313,13 @@ export const UserManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Global Datalist for dynamic autocomplete suggestions across modals */}
+      <datalist id="designation-suggestions">
+        {uniqueDesignations.map((d) => (
+          <option key={d} value={d} />
+        ))}
+      </datalist>
     </div>
   );
 };
