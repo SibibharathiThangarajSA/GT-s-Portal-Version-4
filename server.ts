@@ -1578,9 +1578,17 @@ Provide a clear, detailed, well-structured, and helpful explanation with code sn
       return res.json({ reply: restReply });
     }
 
-    // Fallback response with topic-specific guidance
+    // Friendly greeting check
+    const lowerMsg = (message || '').trim().toLowerCase();
+    if (['hello', 'hi', 'hey', 'greetings', 'good morning', 'good afternoon'].includes(lowerMsg)) {
+      return res.json({
+        reply: `Hello! I am your AI Learning Assistant. How can I help you today with your study materials, code review, or interview preparation?`
+      });
+    }
+
+    // Informative message when Gemini API Key is not set in environment
     return res.json({
-      reply: `### AI Assistant Guidance for ${context?.sessionName || 'Software Engineering'}\n\nHere is key guidance for your question **"${message}"**:\n\n1. **Core Concept**: Ensure strict architectural separation of concerns and type discipline.\n2. **Best Practices**: Utilize async/await patterns for non-blocking I/O and verify data query performance.\n3. **Practical Implementation**: Structure code with modular design patterns and clean error handling.`
+      reply: `I am ready to assist you with **"${message}"**!\n\n⚠️ **Note**: Live Gemini AI generation is currently offline because \`GEMINI_API_KEY\` is missing or invalid in your Railway / local \`.env\` environment.\n\nTo activate real-time AI responses:\n1. Open Railway Dashboard ➔ **GT-s-RAG-API** ➔ **Variables**.\n2. Set \`GEMINI_API_KEY\` to your valid Google AI Studio key (\`AIzaSy...\`).`
     });
   });
 
