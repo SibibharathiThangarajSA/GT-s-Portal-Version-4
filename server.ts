@@ -177,8 +177,8 @@ async function hydrateDatabaseFromS3() {
 }
 
 // Initialize Gemini Client
-const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
+const getGeminiClient = (overrideKey?: string) => {
+  const apiKey = overrideKey || process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   return new GoogleGenAI({
     apiKey,
@@ -1574,9 +1574,9 @@ User Question: ${message}
 
 Provide a clear, detailed, well-structured, production-grade explanation with code snippets, architecture diagrams, or step-by-step guides where relevant. Format nicely in markdown.`;
 
-    const client = getGeminiClient();
+    const client = getGeminiClient(apiKey);
     if (client) {
-      for (const modelName of ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.6-flash']) {
+      for (const modelName of ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash']) {
         try {
           const response = await client.models.generateContent({
             model: modelName,
@@ -1608,62 +1608,9 @@ Provide a clear, detailed, well-structured, production-grade explanation with co
       });
     }
 
-    // High-quality structured response for database table design and technical queries
-    if (lowerMsg.includes('table') || lowerMsg.includes('database') || lowerMsg.includes('db') || lowerMsg.includes('design') || lowerMsg.includes('schema')) {
-      return res.json({
-        reply: `### 📊 Database Table Design & Architecture Guide
-
-A production-grade **Database Table Design** requires structured relationships, normalization, indexing, and audit tracking.
-
-#### 🔑 1. Key Design Principles
-* **Primary Keys (PK)**: Use auto-incrementing \`BIGINT\` / \`UUID\` as surrogate keys for unique identification.
-* **Normalization (3NF)**: Separate entities into logical tables to eliminate redundant data.
-* **Foreign Keys (FK)**: Define strict constraints for Referential Integrity.
-* **Indexing**: Place B-Tree/HNSW indexes on high-cardinality query columns (e.g. \`UserId\`, \`CreatedAt\`).
-* **Audit Fields**: Always include \`CreatedOn\`, \`CreatedBy\`, \`UpdatedOn\`, \`IsDeleted\`.
-
-#### 💻 2. C# Entity Framework Core Example
-\`\`\`csharp
-public class UserProfile
-{
-    public long Id { get; set; } // Primary Key
-    public string VamId { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    
-    // Audit Fields
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public bool IsActive { get; set; } = true;
-}
-\`\`\`
-
-#### 🛡️ 3. SQL DDL Schema
-\`\`\`sql
-CREATE TABLE UserProfiles (
-    Id BIGSERIAL PRIMARY KEY,
-    VamId VARCHAR(50) NOT NULL UNIQUE,
-    FullName VARCHAR(150) NOT NULL,
-    Email VARCHAR(255) NOT NULL UNIQUE,
-    CreatedAt TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    IsActive BOOLEAN DEFAULT TRUE
-);
-\`\`\``
-      });
-    }
-
-    // Default professional structured AI learning guide
+    // Generic fallback if API key or connection fails
     return res.json({
-      reply: `### 📚 Technical Learning Guidance: ${message}
-
-Here is a structured overview for **"${message}"** in ${context?.sessionName || 'Enterprise Software Engineering'}:
-
-#### 1. Core Principles
-* **Separation of Concerns**: Keep business logic, data persistence, and API controllers loosely coupled.
-* **Clean Code**: Follow SOLID principles, write self-documenting code, and handle edge cases gracefully.
-
-#### 2. Best Practices
-* **Asynchronous Operations**: Use \`async/await\` for non-blocking I/O tasks.
-* **Performance Tuning**: Index query columns and use caching for hot data paths.`
+      reply: `I am currently processing your question about **"${message}"**.\n\nPlease ensure your \`GEMINI_API_KEY\` is valid and your network connection is active.`
     });
   });
 
