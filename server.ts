@@ -1545,7 +1545,7 @@ async function startServer() {
     // Direct Gemini REST API call with candidate models
     const generateViaRest = async (userPrompt: string) => {
       if (!apiKey) return null;
-      const candidateModels = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.6-flash'];
+      const candidateModels = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
       for (const modelName of candidateModels) {
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
