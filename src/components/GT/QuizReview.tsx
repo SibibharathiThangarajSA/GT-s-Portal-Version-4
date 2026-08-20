@@ -133,9 +133,13 @@ export const QuizReview: React.FC<QuizReviewProps> = ({
 
   // Count correct answers using robust matching
   const correctCount = quiz.questions.filter(q => isUserAnswerCorrect(q, answers[q.id])).length;
-  const calculatedPercent = Math.round((correctCount / quiz.questions.length) * 100);
-  const displayScorePercent = scorePercent !== undefined ? scorePercent : calculatedPercent;
-  const isPassed = passed !== undefined ? passed : displayScorePercent >= quiz.passingScorePercent;
+  const calculatedPercent = quiz.questions.length > 0 ? Math.round((correctCount / quiz.questions.length) * 100) : 0;
+  const displayScorePercent = (scorePercent !== undefined && scorePercent !== null && !isNaN(Number(scorePercent)) && (Number(scorePercent) === calculatedPercent || correctCount === 0))
+    ? Number(scorePercent)
+    : calculatedPercent;
+  const isPassed = passed !== undefined && passed !== null && typeof passed === 'boolean'
+    ? (displayScorePercent === calculatedPercent ? displayScorePercent >= (quiz.passingScorePercent || 70) : passed)
+    : displayScorePercent >= (quiz.passingScorePercent || 70);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn pb-12">

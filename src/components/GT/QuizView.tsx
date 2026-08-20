@@ -221,27 +221,25 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
       ? (result as any).correctAnswers
       : undefined;
 
-    const overrideWithClient = (rawCorrect === 0 && localCorrectCount > 0) || (serverScore === 0 && localPercent > 0) || serverScore === undefined || rawCorrect === undefined;
-
     const totalQuestions = typeof result.totalQuestions === 'number' && result.totalQuestions > 0
       ? result.totalQuestions
       : calculatedTotal;
 
+    const overrideWithClient = (rawCorrect === 0 && localCorrectCount > 0)
+      || (serverScore === 0 && localPercent > 0)
+      || serverScore === undefined
+      || rawCorrect === undefined
+      || (totalQuestions > 0 && typeof rawCorrect === 'number' && typeof serverScore === 'number' && Math.round((rawCorrect / totalQuestions) * 100) !== serverScore);
+
     const correctCount = overrideWithClient
       ? localCorrectCount
-      : rawCorrect;
+      : (rawCorrect ?? localCorrectCount);
 
-    const scorePercent = overrideWithClient
-      ? localPercent
-      : serverScore;
+    const scorePercent = totalQuestions > 0
+      ? Math.round((correctCount / totalQuestions) * 100)
+      : (overrideWithClient ? localPercent : (serverScore ?? localPercent));
 
-    const passed = overrideWithClient
-      ? (scorePercent >= passingThreshold)
-      : (typeof result.passed === 'boolean'
-          ? result.passed
-          : (typeof result.isPassed === 'boolean'
-              ? result.isPassed
-              : scorePercent >= passingThreshold));
+    const passed = scorePercent >= passingThreshold;
 
     if (showReviewPage) {
       return (
