@@ -355,11 +355,9 @@ async function startServer() {
       });
     }
 
-    // BUG_LOGIN_002 Fix: Passwords must match strictly with case sensitivity.
+    // Passwords must match strictly with case sensitivity against the active stored password.
     const storedPw = (userEntry.password || '').trim();
-    const defaultPw = (userEntry.profile?.defaultPassword || '').trim();
-
-    const isMatch = cleanPassword === storedPw || (defaultPw && cleanPassword === defaultPw);
+    const isMatch = cleanPassword === storedPw;
 
     if (!isMatch) {
       return res.status(401).json({
@@ -564,7 +562,7 @@ async function startServer() {
       return res.status(404).json({ success: false, message: 'User account not found.' });
     }
 
-    if (userEntry.password !== currentPassword && userEntry.password.toLowerCase() !== currentPassword.toLowerCase()) {
+    if (userEntry.password !== currentPassword) {
       return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
     }
 

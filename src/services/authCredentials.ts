@@ -250,15 +250,12 @@ export const authenticateLocalUser = (
     };
   }
 
-  // 3. Strict Case-Sensitive Password Match (BUG_LOGIN_002 Fix)
+  // 3. Strict Case-Sensitive Password Match against Active Stored Password
   const cleanPassword = (password || '').trim();
   const storedPassword = (userEntry.password || '').trim();
-  const defaultPw = (userEntry.profile.defaultPassword || '').trim();
 
-  // Password matching must be strictly case-sensitive.
-  const isMatch =
-    cleanPassword === storedPassword ||
-    (cleanPassword && defaultPw && cleanPassword === defaultPw);
+  // Password matching must be strictly case-sensitive against the active stored password.
+  const isMatch = cleanPassword === storedPassword;
 
   if (!password || !isMatch) {
     return {
