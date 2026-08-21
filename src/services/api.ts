@@ -1022,20 +1022,22 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
     if (res.ok && data.success && data.data) {
       return { success: true, data: data.data };
     }
+    if (!res.ok || data.success === false) {
+      const localResult = authenticateLocalUser(cleanEmail, password);
+      if (!localResult.success) {
+        return {
+          success: false,
+          message: data.message || localResult.message || 'Incorrect email ID or password.'
+        };
+      }
+      return localResult;
+    }
   } catch {
-    // Proceed to verified credentials store fallback
+    // Network offline fallback
   }
 
-  // 4. Fallback to verified local credentials store (supports newly added credentials in User Management)
-  const localResult = authenticateLocalUser(cleanEmail, password);
-  if (localResult.success) {
-    return localResult;
-  }
-
-  return {
-    success: false,
-    message: 'Incorrect email ID or password.'
-  };
+  // 4. Fallback to verified local credentials store
+  return authenticateLocalUser(cleanEmail, password);
 };
 
 export const forgotPasswordApi = async (email: string): Promise<{ success: boolean; message?: string }> => {
@@ -1104,6 +1106,11 @@ export const resetPasswordApi = async (email: string, _resetToken: string, newPa
     };
   }
 
+  const localRes = resetUserPassword(cleanEmail, newPassword);
+  if (!localRes.success) {
+    return localRes;
+  }
+
   try {
     const res = await fetch('/api/auth/reset-password', {
       method: 'POST',
@@ -1112,17 +1119,13 @@ export const resetPasswordApi = async (email: string, _resetToken: string, newPa
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
-      resetUserPassword(cleanEmail, newPassword);
       return { success: true, message: data.message || 'Password has been reset successfully! Please log in with your new password.' };
     }
-    if (!res.ok && data.message) {
-      return { success: false, message: data.message };
-    }
   } catch {
-    // fallback
+    // network fallback
   }
 
-  return resetUserPassword(cleanEmail, newPassword);
+  return localRes;
 };
 
 export const changePasswordApi = async (email: string, currentPassword: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {
@@ -1135,6 +1138,11 @@ export const changePasswordApi = async (email: string, currentPassword: string, 
     };
   }
 
+  const localRes = changeUserPassword(cleanEmail, currentPassword, newPassword);
+  if (!localRes.success) {
+    return localRes;
+  }
+
   try {
     const res = await fetch('/api/auth/change-password', {
       method: 'POST',
@@ -1143,17 +1151,13 @@ export const changePasswordApi = async (email: string, currentPassword: string, 
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
-      changeUserPassword(cleanEmail, currentPassword, newPassword);
       return { success: true, message: data.message || 'Password changed successfully! You can now log in with your new password.' };
     }
-    if (!res.ok && data.message) {
-      return { success: false, message: data.message };
-    }
   } catch {
-    // fallback to local storage
+    // network fallback
   }
 
-  return changeUserPassword(cleanEmail, currentPassword, newPassword);
+  return localRes;
 };
 
 // ============================================================================

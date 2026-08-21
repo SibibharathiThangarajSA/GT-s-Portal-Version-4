@@ -280,10 +280,11 @@ async function startServer() {
 
     roster.forEach((acc: any) => {
       if (!acc.email || acc.email === '-') return;
-      const defaultPw = (acc.email.split('@')[0] || '').toLowerCase();
+      const cleanEmail = acc.email.trim().toLowerCase();
+      const defaultPw = (cleanEmail.split('@')[0] || '').toLowerCase();
       const parts = (acc.name || '').split(' ');
-      store[acc.email.toLowerCase()] = {
-        password: defaultPw,
+      store[cleanEmail] = {
+        password: acc.password || defaultPw,
         profile: {
           ...acc,
           firstName: parts[0] || acc.name,
@@ -296,7 +297,7 @@ async function startServer() {
     const overrides = readJsonFile<Record<string, string>>(CREDENTIALS_FILE, {});
     Object.keys(overrides).forEach((key) => {
       const lower = key.toLowerCase();
-      if (store[lower]) {
+      if (store[lower] && typeof overrides[key] === 'string') {
         store[lower].password = overrides[key];
       }
     });
