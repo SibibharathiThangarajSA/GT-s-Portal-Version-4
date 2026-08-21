@@ -67,4 +67,10 @@ test('Admin Password Change & Persistence Suite', async (t) => {
     assert.equal(auth2.success, true, 'Latest password should succeed');
     assert.equal(auth2.data?.email, adminEmail, 'Email in DTO should match');
   });
+
+  await t.test('5. Reject changing password to the exact same current password', () => {
+    const sameResult = changeUserPassword(adminEmail, newPassword2, newPassword2);
+    assert.equal(sameResult.success, false, 'Setting new password equal to current password must fail');
+    assert.match(sameResult.message, /cannot be the same/, 'Error message should explain same password rule');
+  });
 });

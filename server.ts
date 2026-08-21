@@ -567,6 +567,10 @@ async function startServer() {
       return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
     }
 
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ success: false, message: 'New password cannot be the same as your current password. Please choose a different password.' });
+    }
+
     if (!newPassword || newPassword.length < 8) {
       return res.status(400).json({ success: false, message: 'New password must be at least 8 characters long.' });
     }

@@ -392,6 +392,13 @@ export const changeUserPassword = (
     };
   }
 
+  if (currentPassword === newPassword) {
+    return {
+      success: false,
+      message: 'New password cannot be the same as your current password. Please choose a different password.'
+    };
+  }
+
   if (!newPassword || newPassword.length < 8) {
     return {
       success: false,

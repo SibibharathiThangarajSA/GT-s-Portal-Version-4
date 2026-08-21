@@ -37,15 +37,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   const isConfirmFilled = confirmPassword.length > 0;
   const isPasswordMatch = isConfirmFilled && newPassword === confirmPassword;
   const isPasswordMismatch = isConfirmFilled && newPassword !== confirmPassword;
+  const isSameAsCurrent = Boolean(currentPassword.trim() && newPassword.trim() && currentPassword === newPassword);
 
   const isSubmitDisabled = useMemo(() => {
     return (
       isLoading ||
       !currentPassword.trim() ||
       !isPasswordValid ||
-      !isPasswordMatch
+      !isPasswordMatch ||
+      isSameAsCurrent
     );
-  }, [isLoading, currentPassword, isPasswordValid, isPasswordMatch]);
+  }, [isLoading, currentPassword, isPasswordValid, isPasswordMatch, isSameAsCurrent]);
 
   if (!isOpen) return null;
 
@@ -69,6 +71,11 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
     if (!currentPassword.trim()) {
       setErrorMsg('Please enter your current password.');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setErrorMsg('New password cannot be the same as your current password. Please choose a different password.');
       return;
     }
 
