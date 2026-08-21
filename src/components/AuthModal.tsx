@@ -1135,7 +1135,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <input
                     type="tel"
                     maxLength={10}
-                    placeholder="e.g. 9894242460"
+                    placeholder="Enter your mobile number"
                     value={recoveryPhone}
                     onChange={(e) => {
                       setRecoveryPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
