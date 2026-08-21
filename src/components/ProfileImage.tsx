@@ -5,17 +5,19 @@ const DEFAULT_AVATAR = '/Assets/default-avatar.svg';
 type ProfileImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
   src?: string | null;
   alt?: string;
+  defaultSrc?: string;
 };
 
-export const ProfileImage: React.FC<ProfileImageProps> = ({ src, alt, className, ...rest }) => {
-  const [imgSrc, setImgSrc] = useState<string>(src && String(src).trim() ? String(src) : DEFAULT_AVATAR);
+export const ProfileImage: React.FC<ProfileImageProps> = ({ src, alt, className, defaultSrc = DEFAULT_AVATAR, ...rest }) => {
+  const fallback = defaultSrc || DEFAULT_AVATAR;
+  const [imgSrc, setImgSrc] = useState<string>(src && String(src).trim() ? String(src) : fallback);
 
   useEffect(() => {
-    setImgSrc(src && String(src).trim() ? String(src) : DEFAULT_AVATAR);
-  }, [src]);
+    setImgSrc(src && String(src).trim() ? String(src) : fallback);
+  }, [src, fallback]);
 
   const handleError = () => {
-    if (imgSrc !== DEFAULT_AVATAR) setImgSrc(DEFAULT_AVATAR);
+    if (imgSrc !== fallback) setImgSrc(fallback);
   };
 
   return (
@@ -31,3 +33,4 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({ src, alt, className,
 };
 
 export default ProfileImage;
+
