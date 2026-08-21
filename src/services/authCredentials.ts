@@ -280,6 +280,29 @@ export const getCredentialsStore = (): Record<string, { password: string; profil
 };
 
 /**
+ * Syncs cross-browser password overrides from the backend server
+ */
+export const syncServerCredentialsOverrides = async (): Promise<void> => {
+  try {
+    const res = await fetch('/api/auth/credentials');
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && data.success && data.overrides && typeof data.overrides === 'object') {
+        const currentRaw = safeLocalStorage.getItem(STORAGE_KEY);
+        let currentOverrides: Record<string, string> = {};
+        if (currentRaw) {
+          try { currentOverrides = JSON.parse(currentRaw); } catch {}
+        }
+        const merged = { ...currentOverrides, ...data.overrides };
+        safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      }
+    }
+  } catch {
+    // Offline mode
+  }
+};
+
+/**
  * Checks if the email domain is permitted (@valuemomentum.com, @owlsure.com, or registered in User Management)
  */
 export const isAllowedDomain = (email: string): boolean => {

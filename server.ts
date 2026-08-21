@@ -403,7 +403,7 @@ async function startServer() {
       return res.status(400).json({ success: false, message: 'Invalid records format.' });
     }
 
-    // Backend duplicate phone check
+    // Backend duplicate phone check & password override persistence
     const seenPhones = new Set<string>();
     for (const rec of records) {
       const cleanPhone = (rec.phoneNumber || '').replace(/\D/g, '').trim();
@@ -415,6 +415,9 @@ async function startServer() {
           });
         }
         seenPhones.add(cleanPhone);
+      }
+      if (rec.email && rec.email !== '-' && rec.password) {
+        savePasswordDisk(rec.email, rec.password);
       }
     }
 
@@ -627,12 +630,10 @@ async function startServer() {
     return res.json({ success: true, message: 'Verification code sent to your registered email address.' });
   });
 
-  auth.post('/verify-otp', (_req, res) => {
-    return res.json({
-      success: true,
-      data: { resetToken: `reset-token-${Date.now()}` },
-      message: 'OTP verified successfully.'
-    });
+  // Credentials sync endpoint for cross-browser password overrides
+  auth.get('/credentials', (_req, res) => {
+    const overrides = readJsonFile<Record<string, string>>(CREDENTIALS_FILE, {});
+    return res.json({ success: true, overrides });
   });
 
   app.use("/api/auth", auth);
