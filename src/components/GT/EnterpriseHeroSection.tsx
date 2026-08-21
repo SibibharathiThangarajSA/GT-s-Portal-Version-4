@@ -194,6 +194,7 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
               poster={currentVideo.thumbnailUrl}
               preload="metadata"
               playsInline
+              controls
               onTimeUpdate={() => {
                 if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
               }}

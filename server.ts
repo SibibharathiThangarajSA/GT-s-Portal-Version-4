@@ -305,9 +305,28 @@ async function startServer() {
   };
 
   const savePasswordDisk = (email: string, newPassword: string) => {
+    const cleanEmail = email.toLowerCase().trim();
     const overrides = readJsonFile<Record<string, string>>(CREDENTIALS_FILE, {});
-    overrides[email.toLowerCase()] = newPassword;
+    overrides[cleanEmail] = newPassword;
     writeJsonFile(CREDENTIALS_FILE, overrides);
+    syncJsonToS3(CREDENTIALS_FILE, overrides).catch((err) => {
+      console.warn('[S3 Sync] Error syncing credentials to S3:', err?.message);
+    });
+
+    // Also update server_users_roster.json user record if present so it persists in the main user database
+    const roster = getAllUsers();
+    let updatedRoster = false;
+    const updatedUsers = roster.map((u: any) => {
+      if (u.email && u.email.trim().toLowerCase() === cleanEmail) {
+        updatedRoster = true;
+        return { ...u, password: newPassword, defaultPassword: newPassword };
+      }
+      return u;
+    });
+
+    if (updatedRoster) {
+      saveAllUsers(updatedUsers);
+    }
   };
 
   // Login (Email + Password)
@@ -336,12 +355,11 @@ async function startServer() {
       });
     }
 
-    const storedPw = (userEntry.password || '').trim().toLowerCase();
-    const defaultPw = (userEntry.profile?.defaultPassword || '').trim().toLowerCase();
-    const userEmail = (userEntry.profile?.email || '').trim().toLowerCase();
-    const inputPw = cleanPassword.toLowerCase();
+    // BUG_LOGIN_002 Fix: Passwords must match strictly with case sensitivity.
+    const storedPw = (userEntry.password || '').trim();
+    const defaultPw = (userEntry.profile?.defaultPassword || '').trim();
 
-    const isMatch = inputPw === storedPw || inputPw === defaultPw || inputPw === userEmail;
+    const isMatch = cleanPassword === storedPw || (defaultPw && cleanPassword === defaultPw);
 
     if (!isMatch) {
       return res.status(401).json({
