@@ -218,13 +218,14 @@ export function App() {
 
   const handleAuthSuccess = (role: 'GT' | 'Admin' | 'Associate' | string, userData?: { name: string; email: string; isGuest?: boolean }) => {
     setIsAuthenticated(true);
-    const mappedPortal: 'GT' | 'Admin' = role === 'Admin' ? 'Admin' : 'GT';
+    const isRoleAdmin = Boolean(role && (role === 'Admin' || role.toLowerCase().includes('admin')));
+    const mappedPortal: 'GT' | 'Admin' = isRoleAdmin ? 'Admin' : 'GT';
     if (userData) {
       setCurrentUser(prev => ({
         ...prev,
         name: userData.name,
         email: userData.email,
-        role: role as any,
+        role: isRoleAdmin ? 'Admin' : ('GT' as any),
         isGuest: userData.isGuest ?? prev.isGuest
       }));
     }
@@ -439,7 +440,8 @@ export function App() {
             handleOpenLogin(portal);
             return;
           }
-          if (portal === 'Admin' && currentUser.role !== 'Admin') {
+          const isAdminUser = currentUser.role === 'Admin' || (typeof currentUser.role === 'string' && currentUser.role.toLowerCase().includes('admin'));
+          if (portal === 'Admin' && !isAdminUser) {
             addToast('error', 'Access Denied (RBAC): Admin console is restricted to L&D Administrators.');
             return;
           }
@@ -447,6 +449,7 @@ export function App() {
           setSelectedSessionId(null);
           setActiveQuiz(null);
           if (portal === 'Admin') {
+            setIsAdminAuthenticated(true);
             setAdminViewMode('tracker');
           }
           if (portal !== 'GT') {

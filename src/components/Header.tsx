@@ -58,6 +58,11 @@ export const Header: React.FC<HeaderProps> = ({
     onLogout();
   };
 
+  const isAdminRole =
+    activePortal === 'Admin' ||
+    currentUser.role === 'Admin' ||
+    (typeof currentUser.role === 'string' && currentUser.role.toLowerCase().includes('admin'));
+
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/80 text-slate-900 transition-all shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
@@ -67,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => {
               if (isAuthenticated) {
-                if (currentUser.role === 'Admin' || activePortal === 'Admin') {
+                if (isAdminRole) {
                   setActivePortal('Admin');
                 } else {
                   setActivePortal('GT');
@@ -92,10 +97,10 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </button>
 
-          {/* Current Active Portal Title Badge (Only shows Active Portal Title - No Switching) */}
+          {/* Current Active Portal Title Badge */}
           {isAuthenticated && (
             <div className="flex items-center gap-2">
-              {activePortal === 'Admin' || currentUser.role === 'Admin' ? (
+              {isAdminRole ? (
                 <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 shadow-xs">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   <span className="text-xs font-bold text-emerald-800 tracking-tight">Admin Portal</span>
@@ -183,8 +188,8 @@ export const Header: React.FC<HeaderProps> = ({
                       />
                       <div>
                         <span className="font-bold text-sm text-slate-900 block leading-snug">{currentUser.name}</span>
-                        <span className="text-[11px] text-blue-600 font-medium block">
-                          {activePortal === 'Admin' ? 'L&D Administrator' : 'Graduate Trainee'}
+                        <span className={`text-[11px] font-medium block ${isAdminRole ? 'text-emerald-600 font-semibold' : 'text-blue-600'}`}>
+                          {isAdminRole ? 'L&D Administrator' : 'Graduate Trainee'}
                         </span>
                         <span className="text-[10px] text-slate-500 font-mono">GT Batch 2026</span>
                       </div>

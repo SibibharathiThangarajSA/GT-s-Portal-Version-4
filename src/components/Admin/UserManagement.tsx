@@ -52,6 +52,7 @@ interface FormCredentialEntry {
   email: string;
   designation: string;
   addedOn: string;
+  password?: string;
 }
 
 export const getEffectiveDesignation = (user: { designation?: string; role?: string }): string => {
