@@ -1000,7 +1000,6 @@ export const UserManagement: React.FC = () => {
                         </label>
                         <input
                           type="text"
-                          list="designation-suggestions"
                           value={entry.designation || ''}
                           onChange={(e) => handleUpdateEntry(index, 'designation', e.target.value)}
                           placeholder="e.g. Graduate Trainee, Associate Software Engineer, Lead - L&D"
@@ -1180,7 +1179,6 @@ export const UserManagement: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  list="designation-suggestions"
                   value={editingUser.designation || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, designation: e.target.value })}
                   placeholder="e.g. Graduate Trainee, Associate Software Engineer, L&D Lead"

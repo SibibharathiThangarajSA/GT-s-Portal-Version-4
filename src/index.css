@@ -191,13 +191,15 @@ body {
   will-change: transform;
 }
 
-/* Disable duplicate native browser password reveal eye icons (Edge/Chrome/IE) so only single React Eye icon displays */
+/* Disable duplicate native browser password reveal eye icons & datalist/calendar picker arrows (Edge/Chrome/IE/Safari) */
 input::-ms-reveal,
 input::-ms-clear,
 input::-webkit-contacts-auto-fill-button,
-input::-webkit-credentials-auto-fill-button {
+input::-webkit-credentials-auto-fill-button,
+input::-webkit-calendar-picker-indicator {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
+  opacity: 0 !important;
   pointer-events: none !important;
 }

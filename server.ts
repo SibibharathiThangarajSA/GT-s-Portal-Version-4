@@ -608,7 +608,7 @@ async function startServer() {
     const { email, phone, recoveryType } = req.body || {};
     if (recoveryType === 'phone' || phone) {
       const cleanPhone = (phone || '').replace(/\D/g, '').trim();
-      const roster = readJsonFile(USERS_ROSTER_FILE, []);
+      const roster = readJsonFile(USER_ROSTER_FILE, []);
       const matched = roster.find((u: any) => (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone);
       if (!matched) {
         return res.status(404).json({ success: false, message: 'Account not found for this mobile number in User Management.' });
@@ -618,7 +618,7 @@ async function startServer() {
 
     const cleanEmail = (email || '').trim().toLowerCase();
     const store = getActivePasswordStore();
-    const roster = readJsonFile(USERS_ROSTER_FILE, []);
+    const roster = readJsonFile(USER_ROSTER_FILE, []);
     const inRoster = roster.some((u: any) => (u.email || '').trim().toLowerCase() === cleanEmail);
     if (!store[cleanEmail] && !inRoster) {
       return res.status(404).json({ success: false, message: 'Account not found for this email address in User Management.' });
