@@ -223,11 +223,19 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const { addToast } = useToast();
 
   // Overview Video State
-  const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>((session as any).videoUrl || (session as any).featuredVideoUrl || '');
+  const [overviewVideoUrl, setOverviewVideoUrl] = useState<string>(
+    (session as any).videoUrl || (session as any).featuredVideoUrl || DEFAULT_SESSION_SAMPLE_VIDEO
+  );
   const [overviewVideoTitle, setOverviewVideoTitle] = useState<string>('Final overview');
   const [overviewVideoDesc, setOverviewVideoDesc] = useState<string>(
     `Comprehensive attendee video walkthrough covering key architectural concepts, trainer expectations, and session prerequisites for ${session.name}.`
   );
+
+  useEffect(() => {
+    const vid = (session as any).videoUrl || (session as any).featuredVideoUrl || DEFAULT_SESSION_SAMPLE_VIDEO;
+    setOverviewVideoUrl(vid);
+  }, [session.id, (session as any).videoUrl, (session as any).featuredVideoUrl]);
+
   const [isUploadingVideoModalOpen, setIsUploadingVideoModalOpen] = useState<boolean>(false);
   const [videoInputTitle, setVideoInputTitle] = useState<string>('');
   const [videoInputDesc, setVideoInputDesc] = useState<string>('');
