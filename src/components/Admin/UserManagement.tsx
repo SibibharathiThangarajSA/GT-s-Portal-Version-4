@@ -536,7 +536,7 @@ export const UserManagement: React.FC = () => {
             </span>
           </div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            User Management & Roster
+            User Management
           </h2>
           <p className="text-xs text-slate-500 max-w-2xl">
             Manage enterprise employee accounts, associate mobile access, L&D leadership credentials, and designations.
@@ -959,8 +959,8 @@ export const UserManagement: React.FC = () => {
                             <div>
                               <div
                                 className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${isPhoneError
-                                    ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
-                                    : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
+                                  ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
+                                  : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
                                   }`}
                               >
                                 <select
@@ -1177,8 +1177,8 @@ export const UserManagement: React.FC = () => {
                     <div>
                       <div
                         className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${isError
-                            ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
-                            : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
+                          ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
+                          : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
                           }`}
                       >
                         <select
