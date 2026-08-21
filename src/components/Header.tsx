@@ -186,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {showProfilePopover && (
-                  <div className="absolute right-0 mt-3 w-72 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl p-4 z-50 text-xs space-y-4 animate-fadeIn text-slate-900">
+                  <div className="absolute right-0 mt-3 w-72 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl p-4 z-50 text-xs space-y-3 animate-fadeIn text-slate-900">
                     <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
                       <ProfileImage
                         src={currentUser.avatar}
@@ -199,18 +199,15 @@ export const Header: React.FC<HeaderProps> = ({
                       <div>
                         <span className="font-bold text-sm text-slate-900 block leading-snug">{currentUser.name}</span>
                         <span className={`text-[11px] font-medium block ${isAdminRole ? 'text-emerald-600 font-semibold' : 'text-blue-600'}`}>
-                          {isAdminRole ? 'L&D Administrator' : 'Graduate Trainee'}
+                          {currentUser.designation || (isAdminRole ? 'Lead - L&D Leadership' : 'Graduate Trainee')}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-mono">GT Batch 2026</span>
+                        <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                          Role: {currentUser.role || (isAdminRole ? 'Admin' : 'GT')}
+                        </span>
                       </div>
                     </div>
 
-                    {/* <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
-                     <span className="block text-amber-600 font-bold text-xs">🔥 {currentUser.streakDays} Days</span> 
-                     <span className="text-[10px] text-slate-500 font-mono">Active Learning Streak</span> 
-                    </div> */}
-
-                    <div className="border-t border-slate-100 pt-3 space-y-1">
+                    <div className="space-y-1 pt-1">
                       {onOpenChangePassword && (
                         <button
                           onClick={() => {

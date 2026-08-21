@@ -33,6 +33,7 @@ export interface User {
   dailyGoalMinutes: number;
   todayMinutesSpent: number;
   isGuest?: boolean;
+  designation?: string;
 }
 
 export type DifficultyLevel = 'Beginner' | 'Intermediate' | 'Advanced';
