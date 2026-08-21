@@ -87,6 +87,24 @@ const DEFAULT_SESSION_THUMBNAIL = 'https://images.unsplash.com/photo-15193899504
 const isPersistedId = (value?: string): boolean =>
   !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+export const getSessionStatus = (s: Partial<Session>): 'Published' | 'Draft' | 'Archived' => {
+  const statusStr = (s.status || '').toString().trim();
+  const lower = statusStr.toLowerCase();
+  if (lower === 'archived' || lower === 'archive') {
+    return 'Archived';
+  }
+  if (lower === 'draft') {
+    return 'Draft';
+  }
+  if (lower === 'published' || lower === 'publish' || s.isPublished === true) {
+    return 'Published';
+  }
+  if (s.isPublished === false) {
+    return 'Draft';
+  }
+  return 'Published';
+};
+
 export const SessionManager: React.FC<SessionManagerProps> = ({
   sessions,
   onSaveSession,
@@ -155,9 +173,29 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'Published' | 'Draft' | 'Archived'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const statusCounts = React.useMemo(() => {
+    let published = 0;
+    let draft = 0;
+    let archived = 0;
+
+    sessions.forEach((s) => {
+      const status = getSessionStatus(s);
+      if (status === 'Published') published++;
+      else if (status === 'Draft') draft++;
+      else if (status === 'Archived') archived++;
+    });
+
+    return {
+      ALL: sessions.length,
+      Published: published,
+      Draft: draft,
+      Archived: archived
+    };
+  }, [sessions]);
+
   const filteredSessions = sessions
     .filter((s) => {
-      const matchesStatus = filterStatus === 'ALL' || s.status === filterStatus;
+      const matchesStatus = filterStatus === 'ALL' || getSessionStatus(s) === filterStatus;
       const matchesQuery = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.category.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesStatus && matchesQuery;
     })
@@ -1638,7 +1676,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 filterStatus === st
                   ? st === 'Draft'
                     ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
@@ -1648,7 +1686,12 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                   : 'text-slate-700 hover:text-blue-700 hover:bg-slate-200/80'
               }`}
             >
-              {st}
+              <span>{st}</span>
+              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${
+                filterStatus === st ? 'bg-white/20 text-white font-extrabold' : 'bg-slate-200/90 text-slate-700 font-bold'
+              }`}>
+                {statusCounts[st]}
+              </span>
             </button>
           ))}
         </div>
@@ -1667,36 +1710,38 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
 
       {/* Sessions Cards List */}
       <div className="space-y-4">
-        {filteredSessions.map((session) => (
-          <div
-            key={session.id}
-            className="bg-white border border-slate-200 hover:border-blue-300 rounded-2xl p-5 shadow-md hover:shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-all text-slate-900"
-            data-inspect-id="SessionCard"
-          >
-            <div className="flex items-start gap-4">
-              <img src={session.thumbnail?.trim() ? session.thumbnail : DEFAULT_SESSION_THUMBNAIL} alt={session.name} className="w-20 h-20 rounded-xl object-cover border border-slate-200 shadow-sm flex-shrink-0" />
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                    {session.category}
-                  </span>
-                  {session.trainerName && (
-                    <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Trainer: {session.trainerName}
+        {filteredSessions.map((session) => {
+          const currentStatus = getSessionStatus(session);
+          return (
+            <div
+              key={session.id}
+              className="bg-white border border-slate-200 hover:border-blue-300 rounded-2xl p-5 shadow-md hover:shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-all text-slate-900"
+              data-inspect-id="SessionCard"
+            >
+              <div className="flex items-start gap-4">
+                <img src={session.thumbnail?.trim() ? session.thumbnail : DEFAULT_SESSION_THUMBNAIL} alt={session.name} className="w-20 h-20 rounded-xl object-cover border border-slate-200 shadow-sm flex-shrink-0" />
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                      {session.category}
                     </span>
-                  )}
-                  <span
-                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                      (session.status || (session.isPublished !== false ? 'Published' : 'Draft')) === 'Published' || session.status === 'Publish'
-                        ? 'bg-blue-50 text-blue-800 border-blue-300'
-                        : session.status === 'Archived' || session.status === 'Archive'
-                        ? 'bg-violet-50 text-violet-800 border-violet-300'
-                        : 'bg-orange-50 text-orange-800 border-orange-300'
-                    }`}
-                  >
-                    {session.status || (session.isPublished !== false ? 'Published' : 'Draft')}
-                  </span>
-                </div>
+                    {session.trainerName && (
+                      <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        Trainer: {session.trainerName}
+                      </span>
+                    )}
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                        currentStatus === 'Published'
+                          ? 'bg-blue-50 text-blue-800 border-blue-300'
+                          : currentStatus === 'Archived'
+                          ? 'bg-violet-50 text-violet-800 border-violet-300'
+                          : 'bg-orange-50 text-orange-800 border-orange-300'
+                      }`}
+                    >
+                      {currentStatus}
+                    </span>
+                  </div>
 
                 <h3 className="font-bold text-slate-900 text-base">{session.name}</h3>
                 <p className="text-slate-600 text-xs line-clamp-2 leading-relaxed">{session.description}</p>
@@ -1736,7 +1781,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
               </button>
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
       </>
       )}
