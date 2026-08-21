@@ -227,67 +227,7 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
               </>
             )}
 
-            {/* Bottom Controls */}
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className={`absolute bottom-0 inset-x-0 z-20 backdrop-blur-md bg-slate-900/80 border-t border-white/10 p-3 px-4 flex items-center justify-between gap-3 text-white transition-opacity duration-300 ${isPlaying ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
-                }`}
-            >
-              {/* Play / Pause Toggle */}
-              <button
-                onClick={(e) => handleTogglePlay(e)}
-                className="text-white/80 hover:text-white transition-colors cursor-pointer"
-              >
-                {isPlaying ? (
-                  <Pause className="w-4 h-4 fill-white" />
-                ) : (
-                  <Play className="w-4 h-4 fill-white" />
-                )}
-              </button>
 
-              {/* Progress Bar */}
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (videoRef.current && videoRef.current.duration) {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const pos = (e.clientX - rect.left) / rect.width;
-                    videoRef.current.currentTime = pos * videoRef.current.duration;
-                  }
-                }}
-                className="h-1.5 flex-1 bg-white/20 hover:bg-white/30 rounded-full overflow-hidden cursor-pointer relative transition-all"
-              >
-                <div
-                  className="h-full bg-gradient-to-r from-[#2563EB] to-[#3B82F6] rounded-full relative transition-all"
-                  style={{
-                    width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
-                  }}
-                />
-              </div>
-
-              {/* Timestamp */}
-              <span className="font-mono text-[11px] text-white/80 select-none">
-                {formatTime(currentTime)} / {formatTime(duration || 0)}
-              </span>
-
-              {/* Control Actions */}
-              <div className="flex items-center gap-2.5 text-white/80">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (videoRef.current) {
-                      videoRef.current.muted = !videoRef.current.muted;
-                    }
-                  }}
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  <Volume2 className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={(e) => handleOpenModal(e)} className="hover:text-white transition-colors cursor-pointer">
-                  <Maximize2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 

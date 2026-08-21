@@ -182,6 +182,8 @@ const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?:
   return { provided: providedItems, additional: additionalItems };
 };
 
+const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://vjs.zencdn.net/v/oceans.mp4';
+
 const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'html5'; embedUrl: string } => {
   if (!url) return { type: 'html5', embedUrl: '' };
 
@@ -1442,7 +1444,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     type="url"
                     value={videoInputUrl}
                     onChange={(e) => setVideoInputUrl(e.target.value)}
-                    placeholder="https://commondatastorage.googleapis.com/... or YouTube/Vimeo URL"
+                    placeholder="https://vjs.zencdn.net/v/oceans.mp4 or YouTube/Vimeo URL"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600"
                   />
                 </div>
