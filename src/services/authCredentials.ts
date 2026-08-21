@@ -154,25 +154,81 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
 
 const STORAGE_KEY = 'gt_custom_credentials_store_v2';
 
+// Safe localStorage abstraction supporting both browser and server/test environments
+let memoryStorage: Record<string, string> = {};
+
+export const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        // fallback
+      }
+    }
+    return memoryStorage[key] || null;
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(key, value);
+      } catch {
+        // fallback
+      }
+    }
+    memoryStorage[key] = value;
+  },
+  removeItem: (key: string): void => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // fallback
+      }
+    }
+    delete memoryStorage[key];
+  },
+  clear: (): void => {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.clear();
+      } catch {
+        // fallback
+      }
+    }
+    memoryStorage = {};
+  }
+};
+
 /**
  * Retrieves the current credentials store, merging initial seed data with user updates
  */
 export const getCredentialsStore = (): Record<string, { password: string; profile: RegisteredCredential }> => {
   const store: Record<string, { password: string; profile: RegisteredCredential }> = {};
 
-  // 1. Dynamically load from active user management records roster
+  // 1. Seed initial credentials
+  INITIAL_CREDENTIALS.forEach((cred) => {
+    const lowerEmail = cred.email.trim().toLowerCase();
+    store[lowerEmail] = {
+      password: cred.defaultPassword,
+      profile: { ...cred }
+    };
+  });
+
+  // 2. Dynamically load / merge from active user management records roster
   const activeRoster = getUserManagementRecords();
 
   activeRoster.forEach((u) => {
     if (!u.email || u.email === '-' || !u.email.includes('@')) return;
     const lowerEmail = u.email.trim().toLowerCase();
-    const defaultPw = (lowerEmail.split('@')[0] || '').toLowerCase();
+    const existing = store[lowerEmail];
+    const defaultPw = u.password || (existing ? existing.password : (lowerEmail.split('@')[0] || '').toLowerCase());
     const parts = (u.name || '').trim().split(' ');
 
     const userRole: 'Admin' | 'GT' | 'Associate' = u.role === 'Admin' ? 'Admin' : u.role === 'Associate' ? 'Associate' : 'GT';
 
     store[lowerEmail] = {
-      password: u.password || defaultPw,
+      password: defaultPw,
       profile: {
         email: u.email.trim(),
         defaultPassword: defaultPw,
@@ -188,16 +244,30 @@ export const getCredentialsStore = (): Record<string, { password: string; profil
     };
   });
 
-  // 2. Overlay persistent changes from localStorage password overrides
+  // 3. Overlay persistent changes from localStorage password overrides
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(STORAGE_KEY);
     if (raw) {
       const overrides = JSON.parse(raw);
       if (typeof overrides === 'object' && overrides !== null) {
         Object.keys(overrides).forEach((emailKey) => {
           const lowerKey = emailKey.toLowerCase();
-          if (store[lowerKey] && typeof overrides[emailKey] === 'string') {
-            store[lowerKey].password = overrides[emailKey];
+          if (typeof overrides[emailKey] === 'string') {
+            if (store[lowerKey]) {
+              store[lowerKey].password = overrides[emailKey];
+            } else {
+              store[lowerKey] = {
+                password: overrides[emailKey],
+                profile: {
+                  email: emailKey,
+                  defaultPassword: overrides[emailKey],
+                  role: emailKey.toLowerCase().includes('admin') ? 'Admin' : 'GT',
+                  name: emailKey.split('@')[0],
+                  firstName: emailKey.split('@')[0],
+                  lastName: ''
+                }
+              };
+            }
           }
         });
       }
@@ -329,17 +399,35 @@ export const changeUserPassword = (
     };
   }
 
-  // Save new password into localStorage
+  // 1. Save new password into persistent storage override
   try {
     let overrides: Record<string, string> = {};
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(STORAGE_KEY);
     if (raw) {
       overrides = JSON.parse(raw) || {};
     }
     overrides[cleanEmail] = newPassword;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+    safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch (e) {
-    console.warn('Failed to persist new password to localStorage', e);
+    console.warn('Failed to persist new password to storage', e);
+  }
+
+  // 2. Also update User Management roster record if present
+  try {
+    const roster = getUserManagementRecords();
+    let updated = false;
+    const updatedRoster = roster.map((r) => {
+      if (r.email && r.email.trim().toLowerCase() === cleanEmail) {
+        updated = true;
+        return { ...r, password: newPassword };
+      }
+      return r;
+    });
+    if (updated) {
+      saveUserManagementRecords(updatedRoster);
+    }
+  } catch (e) {
+    console.warn('Failed to sync updated password into user management roster', e);
   }
 
   return {
@@ -374,16 +462,40 @@ export const resetUserPassword = (
     };
   }
 
+  if (!newPassword || newPassword.length < 8) {
+    return {
+      success: false,
+      message: 'New password must be at least 8 characters long.'
+    };
+  }
+
   try {
     let overrides: Record<string, string> = {};
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(STORAGE_KEY);
     if (raw) {
       overrides = JSON.parse(raw) || {};
     }
     overrides[cleanEmail] = newPassword;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+    safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch (e) {
-    console.warn('Failed to persist reset password to localStorage', e);
+    console.warn('Failed to persist reset password to storage', e);
+  }
+
+  try {
+    const roster = getUserManagementRecords();
+    let updated = false;
+    const updatedRoster = roster.map((r) => {
+      if (r.email && r.email.trim().toLowerCase() === cleanEmail) {
+        updated = true;
+        return { ...r, password: newPassword };
+      }
+      return r;
+    });
+    if (updated) {
+      saveUserManagementRecords(updatedRoster);
+    }
+  } catch (e) {
+    console.warn('Failed to sync reset password into user management roster', e);
   }
 
   return {
@@ -592,7 +704,7 @@ export const getDefaultPasswordForEmail = (email: string): string => {
 
 export const getUserManagementRecords = (): UserManagementRecord[] => {
   try {
-    const raw = localStorage.getItem(USER_MGMT_STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(USER_MGMT_STORAGE_KEY);
     if (raw !== null && raw !== undefined) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
@@ -607,7 +719,7 @@ export const getUserManagementRecords = (): UserManagementRecord[] => {
 
 export const saveUserManagementRecords = (records: UserManagementRecord[]): void => {
   try {
-    localStorage.setItem(USER_MGMT_STORAGE_KEY, JSON.stringify(records));
+    safeLocalStorage.setItem(USER_MGMT_STORAGE_KEY, JSON.stringify(records));
   } catch (e) {
     console.warn('Failed to save user management records to storage', e);
   }
