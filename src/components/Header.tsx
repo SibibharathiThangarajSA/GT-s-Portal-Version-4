@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ProfileImage from './ProfileImage';
 import { User } from '../types';
+import { getUserManagementRecords } from '../services/authCredentials';
 import {
   GraduationCap,
   ShieldCheck,
@@ -62,6 +63,38 @@ export const Header: React.FC<HeaderProps> = ({
     activePortal === 'Admin' ||
     currentUser.role === 'Admin' ||
     (typeof currentUser.role === 'string' && currentUser.role.toLowerCase().includes('admin'));
+
+  // Dynamically fetch exact Role and Designation from the User Management table records
+  const userManagementRecord = useMemo(() => {
+    try {
+      const records = getUserManagementRecords();
+      if (!records || !Array.isArray(records)) return null;
+
+      if (currentUser.email && currentUser.email !== '-') {
+        const cleanEmail = currentUser.email.trim().toLowerCase();
+        const found = records.find((r) => r.email && r.email.trim().toLowerCase() === cleanEmail);
+        if (found) return found;
+      }
+
+      if (currentUser.name) {
+        const cleanName = currentUser.name.trim().toLowerCase();
+        const found = records.find((r) => r.name && r.name.trim().toLowerCase() === cleanName);
+        if (found) return found;
+      }
+    } catch {
+      // Fallback
+    }
+    return null;
+  }, [currentUser.email, currentUser.name, showProfilePopover]);
+
+  const displayDesignation =
+    userManagementRecord?.designation ||
+    currentUser.designation ||
+    (isAdminRole ? 'Lead - L&D Leadership' : 'Graduate Trainee');
+
+  const displayRole =
+    userManagementRecord?.role ||
+    (isAdminRole ? 'Admin' : currentUser.role === 'GT' ? 'Employee' : currentUser.role || 'Employee');
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/80 text-slate-900 transition-all shadow-sm">
@@ -139,13 +172,6 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 Login
               </button>
-              {/* <button
-                  onClick={() => onOpenLogin('Admin')}
-                  className="h-[42px] px-4 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all flex items-center gap-1.5 justify-center cursor-pointer shadow-xs"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>L&D Admin</span>
-                </button> */}
             </div>
           )}
 
@@ -153,20 +179,10 @@ export const Header: React.FC<HeaderProps> = ({
             /* Authenticated Header Tools */
             <div className="flex items-center gap-3">
 
-              {/* Back to Login Button */}
-              {/* <button
-                onClick={handleBackToLogin}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all flex items-center gap-1.5 shadow-sm"
-                title="Back to Login Page"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-blue-600" />
-                <span>Back to Login</span>
-              </button> */}
-
               {/* Profile Menu */}
               <div className="relative" ref={profileMenuRef}>
                 <button
-                  onClick={() => setShowProfilePopover(prev => !prev)}
+                  onClick={() => setShowProfilePopover((prev) => !prev)}
                   aria-label="Open profile menu"
                   title="Open profile menu"
                   className={`relative p-0.5 rounded-xl bg-white border ${
@@ -199,10 +215,10 @@ export const Header: React.FC<HeaderProps> = ({
                       <div>
                         <span className="font-bold text-sm text-slate-900 block leading-snug">{currentUser.name}</span>
                         <span className={`text-[11px] font-medium block ${isAdminRole ? 'text-emerald-600 font-semibold' : 'text-blue-600'}`}>
-                          {currentUser.designation || (isAdminRole ? 'Lead - L&D Leadership' : 'Graduate Trainee')}
+                          {displayDesignation}
                         </span>
                         <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
-                          Role: {currentUser.role || (isAdminRole ? 'Admin' : 'GT')}
+                          Role: {displayRole}
                         </span>
                       </div>
                     </div>

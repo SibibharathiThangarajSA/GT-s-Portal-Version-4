@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Session, Quiz, RoadmapTopic, StudyMaterial } from './types';
 import { fetchSessionsApi, createSessionApi, updateSessionApi, deleteSessionApi, saveFullSessionApi, logActivityApi, fetchUserManagementRecordsApi } from './services/api';
+import { getUserManagementRecords } from './services/authCredentials';
 
 const defaultGuestUser: User = {
   id: 'guest-user',
@@ -221,11 +222,24 @@ export function App() {
     const isRoleAdmin = Boolean(role && (role === 'Admin' || role.toLowerCase().includes('admin')));
     const mappedPortal: 'GT' | 'Admin' = isRoleAdmin ? 'Admin' : 'GT';
     if (userData) {
+      let matchedRole = isRoleAdmin ? 'Admin' : 'Employee';
+      let matchedDesig = isRoleAdmin ? 'Lead - L&D Leadership' : 'Graduate Trainee';
+
+      try {
+        const records = getUserManagementRecords();
+        const found = records.find((r) => r.email && r.email.trim().toLowerCase() === userData.email.trim().toLowerCase());
+        if (found) {
+          if (found.role) matchedRole = found.role;
+          if (found.designation) matchedDesig = found.designation;
+        }
+      } catch { }
+
       setCurrentUser(prev => ({
         ...prev,
         name: userData.name,
         email: userData.email,
-        role: isRoleAdmin ? 'Admin' : ('GT' as any),
+        role: matchedRole as any,
+        designation: matchedDesig,
         isGuest: userData.isGuest ?? prev.isGuest
       }));
     }
