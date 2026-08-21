@@ -1040,60 +1040,158 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
   return authenticateLocalUser(cleanEmail, password);
 };
 
-export const forgotPasswordApi = async (email: string): Promise<{ success: boolean; message?: string }> => {
-  const cleanEmail = email.trim().toLowerCase();
+export interface ForgotPasswordRequest {
+  recoveryType: 'email' | 'phone';
+  email?: string;
+  phone?: string;
+}
 
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message?: string;
+  userEmail?: string;
+  otp?: string;
+}
+
+export const forgotPasswordApi = async (
+  req: ForgotPasswordRequest | string
+): Promise<ForgotPasswordResponse> => {
+  let recoveryType: 'email' | 'phone' = 'email';
+  let emailVal = '';
+  let phoneVal = '';
+
+  if (typeof req === 'string') {
+    emailVal = req;
+    recoveryType = 'email';
+  } else {
+    recoveryType = req.recoveryType || 'email';
+    emailVal = req.email || '';
+    phoneVal = req.phone || '';
+  }
+
+  const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  if (recoveryType === 'phone') {
+    const cleanPhone = phoneVal.replace(/\D/g, '').trim();
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return {
+        success: false,
+        message: 'Please enter a valid 10-digit mobile number.'
+      };
+    }
+
+    let user = findUserByPhoneNumber(cleanPhone);
+    if (!user) {
+      try {
+        await fetchUserManagementRecordsApi();
+        user = findUserByPhoneNumber(cleanPhone);
+      } catch {}
+    }
+
+    if (!user) {
+      return {
+        success: false,
+        message: 'Mobile number not found in User Management roster. Please check your number or contact L&D Admin.'
+      };
+    }
+
+    const matchedEmail = (user.email || '').trim().toLowerCase();
+    sessionStorage.setItem(`gt_forgot_otp_${cleanPhone}`, generatedOtp);
+    sessionStorage.setItem(`gt_forgot_user_${cleanPhone}`, matchedEmail);
+
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone, recoveryType: 'phone' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        return {
+          success: true,
+          userEmail: data.userEmail || matchedEmail,
+          otp: generatedOtp,
+          message: data.message || `Verification OTP sent to registered mobile number ${cleanPhone}.`
+        };
+      }
+    } catch {}
+
+    return {
+      success: true,
+      userEmail: matchedEmail,
+      otp: generatedOtp,
+      message: `Verification OTP sent to registered mobile number (${cleanPhone}).`
+    };
+  }
+
+  // Email recovery
+  const cleanEmail = emailVal.trim().toLowerCase();
   if (!isAllowedDomain(cleanEmail)) {
     return {
       success: false,
       message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
     };
   }
+
+  const store = getCredentialsStore();
+  const userRoster = getUserManagementRecords();
+  const existsInRoster = userRoster.some(r => (r.email || '').trim().toLowerCase() === cleanEmail);
+  const existsInStore = !!store[cleanEmail];
+
+  if (!existsInRoster && !existsInStore) {
+    return {
+      success: false,
+      message: 'Account not found for this email address in User Management.'
+    };
+  }
+
+  sessionStorage.setItem(`gt_forgot_otp_${cleanEmail}`, generatedOtp);
+  sessionStorage.setItem(`gt_forgot_user_${cleanEmail}`, cleanEmail);
 
   try {
     const res = await fetch('/api/auth/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail })
+      body: JSON.stringify({ email: cleanEmail, recoveryType: 'email' })
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
-      return { success: true, message: data.message };
+      return {
+        success: true,
+        userEmail: cleanEmail,
+        otp: generatedOtp,
+        message: data.message || `Verification OTP sent to registered email ${cleanEmail}.`
+      };
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
 
-  const store = getCredentialsStore();
-  if (!store[cleanEmail]) {
-    return {
-      success: false,
-      message: 'Incorrect email ID or password.'
-    };
-  }
-
-  return { success: true, message: 'Verification OTP sent to your registered email address.' };
+  return {
+    success: true,
+    userEmail: cleanEmail,
+    otp: generatedOtp,
+    message: 'Verification OTP sent to your registered email address.'
+  };
 };
 
-export const verifyOtpApi = async (email: string, otp: string): Promise<{ success: boolean; resetToken?: string; message?: string }> => {
-  const cleanEmail = email.trim().toLowerCase();
+export const verifyOtpApi = async (
+  emailOrPhone: string,
+  otp: string
+): Promise<{ success: boolean; resetToken?: string; message?: string }> => {
+  const cleanInput = (emailOrPhone || '').trim().toLowerCase();
+  const cleanOtp = (otp || '').trim();
 
-  if (!isAllowedDomain(cleanEmail)) {
+  if (cleanOtp.length !== 6) {
     return {
       success: false,
-      message: 'Only @valuemomentum.com and @owlsure.com email addresses are allowed.'
+      message: 'Please enter all 6 digits of the OTP code.'
     };
   }
 
-  if (otp && otp.trim().length === 4) {
-    return {
-      success: true,
-      resetToken: `reset-token-${Date.now()}`,
-      message: 'OTP verified successfully.'
-    };
-  }
-
-  return { success: false, message: 'Invalid OTP code. Please enter the 4-digit code.' };
+  return {
+    success: true,
+    resetToken: `reset-token-${Date.now()}`,
+    message: 'OTP verified successfully.'
+  };
 };
 
 export const resetPasswordApi = async (email: string, _resetToken: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {

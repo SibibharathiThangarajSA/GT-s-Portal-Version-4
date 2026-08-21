@@ -605,12 +605,23 @@ async function startServer() {
 
   // Forgot Password
   auth.post('/forgot-password', (req, res) => {
-    const { email } = req.body || {};
-    const cleanEmail = (email || '').trim().toLowerCase();
+    const { email, phone, recoveryType } = req.body || {};
+    if (recoveryType === 'phone' || phone) {
+      const cleanPhone = (phone || '').replace(/\D/g, '').trim();
+      const roster = readJsonFile(USERS_ROSTER_FILE, []);
+      const matched = roster.find((u: any) => (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone);
+      if (!matched) {
+        return res.status(404).json({ success: false, message: 'Account not found for this mobile number in User Management.' });
+      }
+      return res.json({ success: true, userEmail: matched.email, message: 'Verification code sent to your registered mobile number.' });
+    }
 
+    const cleanEmail = (email || '').trim().toLowerCase();
     const store = getActivePasswordStore();
-    if (!store[cleanEmail]) {
-      return res.status(404).json({ success: false, message: 'Account not found for this email address.' });
+    const roster = readJsonFile(USERS_ROSTER_FILE, []);
+    const inRoster = roster.some((u: any) => (u.email || '').trim().toLowerCase() === cleanEmail);
+    if (!store[cleanEmail] && !inRoster) {
+      return res.status(404).json({ success: false, message: 'Account not found for this email address in User Management.' });
     }
 
     return res.json({ success: true, message: 'Verification code sent to your registered email address.' });

@@ -79,8 +79,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const mobileTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // OTP & Reset Password Fields (Forgot Password Flow)
+  const [recoveryType, setRecoveryType] = useState<'email' | 'phone'>('email');
   const [recoveryEmail, setRecoveryEmail] = useState('');
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '']);
+  const [recoveryPhone, setRecoveryPhone] = useState('');
+  const [recoveryCountryCode, setRecoveryCountryCode] = useState('+91');
+  const [targetAccountEmail, setTargetAccountEmail] = useState('');
+
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -105,7 +110,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setErrorMsg('');
       setSuccessMsg('');
       setIsLoading(false);
-      setOtpDigits(['', '', '', '']);
+      setRecoveryType('email');
+      setRecoveryEmail('');
+      setRecoveryPhone('');
+      setRecoveryCountryCode('+91');
+      setTargetAccountEmail('');
+      setOtpDigits(['', '', '', '', '', '']);
       setMobileOtpDigits(['', '', '', '', '', '']);
       setMobileNumber('');
       setResetToken('');
@@ -187,13 +197,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const isPasswordMatch = isConfirmFilled && newPassword === confirmPassword;
   const isPasswordMismatch = isConfirmFilled && newPassword !== confirmPassword;
 
-  // 4-digit combined OTP string for Forgot Password
+  // 6-digit combined OTP string for Forgot Password
   const fullOtp = otpDigits.join('');
 
   // Submit button disabled states
   const isLoginDisabled = isLoading || !email.trim() || !password.trim();
-  const isSendOtpDisabled = isLoading || !recoveryEmail.trim() || !recoveryEmail.includes('@');
-  const isVerifyOtpDisabled = isLoading || fullOtp.length !== 4;
+  const isSendOtpDisabled = isLoading || (
+    recoveryType === 'email'
+      ? (!recoveryEmail.trim() || !recoveryEmail.includes('@'))
+      : (recoveryPhone.replace(/\D/g, '').length < 10)
+  );
+  const isVerifyOtpDisabled = isLoading || fullOtp.length !== 6;
   const isResetDisabled = isLoading || !isPasswordValid || !isPasswordMatch;
 
   const isMobileLoginDisabled = isLoading || mobileNumber.replace(/\D/g, '').length < 10;
@@ -406,21 +420,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!recoveryEmail.trim() || !recoveryEmail.includes('@')) {
-      setErrorMsg('Please enter a valid registered email address.');
-      addToast('error', 'Please enter a valid registered email address.');
-      return;
+    if (recoveryType === 'email') {
+      if (!recoveryEmail.trim() || !recoveryEmail.includes('@')) {
+        setErrorMsg('Please enter a valid registered email address.');
+        addToast('error', 'Please enter a valid registered email address.');
+        return;
+      }
+    } else {
+      const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
+      if (!cleanPhone || cleanPhone.length < 10) {
+        setErrorMsg('Please enter a valid 10-digit mobile number.');
+        addToast('error', 'Please enter a valid 10-digit mobile number.');
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
-      const res = await forgotPasswordApi(recoveryEmail.trim());
+      const res = await forgotPasswordApi({
+        recoveryType,
+        email: recoveryEmail.trim(),
+        phone: recoveryPhone
+      });
       setIsLoading(false);
 
       if (res.success) {
+        setTargetAccountEmail(res.userEmail || recoveryEmail.trim());
         setSuccessMsg(res.message || 'OTP sent successfully!');
-        addToast('info', 'Verification code generated.');
+        if (res.otp) {
+          addToast('info', `Your 6-digit verification code is: ${res.otp}`);
+        } else {
+          addToast('info', '6-digit verification code generated.');
+        }
+        setOtpDigits(['', '', '', '', '', '']);
         setView('verify-otp');
       } else {
         setErrorMsg(res.message || 'Unable to send OTP.');
@@ -440,14 +473,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
-      const res = await forgotPasswordApi(recoveryEmail.trim());
+      const res = await forgotPasswordApi({
+        recoveryType,
+        email: recoveryEmail.trim(),
+        phone: recoveryPhone
+      });
       setIsResending(false);
 
       if (res.success) {
-        setSuccessMsg('A new OTP has been sent.');
+        setSuccessMsg('A new 6-digit OTP has been sent.');
         setOtpTimerSeconds(300);
         setCanResend(false);
-        addToast('info', 'New verification code generated.');
+        if (res.otp) {
+          addToast('info', `Your new 6-digit verification code is: ${res.otp}`);
+        } else {
+          addToast('info', 'New 6-digit verification code generated.');
+        }
       } else {
         setErrorMsg(res.message || 'Failed to resend OTP.');
         addToast('error', res.message || 'Failed to resend OTP.');
@@ -465,7 +506,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     newDigits[index] = val;
     setOtpDigits(newDigits);
 
-    if (val && index < 3) {
+    if (val && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
     }
   };
@@ -478,15 +519,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (!pastedData) return;
 
     const newDigits = [...otpDigits];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       newDigits[i] = pastedData[i] || '';
     }
     setOtpDigits(newDigits);
-    const focusIndex = Math.min(pastedData.length, 3);
+    const focusIndex = Math.min(pastedData.length, 5);
     otpInputRefs.current[focusIndex]?.focus();
   };
 
@@ -495,8 +536,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (fullOtp.length !== 4) {
-      setErrorMsg('Please enter all 4 digits of the OTP.');
+    if (fullOtp.length !== 6) {
+      setErrorMsg('Please enter all 6 digits of the OTP.');
       return;
     }
 
@@ -509,13 +550,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await verifyOtpApi(recoveryEmail.trim(), fullOtp);
+      const inputVal = recoveryType === 'email' ? recoveryEmail.trim() : recoveryPhone;
+      const res = await verifyOtpApi(inputVal, fullOtp);
       setIsLoading(false);
 
       if (res.success && res.resetToken) {
         setResetToken(res.resetToken);
-        setSuccessMsg('OTP verified successfully!');
-        addToast('success', 'Verification successful.');
+        setSuccessMsg('6-Digit OTP verified successfully!');
+        addToast('success', 'Verification successful. Please create your new password.');
         setView('new-password');
       } else {
         setErrorMsg('Incorrect OTP. Please try again.');
@@ -551,14 +593,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await resetPasswordApi(recoveryEmail.trim(), resetToken, newPassword);
+      const accEmail = targetAccountEmail || recoveryEmail.trim();
+      const res = await resetPasswordApi(accEmail, resetToken, newPassword);
       setIsLoading(false);
 
       if (res.success) {
         setSuccessMsg(res.message || 'Password has been reset successfully!');
-        addToast('success', 'Password reset successfully! Please login with your new password.');
+        addToast('success', 'Password reset successfully! Old password has been overridden.');
         setTimeout(() => {
           setView('login');
+          setEmail(accEmail);
           setPassword('');
           setErrorMsg('');
           setSuccessMsg('');
@@ -988,55 +1032,149 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 4: FORGOT PASSWORD — STEP 1: ENTER EMAIL            */}
+        {/* VIEW 4: FORGOT PASSWORD — STEP 1: CHOOSE EMAIL OR PHONE */}
         {/* ======================================================== */}
         {view === 'forgot-email' && (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Registered Email Address
-              </label>
-              <div className="relative">
-                <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
-                <input
-                  type="email"
-                  placeholder="e.g. employee.name@valuemomentum.com"
-                  value={recoveryEmail}
-                  onChange={(e) => {
-                    setRecoveryEmail(e.target.value);
-                    if (errorMsg) setErrorMsg('');
-                  }}
-                  className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
-                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
-                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
-                    }`}
-                  required
-                  autoFocus
-                />
+          <form onSubmit={handleSendOtp} className="space-y-4 animate-fadeIn">
+            <div className="text-center pb-1">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center mx-auto mb-2 shadow-xs">
+                <Key className="w-6 h-6" />
               </div>
-
-              {/* Inline error for email */}
-              {errorMsg && (
-                <div className="flex items-center gap-1.5 text-rose-600 text-xs font-semibold mt-1.5 animate-fadeIn">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
+              <h4 className="text-base font-extrabold text-slate-900">Forgot Password</h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Select your preferred recovery method to verify your identity against User Management.
+              </p>
             </div>
+
+            {/* Radio / Checkbox Pill Options for Email vs Mobile Number */}
+            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200 gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setRecoveryType('email');
+                  setErrorMsg('');
+                }}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  recoveryType === 'email'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Email Address</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRecoveryType('phone');
+                  setErrorMsg('');
+                }}
+                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  recoveryType === 'phone'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Mobile Number</span>
+              </button>
+            </div>
+
+            {/* Input Field: Email */}
+            {recoveryType === 'email' ? (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Registered Email Address *
+                </label>
+                <div className="relative">
+                  <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
+                  <input
+                    type="email"
+                    placeholder="e.g. employee.name@valuemomentum.com"
+                    value={recoveryEmail}
+                    onChange={(e) => {
+                      setRecoveryEmail(e.target.value);
+                      if (errorMsg) setErrorMsg('');
+                    }}
+                    className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${
+                      errorMsg
+                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
+                        : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
+                    }`}
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
+            ) : (
+              /* Input Field: Phone Number */
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700">
+                    Registered Mobile Number (10 Digits) *
+                  </label>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {recoveryPhone.length}/10
+                  </span>
+                </div>
+                <div
+                  className={`flex rounded-xl border bg-white overflow-hidden shadow-xs focus-within:ring-2 transition-all ${
+                    errorMsg
+                      ? 'border-rose-400 focus-within:border-rose-500 focus-within:ring-rose-500/20'
+                      : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-blue-500/20'
+                  }`}
+                >
+                  <select
+                    value={recoveryCountryCode}
+                    onChange={(e) => setRecoveryCountryCode(e.target.value)}
+                    className="bg-slate-100/90 px-2.5 py-2.5 text-xs font-bold text-slate-800 border-r border-slate-300 focus:outline-none cursor-pointer"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    placeholder="e.g. 9894242460"
+                    value={recoveryPhone}
+                    onChange={(e) => {
+                      setRecoveryPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
+                      if (errorMsg) setErrorMsg('');
+                    }}
+                    className="w-full px-3 py-2.5 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:outline-none"
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Inline error */}
+            {errorMsg && (
+              <div className="flex items-center gap-1.5 text-rose-600 text-xs font-semibold mt-1.5 animate-fadeIn">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={isSendOtpDisabled}
-              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isSendOtpDisabled
-                ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
-                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
-                }`}
+              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${
+                isSendOtpDisabled
+                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                  : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+              }`}
             >
               {isLoading ? (
-                <span>Sending OTP...</span>
+                <span>Checking Roster & Generating OTP...</span>
               ) : (
                 <>
-                  <span>Send OTP</span>
+                  <span>Send 6-Digit OTP</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -1058,19 +1196,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         )}
 
         {/* ======================================================== */}
-        {/* VIEW 5: FORGOT PASSWORD — STEP 2: VERIFY 4-DIGIT OTP     */}
+        {/* VIEW 5: FORGOT PASSWORD — STEP 2: VERIFY 6-DIGIT OTP     */}
         {/* ======================================================== */}
         {view === 'verify-otp' && (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <form onSubmit={handleVerifyOtp} className="space-y-4 animate-fadeIn">
+            <div className="text-center pb-1">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto mb-2 shadow-xs">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-extrabold text-slate-900">Enter 6-Digit OTP</h4>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Verification code sent to registered{' '}
+                <strong className="font-mono text-slate-800">
+                  {recoveryType === 'email' ? recoveryEmail : `${recoveryCountryCode} ${recoveryPhone}`}
+                </strong>
+              </p>
+            </div>
+
+            {/* 6-Box OTP Inputs */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-2 text-center">
-                Enter 4-Digit Verification Code
-              </label>
               <div className="flex items-center justify-center gap-2" onPaste={handleOtpPaste}>
                 {otpDigits.map((digit, idx) => (
                   <input
                     key={idx}
-                    ref={(el) => { otpInputRefs.current[idx] = el; }}
+                    ref={(el) => {
+                      otpInputRefs.current[idx] = el;
+                    }}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
@@ -1080,15 +1231,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       if (errorMsg) setErrorMsg('');
                     }}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    className={`w-11 h-12 text-center text-lg font-bold font-mono bg-white border rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
+                    className={`w-10 h-12 text-center text-lg font-extrabold font-mono bg-white border rounded-xl focus:outline-none focus:ring-2 shadow-sm transition-all text-slate-900 ${
+                      errorMsg
                         ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
                         : 'border-slate-300 focus:border-blue-600 focus:ring-blue-500/20'
-                      }`}
+                    }`}
                   />
                 ))}
               </div>
 
-              {/* Inline error for 4-digit OTP */}
+              {/* Inline error for 6-digit OTP */}
               {errorMsg && (
                 <div className="flex items-center justify-center gap-1.5 text-rose-600 text-xs font-semibold mt-2 animate-fadeIn">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
@@ -1101,17 +1253,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="flex items-center justify-between text-xs px-1 pt-1">
               <div className="flex items-center gap-1.5 text-slate-600 font-mono">
                 <Timer className="w-3.5 h-3.5 text-amber-600" />
-                <span>Expires in: <strong className={otpTimerSeconds < 60 ? 'text-rose-600 font-bold' : 'text-slate-800'}>{formatTimer(otpTimerSeconds)}</strong></span>
+                <span>
+                  Expires in:{' '}
+                  <strong className={otpTimerSeconds < 60 ? 'text-rose-600 font-bold' : 'text-slate-800'}>
+                    {formatTimer(otpTimerSeconds)}
+                  </strong>
+                </span>
               </div>
 
               <button
                 type="button"
                 onClick={handleResendOtp}
                 disabled={!canResend || isResending}
-                className={`font-semibold transition-colors flex items-center gap-1 cursor-pointer ${canResend && !isResending
-                  ? 'text-blue-600 hover:text-blue-800 hover:underline'
-                  : 'text-slate-400 cursor-not-allowed'
-                  }`}
+                className={`font-semibold transition-colors flex items-center gap-1 cursor-pointer ${
+                  canResend && !isResending
+                    ? 'text-blue-600 hover:text-blue-800 hover:underline'
+                    : 'text-slate-400 cursor-not-allowed'
+                }`}
               >
                 <RefreshCw className={`w-3 h-3 ${isResending ? 'animate-spin' : ''}`} />
                 <span>{isResending ? 'Resending...' : 'Resend OTP'}</span>
@@ -1122,13 +1280,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="submit"
               disabled={isVerifyOtpDisabled}
-              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${isVerifyOtpDisabled
-                ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
-                : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
-                }`}
+              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer ${
+                isVerifyOtpDisabled
+                  ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
+                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+              }`}
             >
               {isLoading ? (
-                <span>Verifying OTP...</span>
+                <span>Verifying 6-Digit OTP...</span>
               ) : (
                 <>
                   <span>Verify OTP & Proceed</span>
@@ -1148,7 +1307,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               className="w-full py-2.5 rounded-xl font-semibold text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all text-center cursor-pointer flex items-center justify-center gap-1.5"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Change Email</span>
+              <span>Change Recovery Option</span>
             </button>
           </form>
         )}
