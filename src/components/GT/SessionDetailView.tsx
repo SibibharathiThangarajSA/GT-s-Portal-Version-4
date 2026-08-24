@@ -1106,7 +1106,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     </span>
                     <span className="text-slate-300">•</span>
                     <span className="text-xs text-slate-500 font-medium font-mono">
-                      Passing Grade: 70%
+                      Passing Grade: {activeQuiz.passingScorePercent ?? 80}%
                     </span>
                   </div>
                   <button

@@ -28,7 +28,9 @@ import {
   X,
   Table,
   Upload,
-  ExternalLink
+  ExternalLink,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 interface SessionManagerProps {
@@ -1447,16 +1449,55 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-slate-700 font-bold block">Passing Score (%)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={currentQuiz.passingScorePercent || 80}
-                        onChange={(e) => updateQuizMetadata({ passingScorePercent: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}
-                        placeholder="80"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
-                      />
+                      <label className="text-slate-700 font-bold text-xs flex items-center justify-between">
+                        <span>Passing Score (%)</span>
+                        <span className="text-[10px] text-slate-500 font-mono">0 - 100% max</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={currentQuiz.passingScorePercent ?? 80}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '') {
+                              updateQuizMetadata({ passingScorePercent: 0 });
+                            } else {
+                              const num = Number(val);
+                              if (!isNaN(num)) {
+                                updateQuizMetadata({ passingScorePercent: Math.min(100, Math.max(0, num)) });
+                              }
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const val = Number(e.target.value);
+                            if (isNaN(val) || val < 0) updateQuizMetadata({ passingScorePercent: 0 });
+                            else if (val > 100) updateQuizMetadata({ passingScorePercent: 100 });
+                          }}
+                          className="w-full bg-white border border-slate-300 rounded-xl pl-3 pr-14 py-2 text-slate-900 font-mono font-bold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm text-xs"
+                        />
+                        <span className="absolute right-8 text-slate-400 font-bold text-xs pointer-events-none">%</span>
+                        <div className="absolute right-1 flex flex-col border-l border-slate-200 pl-1 pr-1">
+                          <button
+                            type="button"
+                            onClick={() => updateQuizMetadata({ passingScorePercent: Math.min(100, (Number(currentQuiz.passingScorePercent) || 0) + 5) })}
+                            className="p-0.5 hover:bg-slate-100 rounded text-slate-600 hover:text-blue-600 transition-colors"
+                            title="Increase (+5%)"
+                          >
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateQuizMetadata({ passingScorePercent: Math.max(0, (Number(currentQuiz.passingScorePercent) || 0) - 5) })}
+                            className="p-0.5 hover:bg-slate-100 rounded text-slate-600 hover:text-blue-600 transition-colors"
+                            title="Decrease (-5%)"
+                          >
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );

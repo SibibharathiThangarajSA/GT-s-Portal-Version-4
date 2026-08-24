@@ -138,8 +138,8 @@ export const QuizReview: React.FC<QuizReviewProps> = ({
     ? Number(scorePercent)
     : calculatedPercent;
   const isPassed = passed !== undefined && passed !== null && typeof passed === 'boolean'
-    ? (displayScorePercent === calculatedPercent ? displayScorePercent >= (quiz.passingScorePercent || 70) : passed)
-    : displayScorePercent >= (quiz.passingScorePercent || 70);
+    ? (displayScorePercent === calculatedPercent ? displayScorePercent >= (quiz.passingScorePercent ?? 80) : passed)
+    : displayScorePercent >= (quiz.passingScorePercent ?? 80);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn pb-12">

@@ -164,19 +164,23 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   const [startTimeVal, setStartTimeVal] = useState('09:00');
   const [endTimeVal, setEndTimeVal] = useState('11:00');
 
-  // Dynamic available categories derived from created sessions + tracker records + defaults
+  // Dynamic available categories derived strictly from created sessions + tracker records
   const availableCategories = React.useMemo(() => {
-    const defaults = [
+    const fromSessions = (sessions || []).map(s => s.category).filter((c): c is string => Boolean(c) && c.trim().length > 0);
+    const fromTracker = (trackerRecords || []).map(r => r.category).filter((c): c is string => Boolean(c) && c.trim().length > 0);
+    const existing = Array.from(new Set([...fromSessions, ...fromTracker]));
+
+    if (existing.length > 0) {
+      return existing;
+    }
+
+    return [
       '.NET with C#',
       'Insurance',
       'SQL & Database Modelling',
       'Frontend (React & Tailwind)',
-      'Campus to Corporate (C2C)',
-      'Azure & Cloud Services'
+      'Campus to Corporate (C2C)'
     ];
-    const fromSessions = (sessions || []).map(s => s.category).filter((c): c is string => Boolean(c) && c.trim().length > 0);
-    const fromTracker = (trackerRecords || []).map(r => r.category).filter((c): c is string => Boolean(c) && c.trim().length > 0);
-    return Array.from(new Set([...defaults, ...fromSessions, ...fromTracker]));
   }, [sessions, trackerRecords]);
 
   // Filter logic
@@ -682,7 +686,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                         sessionCode: autoCode
                       }) : null);
                     }}
-                    placeholder="e.g. Janani Selvaraj"
+                    placeholder="Trainer Name"
                     className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-medium"
                   />
                 </div>
@@ -690,7 +694,15 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                 {/* Schedule Date */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Schedule Date *</label>
-                  <div className="relative">
+                  <div 
+                    className="relative cursor-pointer"
+                    onClick={(e) => {
+                      const input = e.currentTarget.querySelector('input');
+                      if (input && typeof input.showPicker === 'function') {
+                        try { input.showPicker(); } catch {}
+                      }
+                    }}
+                  >
                     <Calendar className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
                     <input
                       type="date"
@@ -712,28 +724,13 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
 
                 {/* Session Code (Auto Generated) */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-slate-700 font-bold">Session Code / ID *</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const autoCode = generateSessionCode(editingRecord.trainerName || '', editingRecord.scheduleDate || '');
-                        setEditingRecord(prev => prev ? ({ ...prev, sessionCode: autoCode }) : null);
-                      }}
-                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                      title="Auto-generate Session Code from Trainer & Date"
-                    >
-                      <Sparkles className="w-3 h-3 text-blue-600" />
-                      <span>Auto-Generate</span>
-                    </button>
-                  </div>
+                  <label className="block text-slate-700 font-bold mb-1">Session Code / ID (Auto Generated) *</label>
                   <input
                     type="text"
-                    required
+                    disabled
                     value={editingRecord.sessionCode || ''}
-                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, sessionCode: e.target.value }) : null)}
-                    placeholder="e.g. JAN-GT-0922"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-mono font-bold shadow-sm"
+                    placeholder="Auto generated (e.g. JAN-GT-0922)"
+                    className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold shadow-sm cursor-not-allowed opacity-90"
                   />
                   <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-GT-[MMDD] (e.g. JAN-GT-0922)</p>
                 </div>
@@ -770,7 +767,15 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                 {/* Start Time & End Time */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Start Time *</label>
-                  <div className="relative">
+                  <div 
+                    className="relative cursor-pointer"
+                    onClick={(e) => {
+                      const input = e.currentTarget.querySelector('input');
+                      if (input && typeof input.showPicker === 'function') {
+                        try { input.showPicker(); } catch {}
+                      }
+                    }}
+                  >
                     <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
                     <input
                       type="time"
@@ -796,7 +801,15 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
 
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">End Time *</label>
-                  <div className="relative">
+                  <div 
+                    className="relative cursor-pointer"
+                    onClick={(e) => {
+                      const input = e.currentTarget.querySelector('input');
+                      if (input && typeof input.showPicker === 'function') {
+                        try { input.showPicker(); } catch {}
+                      }
+                    }}
+                  >
                     <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
                     <input
                       type="time"
@@ -820,34 +833,30 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   </div>
                 </div>
 
-                {/* Formatted Schedule Time */}
+                {/* Formatted Schedule Time (Disabled Auto Computed) */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Schedule Time (Formatted) *</label>
+                  <label className="block text-slate-700 font-bold mb-1">Schedule Time (Auto Computed) *</label>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                    <Clock className="absolute left-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
                     <input
                       type="text"
-                      required
+                      disabled
                       value={editingRecord.scheduleTime || ''}
-                      onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, scheduleTime: e.target.value }) : null)}
-                      placeholder="e.g. 09:00 AM - 11:00 AM"
-                      className="w-full pl-9 pr-3 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold"
+                      placeholder="Auto computed from Start & End time"
+                      className="w-full pl-9 pr-3 bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-semibold cursor-not-allowed opacity-90"
                     />
                   </div>
                 </div>
 
-                {/* Duration Hours (Auto Computed) */}
+                {/* Duration Hours (Disabled Auto Computed) */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Duration (Hrs) *</label>
+                  <label className="block text-slate-700 font-bold mb-1">Duration (Hrs Auto Computed) *</label>
                   <input
-                    type="number"
-                    min="0.5"
-                    step="0.5"
-                    required
-                    value={editingRecord.durationHours ?? ''}
-                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, durationHours: Number(e.target.value) }) : null)}
-                    placeholder="Calculated automatically"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-mono font-bold shadow-sm"
+                    type="text"
+                    disabled
+                    value={editingRecord.durationHours ? `${editingRecord.durationHours} hrs` : ''}
+                    placeholder="Auto computed from Start & End time"
+                    className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold cursor-not-allowed opacity-90"
                   />
                   <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time</p>
                 </div>

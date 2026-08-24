@@ -119,7 +119,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
     const verifiedTotal = questionsList.length;
     const verifiedCorrect = questionsList.filter(q => isUserAnswerCorrect(q, answers[q.id])).length;
     const verifiedPercent = verifiedTotal > 0 ? Math.round((verifiedCorrect / verifiedTotal) * 100) : 0;
-    const passingPercent = Number(quiz.passingScorePercent) || 70;
+    const passingPercent = typeof quiz.passingScorePercent === 'number' ? quiz.passingScorePercent : (Number(quiz.passingScorePercent) || 80);
 
     try {
       const res = await submitQuizApi(quiz.id, answers);
@@ -208,7 +208,7 @@ export const QuizView: React.FC<QuizViewProps> = ({ quiz, onBack, onQuizComplete
     const calculatedTotal = questionsList.length;
     const localCorrectCount = questionsList.filter(q => isUserAnswerCorrect(q, answers[q.id])).length;
     const localPercent = calculatedTotal > 0 ? Math.round((localCorrectCount / calculatedTotal) * 100) : 0;
-    const passingThreshold = Number(quiz.passingScorePercent) || 70;
+    const passingThreshold = typeof quiz.passingScorePercent === 'number' ? quiz.passingScorePercent : (Number(quiz.passingScorePercent) || 80);
 
     const rawScore = result.scorePercent ?? result.percentage ?? (result as any).score;
     const serverScore = typeof rawScore === 'number' && !isNaN(rawScore)

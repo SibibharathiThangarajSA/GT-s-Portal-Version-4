@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Session, Quiz, QuizQuestion } from '../../types';
 import { generateAiQuizApi } from '../../services/api';
-import { ArrowLeft, Plus, Save, Trash2, HelpCircle, Sparkles, Clock, Award } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, HelpCircle, Sparkles, Clock, Award, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface QuizBuilderProps {
   session: Session;
@@ -13,7 +13,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ session, onSaveQuiz, o
   const existingQuiz = session.quizzes?.[0];
   const [title, setTitle] = useState(existingQuiz?.title || `${session.name} Assessment`);
   const [timeLimit, setTimeLimit] = useState(existingQuiz?.timeLimitMinutes || 15);
-  const [passingScore, setPassingScore] = useState(existingQuiz?.passingScorePercent || 80);
+  const [passingScore, setPassingScore] = useState<number | ''>(existingQuiz?.passingScorePercent ?? 80);
   const [questions, setQuestions] = useState<QuizQuestion[]>(existingQuiz?.questions || []);
   const [aiGenerating, setAiGenerating] = useState(false);
 
@@ -75,7 +75,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ session, onSaveQuiz, o
       title,
       description: `Assessment quiz for ${session.name}`,
       timeLimitMinutes: Number(timeLimit),
-      passingScorePercent: Number(passingScore),
+      passingScorePercent: passingScore === '' ? 80 : Number(passingScore),
       questions
     };
     onSaveQuiz(quiz);
@@ -131,15 +131,57 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ session, onSaveQuiz, o
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-300 font-semibold">Passing Score (%)</label>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            value={passingScore}
-            onChange={(e) => setPassingScore(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-          />
+          <label className="text-slate-300 font-semibold text-xs flex items-center justify-between">
+            <span>Passing Score (%)</span>
+            <span className="text-[10px] text-slate-400 font-mono">0 - 100% max</span>
+          </label>
+          <div className="relative flex items-center">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              value={passingScore}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '') {
+                  setPassingScore('');
+                } else {
+                  const num = Number(val);
+                  if (!isNaN(num)) {
+                    setPassingScore(Math.min(100, Math.max(0, num)));
+                  }
+                }
+              }}
+              onBlur={() => {
+                if (passingScore === '' || isNaN(Number(passingScore))) {
+                  setPassingScore(80);
+                } else {
+                  setPassingScore(Math.min(100, Math.max(0, Number(passingScore))));
+                }
+              }}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-14 py-2 text-white font-mono font-bold focus:outline-none focus:border-blue-500 shadow-sm"
+            />
+            <span className="absolute right-8 text-slate-400 font-bold text-xs pointer-events-none">%</span>
+            <div className="absolute right-1 flex flex-col border-l border-slate-800 pl-1 pr-1">
+              <button
+                type="button"
+                onClick={() => setPassingScore(prev => Math.min(100, (Number(prev) || 0) + 5))}
+                className="p-0.5 hover:bg-slate-800 rounded text-slate-400 hover:text-blue-400 transition-colors"
+                title="Increase (+5%)"
+              >
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPassingScore(prev => Math.max(0, (Number(prev) || 0) - 5))}
+                className="p-0.5 hover:bg-slate-800 rounded text-slate-400 hover:text-blue-400 transition-colors"
+                title="Decrease (-5%)"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
