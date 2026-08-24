@@ -112,56 +112,20 @@ const buildHashFromState = (
 export function App() {
   const initialHashState = getHashState();
 
-  const [currentUser, setCurrentUser] = useState<User>(() => {
-    try {
-      const saved = localStorage.getItem('gt_auth_session');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.currentUser) return parsed.currentUser;
-      }
-    } catch (e) {}
-    return defaultGuestUser;
-  });
-
+  const [currentUser, setCurrentUser] = useState<User>(defaultGuestUser);
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Global Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('gt_auth_session');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return Boolean(parsed.isAuthenticated);
-      }
-    } catch (e) {}
-    return false;
-  });
-
+  // Global Authentication State - Always starts clean on Landing page on fresh link open
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalRole, setAuthModalRole] = useState<'GT' | 'Admin'>('GT');
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
 
   // Admin Authentication State
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('gt_auth_session');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return Boolean(parsed.isAdminAuthenticated);
-      }
-    } catch (e) {}
-    return false;
-  });
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   
-  // Navigation State
-  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(() => {
-    const rawHash = typeof window !== 'undefined' ? window.location.hash : '';
-    if ((!rawHash || rawHash === '#' || rawHash === '#/') && isAuthenticated) {
-      const isRoleAdmin = currentUser.role === 'Admin' || (typeof currentUser.role === 'string' && currentUser.role.toLowerCase().includes('admin'));
-      return isRoleAdmin ? 'Admin' : 'GT';
-    }
-    return initialHashState.portal;
-  });
+  // Navigation State - Always default to Landing page when visiting site root
+  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>('Landing');
   const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
     initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState ? initialHashState.gtViewMode : 'sessions'
   );
@@ -273,14 +237,13 @@ export function App() {
     addToast('info', 'You have been logged out.');
   };
 
-  // Sync Auth State to localStorage
+  // Clean up any legacy saved session so every page open starts clean on Landing Page
   useEffect(() => {
-    localStorage.setItem('gt_auth_session', JSON.stringify({
-      isAuthenticated,
-      currentUser,
-      isAdminAuthenticated
-    }));
-  }, [isAuthenticated, currentUser, isAdminAuthenticated]);
+    try {
+      localStorage.removeItem('gt_auth_session');
+      sessionStorage.removeItem('gt_auth_session');
+    } catch (e) {}
+  }, []);
 
   // Sync URL Hash whenever navigation state changes (Pushing browser history entries)
   useEffect(() => {
