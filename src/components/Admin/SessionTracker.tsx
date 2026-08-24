@@ -115,6 +115,33 @@ export const calculateHoursFromTimes = (start: string, end: string): number | nu
   return hours > 0 ? hours : null;
 };
 
+export const calculateDurationFormatted = (start: string, end: string): string => {
+  if (!start || !end) return '';
+  const [sH, sM] = start.split(':').map(Number);
+  const [eH, eM] = end.split(':').map(Number);
+  if (isNaN(sH) || isNaN(sM) || isNaN(eH) || isNaN(eM)) return '';
+
+  let startMinutes = sH * 60 + sM;
+  let endMinutes = eH * 60 + eM;
+
+  if (endMinutes < startMinutes) {
+    endMinutes += 24 * 60;
+  }
+
+  const diffMinutes = endMinutes - startMinutes;
+  const hours = Math.floor(diffMinutes / 60);
+  const mins = diffMinutes % 60;
+
+  if (hours > 0 && mins > 0) {
+    return `${hours} hr ${mins} mins`;
+  } else if (hours > 0) {
+    return `${hours} hr${hours > 1 ? 's' : ''} 00 mins`;
+  } else if (mins > 0) {
+    return `${mins} mins`;
+  }
+  return '0 hr 00 mins';
+};
+
 export const SessionTracker: React.FC<SessionTrackerProps> = ({
   sessions = [],
   records: initialRecords,
@@ -163,6 +190,8 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   const [selectedRecordForNotes, setSelectedRecordForNotes] = useState<SessionTrackerRecord | null>(null);
   const [startTimeVal, setStartTimeVal] = useState('09:00');
   const [endTimeVal, setEndTimeVal] = useState('11:00');
+  const [activeClockPickerTarget, setActiveClockPickerTarget] = useState<'start' | 'end' | null>(null);
+  const dateInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Dynamic available categories derived strictly from created sessions + tracker records
   const availableCategories = React.useMemo(() => {
@@ -187,8 +216,13 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   const availableTrainers = React.useMemo(() => {
     const fromSessions = (sessions || []).map(s => s.trainerName).filter((t): t is string => Boolean(t) && t.trim().length > 0);
     const fromTracker = (trackerRecords || []).map(r => r.trainerName).filter((t): t is string => Boolean(t) && t.trim().length > 0);
-    const defaults = ['Sarah Jenkins', 'Alex Vance', 'Janani Selvaraj', 'Dr. Aris Vance'];
-    return Array.from(new Set([...fromSessions, ...fromTracker, ...defaults]));
+    const existing = Array.from(new Set([...fromSessions, ...fromTracker]));
+
+    if (existing.length > 0) {
+      return existing;
+    }
+
+    return ['Unassigned'];
   }, [sessions, trackerRecords]);
 
   // Filter logic
@@ -231,7 +265,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   // Handlers
   const handleOpenAdd = () => {
     const defaultDate = new Date().toISOString().split('T')[0];
-    const defaultTrainer = availableTrainers[0] || 'Sarah Jenkins';
+    const defaultTrainer = availableTrainers[0] || 'Unassigned';
     const defaultCode = generateSessionCode(defaultTrainer, defaultDate);
     setStartTimeVal('09:00');
     setEndTimeVal('11:00');
@@ -612,7 +646,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                           <span>{record.scheduleDate}</span>
                         </div>
                         <p className="text-[10px] text-slate-500 font-mono">
-                          {record.scheduleTime} ({record.durationHours} hrs)
+                          {record.scheduleTime} ({calculateDurationFormatted(parse12HourTo24Hour(record.scheduleTime.split(' - ')[0] || ''), parse12HourTo24Hour(record.scheduleTime.split(' - ')[1] || '')) || `${record.durationHours} hrs`})
                         </p>
                       </div>
                     </td>
@@ -706,17 +740,9 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                 {/* Schedule Date */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Schedule Date *</label>
-                  <div 
-                    className="relative cursor-pointer"
-                    onClick={(e) => {
-                      const input = e.currentTarget.querySelector('input');
-                      if (input && typeof input.showPicker === 'function') {
-                        try { input.showPicker(); } catch {}
-                      }
-                    }}
-                  >
-                    <Calendar className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                  <div className="relative flex items-center">
                     <input
+                      ref={dateInputRef}
                       type="date"
                       required
                       value={editingRecord.scheduleDate || ''}
@@ -729,8 +755,20 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                           sessionCode: autoCode
                         }) : null);
                       }}
-                      className="w-full pl-9 pr-3 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
+                      className="w-full pl-3.5 pr-10 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (dateInputRef.current && typeof dateInputRef.current.showPicker === 'function') {
+                          try { dateInputRef.current.showPicker(); } catch {}
+                        }
+                      }}
+                      className="absolute right-2.5 top-2.5 p-1 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors cursor-pointer"
+                      title="Open Calendar Picker"
+                    >
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                    </button>
                   </div>
                 </div>
 
@@ -779,16 +817,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                 {/* Start Time & End Time */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Start Time *</label>
-                  <div 
-                    className="relative cursor-pointer"
-                    onClick={(e) => {
-                      const input = e.currentTarget.querySelector('input');
-                      if (input && typeof input.showPicker === 'function') {
-                        try { input.showPicker(); } catch {}
-                      }
-                    }}
-                  >
-                    <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                  <div className="relative flex items-center">
                     <input
                       type="time"
                       required
@@ -806,23 +835,22 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                           durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
                         }) : null);
                       }}
-                      className="w-full pl-9 pr-3 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
+                      className="w-full pl-3.5 pr-10 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setActiveClockPickerTarget('start')}
+                      className="absolute right-2.5 top-2.5 p-1 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors cursor-pointer"
+                      title="Open Clock Time Picker"
+                    >
+                      <Clock className="w-4 h-4 text-blue-600" />
+                    </button>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">End Time *</label>
-                  <div 
-                    className="relative cursor-pointer"
-                    onClick={(e) => {
-                      const input = e.currentTarget.querySelector('input');
-                      if (input && typeof input.showPicker === 'function') {
-                        try { input.showPicker(); } catch {}
-                      }
-                    }}
-                  >
-                    <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                  <div className="relative flex items-center">
                     <input
                       type="time"
                       required
@@ -840,8 +868,16 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                           durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
                         }) : null);
                       }}
-                      className="w-full pl-9 pr-3 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
+                      className="w-full pl-3.5 pr-10 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setActiveClockPickerTarget('end')}
+                      className="absolute right-2.5 top-2.5 p-1 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors cursor-pointer"
+                      title="Open Clock Time Picker"
+                    >
+                      <Clock className="w-4 h-4 text-blue-600" />
+                    </button>
                   </div>
                 </div>
 
@@ -860,17 +896,17 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   </div>
                 </div>
 
-                {/* Duration Hours (Disabled Auto Computed) */}
+                {/* Duration (Hrs : Mins Auto Computed) */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Duration (Hrs Auto Computed) *</label>
+                  <label className="block text-slate-700 font-bold mb-1">Duration (Hrs : Mins Auto Computed) *</label>
                   <input
                     type="text"
                     disabled
-                    value={editingRecord.durationHours ? `${editingRecord.durationHours} hrs` : ''}
+                    value={calculateDurationFormatted(startTimeVal, endTimeVal) || (editingRecord.durationHours ? `${editingRecord.durationHours} hrs` : '2 hrs 00 mins')}
                     placeholder="Auto computed from Start & End time"
-                    className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold cursor-not-allowed opacity-90"
+                    className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold shadow-sm cursor-not-allowed opacity-90"
                   />
-                  {/* <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time</p> */}
+                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time (hrs:mins)</p>
                 </div>
 
                 {/* Notes / Remarks */}
@@ -951,6 +987,139 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Clock Time Picker Modal */}
+      {activeClockPickerTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-sm w-full space-y-5 animate-fadeIn text-slate-900">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-600" />
+                <h4 className="font-bold text-slate-900 text-sm">
+                  Select {activeClockPickerTarget === 'start' ? 'Start Time' : 'End Time'}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveClockPickerTarget(null)}
+                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Clock Face Display Card */}
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-5 text-center shadow-lg space-y-1">
+              <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-blue-100 block">
+                CLOCK TIME PICKER
+              </span>
+              <div className="text-3xl font-extrabold font-mono flex items-center justify-center gap-2">
+                <span>{format12Hour(activeClockPickerTarget === 'start' ? startTimeVal : endTimeVal)}</span>
+              </div>
+            </div>
+
+            {/* Quick Time Presets Grid */}
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase font-mono">Quick Time Presets</label>
+              <div className="grid grid-cols-3 gap-1.5 text-xs font-bold font-mono">
+                {['09:00', '10:00', '11:00', '13:00', '14:30', '16:00'].map((time24) => {
+                  const currentVal = activeClockPickerTarget === 'start' ? startTimeVal : endTimeVal;
+                  const isSelected = currentVal === time24;
+                  return (
+                    <button
+                      key={time24}
+                      type="button"
+                      onClick={() => {
+                        if (activeClockPickerTarget === 'start') {
+                          setStartTimeVal(time24);
+                          const start12 = format12Hour(time24);
+                          const end12 = format12Hour(endTimeVal);
+                          const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
+                          const hrs = calculateHoursFromTimes(time24, endTimeVal);
+                          setEditingRecord(prev => prev ? ({
+                            ...prev,
+                            scheduleTime: schedTime,
+                            durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
+                          }) : null);
+                        } else {
+                          setEndTimeVal(time24);
+                          const start12 = format12Hour(startTimeVal);
+                          const end12 = format12Hour(time24);
+                          const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
+                          const hrs = calculateHoursFromTimes(startTimeVal, time24);
+                          setEditingRecord(prev => prev ? ({
+                            ...prev,
+                            scheduleTime: schedTime,
+                            durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
+                          }) : null);
+                        }
+                      }}
+                      className={`py-2 rounded-xl border text-center transition-all ${
+                        isSelected
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-blue-50 hover:border-blue-300'
+                      }`}
+                    >
+                      {format12Hour(time24)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Time Input Selector */}
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase font-mono">Custom Time Selector</label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                <input
+                  type="time"
+                  value={activeClockPickerTarget === 'start' ? startTimeVal : endTimeVal}
+                  onChange={(e) => {
+                    const time24 = e.target.value;
+                    if (activeClockPickerTarget === 'start') {
+                      setStartTimeVal(time24);
+                      const start12 = format12Hour(time24);
+                      const end12 = format12Hour(endTimeVal);
+                      const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
+                      const hrs = calculateHoursFromTimes(time24, endTimeVal);
+                      setEditingRecord(prev => prev ? ({
+                        ...prev,
+                        scheduleTime: schedTime,
+                        durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
+                      }) : null);
+                    } else {
+                      setEndTimeVal(time24);
+                      const start12 = format12Hour(startTimeVal);
+                      const end12 = format12Hour(time24);
+                      const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
+                      const hrs = calculateHoursFromTimes(startTimeVal, time24);
+                      setEditingRecord(prev => prev ? ({
+                        ...prev,
+                        scheduleTime: schedTime,
+                        durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
+                      }) : null);
+                    }
+                  }}
+                  className="w-full pl-9 pr-3 bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 font-extrabold shadow-sm focus:outline-none focus:border-blue-600 font-mono text-sm cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Done Button */}
+            <button
+              type="button"
+              onClick={() => setActiveClockPickerTarget(null)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs shadow-md shadow-blue-600/20 transition-colors"
+            >
+              Done & Apply Time
+            </button>
+
           </div>
         </div>
       )}
