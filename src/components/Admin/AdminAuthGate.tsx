@@ -71,7 +71,7 @@ export const AdminAuthGate: React.FC<AdminAuthGateProps> = ({ onLoginSuccess, on
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
           
           {error && (
             <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 p-3 rounded-2xl text-xs flex items-center gap-2 animate-fadeIn">
@@ -86,6 +86,8 @@ export const AdminAuthGate: React.FC<AdminAuthGateProps> = ({ onLoginSuccess, on
             </label>
             <input
               type="email"
+              name="admin_login_email"
+              autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Anukraha.Magdalene@valuemomentum.com"
@@ -101,6 +103,8 @@ export const AdminAuthGate: React.FC<AdminAuthGateProps> = ({ onLoginSuccess, on
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
+                name="admin_login_password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"

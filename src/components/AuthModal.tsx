@@ -67,7 +67,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Mobile OTP Login Fields
   const [mobileCountryCode, setMobileCountryCode] = useState('+91');
@@ -641,7 +641,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* VIEW 1: STANDARD EMAIL + PASSWORD LOGIN                  */}
         {/* ======================================================== */}
         {view === 'login' && (
-          <form onSubmit={handleLoginSubmit} className="space-y-5">
+          <form onSubmit={handleLoginSubmit} className="space-y-5" autoComplete="off">
 
             {/* Header Title & Subtitle Matching Screenshot */}
             <div className="text-center space-y-1 pt-1">
@@ -701,6 +701,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : selectedRole === 'Admin' ? 'text-emerald-500' : 'text-blue-500'}`} />
                 <input
                   type="email"
+                  name="gt_user_email"
+                  autoComplete="off"
                   placeholder="employee.name@valuemomentum.com"
                   value={email}
                   onChange={(e) => {
@@ -725,6 +727,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <Lock className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : selectedRole === 'Admin' ? 'text-emerald-500' : 'text-blue-500'}`} />
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="gt_user_password"
+                  autoComplete="new-password"
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => {
