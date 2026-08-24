@@ -434,14 +434,14 @@ export const UserManagement: React.FC = () => {
     addToast('info', `Removed ${userToRemove.name} from roster.`);
   };
 
-  // Export Excel (.xlsx)
+  // Export Excel (.xlsx) - Exports strictly the filtered table records currently visible
   const handleExportExcel = () => {
-    if (users.length === 0) {
-      addToast('error', 'No records to export.');
+    if (filteredUsers.length === 0) {
+      addToast('error', 'No matching records found to export.');
       return;
     }
 
-    const dataToExport = users.map((u, i) => ({
+    const dataToExport = filteredUsers.map((u, i) => ({
       'S.No.': i + 1,
       'VAM ID': u.vamId && u.vamId !== '-' ? u.vamId : '-',
       'Emp Name': u.name || '-',
@@ -475,7 +475,7 @@ export const UserManagement: React.FC = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'User Roster');
 
     XLSX.writeFile(workbook, `User_Credentials_Roster_${getTodayFormatted()}.xlsx`);
-    addToast('success', 'User roster Excel workbook (.xlsx) exported successfully.');
+    addToast('success', `${filteredUsers.length} filtered user record(s) exported to Excel successfully.`);
   };
 
   // Role Badge Styling

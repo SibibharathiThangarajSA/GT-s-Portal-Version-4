@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import { useToast } from '../../context/ToastContext';
 import { SessionTrackerRecord, Session } from '../../types';
 import { mockSessionTrackerRecords } from '../../data/mockData';
 import {
@@ -475,6 +476,8 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   onSaveRecord,
   onDeleteRecord
 }) => {
+  const { addToast } = useToast();
+
   // Initialize state with manual records only (Never auto-populate from curriculum sessions)
   const [trackerRecords, setTrackerRecords] = useState<SessionTrackerRecord[]>(() => {
     if (initialRecords && initialRecords.length > 0) return initialRecords;
@@ -681,13 +684,14 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
     setEditingRecord(null);
   };
 
-  // Excel Export (.xlsx)
+  // Excel Export (.xlsx) - Exports strictly the filtered table records currently visible
   const handleExportExcel = () => {
-    if (trackerRecords.length === 0) {
+    if (filteredRecords.length === 0) {
+      addToast('error', 'No matching records found to export.');
       return;
     }
 
-    const dataToExport = trackerRecords.map((r, index) => ({
+    const dataToExport = filteredRecords.map((r, index) => ({
       'S.No.': index + 1,
       'Session Code': r.sessionCode || '-',
       'Session Name': r.sessionName || '-',
@@ -718,6 +722,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Session Tracker');
 
     XLSX.writeFile(workbook, `GT_Session_Tracker_${new Date().toISOString().split('T')[0]}.xlsx`);
+    addToast('success', `${filteredRecords.length} filtered session record(s) exported to Excel successfully.`);
   };
 
   const getStatusBadge = (status: string) => {
