@@ -150,6 +150,325 @@ export const calculateDurationFormatted = (start: string, end: string): string =
   return '0 hr 00 mins';
 };
 
+const AnalogueClockModal: React.FC<{
+  target: 'start' | 'end';
+  currentTime24: string;
+  onApply: (time24: string) => void;
+  onClose: () => void;
+}> = ({ target, currentTime24, onApply, onClose }) => {
+  const parseTime = (t24: string) => {
+    let [hStr, mStr] = (t24 || '09:00').split(':');
+    let h = parseInt(hStr, 10) || 9;
+    let m = parseInt(mStr, 10) || 0;
+    let period: 'AM' | 'PM' = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12 || 12;
+    return { h12, m, period };
+  };
+
+  const initial = parseTime(currentTime24);
+  const [hour12, setHour12] = useState<number>(initial.h12);
+  const [minute, setMinute] = useState<number>(initial.m);
+  const [period, setPeriod] = useState<'AM' | 'PM'>(initial.period);
+  const [pickerMode, setPickerMode] = useState<'hours' | 'minutes'>('hours');
+
+  const getTime24 = (h: number, m: number, p: 'AM' | 'PM'): string => {
+    let h24 = h;
+    if (p === 'PM' && h < 12) h24 += 12;
+    if (p === 'AM' && h === 12) h24 = 0;
+    const hStr = String(h24).padStart(2, '0');
+    const mStr = String(m).padStart(2, '0');
+    return `${hStr}:${mStr}`;
+  };
+
+  const current24Str = getTime24(hour12, minute, period);
+
+  const handleUpdate = (h: number, m: number, p: 'AM' | 'PM') => {
+    const t24 = getTime24(h, m, p);
+    onApply(t24);
+  };
+
+  const CENTER = 120;
+  const RADIUS = 82;
+
+  const handleClockDialClick = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const x = clientX - rect.left - CENTER;
+    const y = clientY - rect.top - CENTER;
+
+    let rad = Math.atan2(y, x);
+    let deg = (rad * (180 / Math.PI) + 90 + 360) % 360;
+
+    if (pickerMode === 'hours') {
+      let h = Math.round(deg / 30) % 12;
+      if (h === 0) h = 12;
+      setHour12(h);
+      handleUpdate(h, minute, period);
+      setPickerMode('minutes');
+    } else {
+      let m = Math.round(deg / 6) % 60;
+      setMinute(m);
+      handleUpdate(hour12, m, period);
+    }
+  };
+
+  const hourAngle = ((hour12 % 12) + minute / 60) * 30;
+  const minuteAngle = minute * 6;
+
+  const activeAngle = pickerMode === 'hours' ? (hour12 % 12) * 30 : minute * 6;
+  const activeRad = (activeAngle - 90) * (Math.PI / 180);
+  const pointerX = CENTER + RADIUS * Math.cos(activeRad);
+  const pointerY = CENTER + RADIUS * Math.sin(activeRad);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-sm w-full space-y-4 animate-fadeIn text-slate-900">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-blue-600" />
+            <h4 className="font-bold text-slate-900 text-sm">
+              Select {target === 'start' ? 'Start Time' : 'End Time'} (Analogue Clock)
+            </h4>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Digital Time Header & AM/PM Switch */}
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-4 shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPickerMode('hours')}
+              className={`px-3 py-1.5 rounded-xl font-mono text-3xl font-extrabold transition-all ${
+                pickerMode === 'hours' ? 'bg-white text-blue-700 shadow-md scale-105' : 'text-blue-100 hover:bg-white/20'
+              }`}
+            >
+              {String(hour12).padStart(2, '0')}
+            </button>
+            <span className="text-2xl font-bold font-mono text-blue-200">:</span>
+            <button
+              type="button"
+              onClick={() => setPickerMode('minutes')}
+              className={`px-3 py-1.5 rounded-xl font-mono text-3xl font-extrabold transition-all ${
+                pickerMode === 'minutes' ? 'bg-white text-blue-700 shadow-md scale-105' : 'text-blue-100 hover:bg-white/20'
+              }`}
+            >
+              {String(minute).padStart(2, '0')}
+            </button>
+          </div>
+
+          {/* AM / PM Toggle */}
+          <div className="flex flex-col gap-1 bg-blue-800/60 p-1 rounded-xl border border-blue-400/30">
+            <button
+              type="button"
+              onClick={() => {
+                setPeriod('AM');
+                handleUpdate(hour12, minute, 'AM');
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono transition-colors ${
+                period === 'AM' ? 'bg-white text-blue-700 shadow-xs' : 'text-blue-200 hover:text-white'
+              }`}
+            >
+              AM
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPeriod('PM');
+                handleUpdate(hour12, minute, 'PM');
+              }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold font-mono transition-colors ${
+                period === 'PM' ? 'bg-white text-blue-700 shadow-xs' : 'text-blue-200 hover:text-white'
+              }`}
+            >
+              PM
+            </button>
+          </div>
+        </div>
+
+        {/* Mode Selector Sub-Header */}
+        <div className="flex items-center justify-between text-xs px-1">
+          <span className="font-bold text-slate-600 uppercase font-mono tracking-wider text-[11px]">
+            {pickerMode === 'hours' ? 'Touch Dial / Needle for Hours' : 'Touch Dial / Needle for Minutes'}
+          </span>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPickerMode('hours')}
+              className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-lg border ${
+                pickerMode === 'hours' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'text-slate-400 border-transparent'
+              }`}
+            >
+              HH
+            </button>
+            <button
+              type="button"
+              onClick={() => setPickerMode('minutes')}
+              className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-lg border ${
+                pickerMode === 'minutes' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'text-slate-400 border-transparent'
+              }`}
+            >
+              MM
+            </button>
+          </div>
+        </div>
+
+        {/* Interactive Analogue Clock SVG Dial */}
+        <div className="flex items-center justify-center py-1">
+          <div className="relative w-[240px] h-[240px] select-none cursor-pointer">
+            <svg
+              width="240"
+              height="240"
+              viewBox="0 0 240 240"
+              onClick={handleClockDialClick}
+              className="w-full h-full touch-none"
+            >
+              {/* Outer Clock Circle */}
+              <circle cx="120" cy="120" r="110" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="3" />
+              <circle cx="120" cy="120" r="102" fill="none" stroke="#f1f5f9" strokeWidth="1" />
+
+              {/* Minute Ticks around outer ring */}
+              {Array.from({ length: 60 }).map((_, idx) => {
+                const tickRad = (idx * 6 - 90) * (Math.PI / 180);
+                const isMajor = idx % 5 === 0;
+                const rInner = isMajor ? 97 : 100;
+                const x1 = 120 + rInner * Math.cos(tickRad);
+                const y1 = 120 + rInner * Math.sin(tickRad);
+                const x2 = 120 + 104 * Math.cos(tickRad);
+                const y2 = 120 + 104 * Math.sin(tickRad);
+                return (
+                  <line
+                    key={idx}
+                    x1={x1}
+                    y1={y1}
+                    x2={x2}
+                    y2={y2}
+                    stroke={isMajor ? '#94a3b8' : '#cbd5e1'}
+                    strokeWidth={isMajor ? 2 : 1}
+                  />
+                );
+              })}
+
+              {/* Selection Hand Line to Pointer */}
+              <line
+                x1="120"
+                y1="120"
+                x2={pointerX}
+                y2={pointerY}
+                stroke="#2563eb"
+                strokeWidth="2.5"
+                strokeDasharray="4 2"
+              />
+              <circle cx={pointerX} cy={pointerY} r="18" fill="#2563eb" opacity="0.2" />
+
+              {/* Hour Numbers (1-12) */}
+              {pickerMode === 'hours' && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => {
+                const numRad = (num * 30 - 90) * (Math.PI / 180);
+                const nx = 120 + RADIUS * Math.cos(numRad);
+                const ny = 120 + RADIUS * Math.sin(numRad);
+                const isSelected = hour12 === num;
+                return (
+                  <g key={num} className="cursor-pointer">
+                    {isSelected && (
+                      <circle cx={nx} cy={ny} r="15" fill="#2563eb" />
+                    )}
+                    <text
+                      x={nx}
+                      y={ny + 4}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill={isSelected ? '#ffffff' : '#1e293b'}
+                      className="font-mono font-bold text-xs pointer-events-none"
+                      style={{ fontSize: '13px' }}
+                    >
+                      {num}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Minute Numbers (00, 05, 10 ... 55) */}
+              {pickerMode === 'minutes' && [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((mVal) => {
+                const numRad = (mVal * 6 - 90) * (Math.PI / 180);
+                const nx = 120 + RADIUS * Math.cos(numRad);
+                const ny = 120 + RADIUS * Math.sin(numRad);
+                const isSelected = Math.abs(minute - mVal) < 3 || (minute >= 58 && mVal === 0);
+                return (
+                  <g key={mVal} className="cursor-pointer">
+                    {isSelected && (
+                      <circle cx={nx} cy={ny} r="15" fill="#2563eb" />
+                    )}
+                    <text
+                      x={nx}
+                      y={ny + 4}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill={isSelected ? '#ffffff' : '#1e293b'}
+                      className="font-mono font-bold text-[11px] pointer-events-none"
+                    >
+                      {String(mVal).padStart(2, '0')}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Hour Hand (Short Needle / Mull) */}
+              <line
+                x1="120"
+                y1="120"
+                x2="120"
+                y2="66"
+                stroke="#1e3a8a"
+                strokeWidth="5"
+                strokeLinecap="round"
+                transform={`rotate(${hourAngle}, 120, 120)`}
+              />
+              {/* Minute Hand (Long Needle / Mull) */}
+              <line
+                x1="120"
+                y1="120"
+                x2="120"
+                y2="42"
+                stroke="#2563eb"
+                strokeWidth="3"
+                strokeLinecap="round"
+                transform={`rotate(${minuteAngle}, 120, 120)`}
+              />
+
+              {/* Center Pin */}
+              <circle cx="120" cy="120" r="6" fill="#1d4ed8" stroke="#ffffff" strokeWidth="2" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Selected Time Display & Apply Button */}
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3">
+          <div className="text-xs text-slate-500 font-mono font-semibold">
+            Time: <span className="text-slate-900 font-bold">{format12Hour(current24Str)}</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-600/20 transition-all hover:-translate-y-0.5"
+          >
+            Apply Time
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
 export const SessionTracker: React.FC<SessionTrackerProps> = ({
   sessions = [],
   records: initialRecords,
@@ -791,7 +1110,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     placeholder="Auto generated (e.g. JAN-NET-0922)"
                     className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold shadow-sm cursor-not-allowed opacity-90"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-[Category (3)]-[MMDD] (e.g. JAN-NET-0922)</p>
+                  {/* <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-[Category (3)]-[MMDD] (e.g. JAN-NET-0922)</p> */}
                 </div>
 
                 {/* Category / Track */}
@@ -923,7 +1242,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     placeholder="Auto computed from Start & End time"
                     className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold shadow-sm cursor-not-allowed opacity-90"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time (hrs:mins)</p>
+                  {/* <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time (hrs:mins)</p> */}
                 </div>
 
                 {/* Notes / Remarks */}
@@ -1008,137 +1327,38 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
         </div>
       )}
 
-      {/* Interactive Clock Time Picker Modal */}
+      {/* Interactive Analogue Clock Time Picker Modal */}
       {activeClockPickerTarget && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 max-w-sm w-full space-y-5 animate-fadeIn text-slate-900">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-600" />
-                <h4 className="font-bold text-slate-900 text-sm">
-                  Select {activeClockPickerTarget === 'start' ? 'Start Time' : 'End Time'}
-                </h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveClockPickerTarget(null)}
-                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Clock Face Display Card */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-5 text-center shadow-lg space-y-1">
-              <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-blue-100 block">
-                CLOCK TIME PICKER
-              </span>
-              <div className="text-3xl font-extrabold font-mono flex items-center justify-center gap-2">
-                <span>{format12Hour(activeClockPickerTarget === 'start' ? startTimeVal : endTimeVal)}</span>
-              </div>
-            </div>
-
-            {/* Quick Time Presets Grid */}
-            <div>
-              <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase font-mono">Quick Time Presets</label>
-              <div className="grid grid-cols-3 gap-1.5 text-xs font-bold font-mono">
-                {['09:00', '10:00', '11:00', '13:00', '14:30', '16:00'].map((time24) => {
-                  const currentVal = activeClockPickerTarget === 'start' ? startTimeVal : endTimeVal;
-                  const isSelected = currentVal === time24;
-                  return (
-                    <button
-                      key={time24}
-                      type="button"
-                      onClick={() => {
-                        if (activeClockPickerTarget === 'start') {
-                          setStartTimeVal(time24);
-                          const start12 = format12Hour(time24);
-                          const end12 = format12Hour(endTimeVal);
-                          const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
-                          const hrs = calculateHoursFromTimes(time24, endTimeVal);
-                          setEditingRecord(prev => prev ? ({
-                            ...prev,
-                            scheduleTime: schedTime,
-                            durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
-                          }) : null);
-                        } else {
-                          setEndTimeVal(time24);
-                          const start12 = format12Hour(startTimeVal);
-                          const end12 = format12Hour(time24);
-                          const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
-                          const hrs = calculateHoursFromTimes(startTimeVal, time24);
-                          setEditingRecord(prev => prev ? ({
-                            ...prev,
-                            scheduleTime: schedTime,
-                            durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
-                          }) : null);
-                        }
-                      }}
-                      className={`py-2 rounded-xl border text-center transition-all ${
-                        isSelected
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-blue-50 hover:border-blue-300'
-                      }`}
-                    >
-                      {format12Hour(time24)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Custom Time Input Selector */}
-            <div>
-              <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase font-mono">Custom Time Selector</label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
-                <input
-                  type="time"
-                  value={activeClockPickerTarget === 'start' ? startTimeVal : endTimeVal}
-                  onChange={(e) => {
-                    const time24 = e.target.value;
-                    if (activeClockPickerTarget === 'start') {
-                      setStartTimeVal(time24);
-                      const start12 = format12Hour(time24);
-                      const end12 = format12Hour(endTimeVal);
-                      const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
-                      const hrs = calculateHoursFromTimes(time24, endTimeVal);
-                      setEditingRecord(prev => prev ? ({
-                        ...prev,
-                        scheduleTime: schedTime,
-                        durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
-                      }) : null);
-                    } else {
-                      setEndTimeVal(time24);
-                      const start12 = format12Hour(startTimeVal);
-                      const end12 = format12Hour(time24);
-                      const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
-                      const hrs = calculateHoursFromTimes(startTimeVal, time24);
-                      setEditingRecord(prev => prev ? ({
-                        ...prev,
-                        scheduleTime: schedTime,
-                        durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
-                      }) : null);
-                    }
-                  }}
-                  className="w-full pl-9 pr-3 bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 font-extrabold shadow-sm focus:outline-none focus:border-blue-600 font-mono text-sm cursor-pointer"
-                />
-              </div>
-            </div>
-
-            {/* Done Button */}
-            <button
-              type="button"
-              onClick={() => setActiveClockPickerTarget(null)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs shadow-md shadow-blue-600/20 transition-colors"
-            >
-              Done & Apply Time
-            </button>
-
-          </div>
-        </div>
+        <AnalogueClockModal
+          target={activeClockPickerTarget}
+          currentTime24={activeClockPickerTarget === 'start' ? startTimeVal : endTimeVal}
+          onApply={(time24) => {
+            if (activeClockPickerTarget === 'start') {
+              setStartTimeVal(time24);
+              const start12 = format12Hour(time24);
+              const end12 = format12Hour(endTimeVal);
+              const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
+              const hrs = calculateHoursFromTimes(time24, endTimeVal);
+              setEditingRecord(prev => prev ? ({
+                ...prev,
+                scheduleTime: schedTime,
+                durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
+              }) : null);
+            } else {
+              setEndTimeVal(time24);
+              const start12 = format12Hour(startTimeVal);
+              const end12 = format12Hour(time24);
+              const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
+              const hrs = calculateHoursFromTimes(startTimeVal, time24);
+              setEditingRecord(prev => prev ? ({
+                ...prev,
+                scheduleTime: schedTime,
+                durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
+              }) : null);
+            }
+          }}
+          onClose={() => setActiveClockPickerTarget(null)}
+        />
       )}
 
     </div>
