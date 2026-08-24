@@ -154,7 +154,14 @@ export function App() {
   });
   
   // Navigation State
-  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(initialHashState.portal);
+  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(() => {
+    const rawHash = typeof window !== 'undefined' ? window.location.hash : '';
+    if ((!rawHash || rawHash === '#' || rawHash === '#/') && isAuthenticated) {
+      const isRoleAdmin = currentUser.role === 'Admin' || (typeof currentUser.role === 'string' && currentUser.role.toLowerCase().includes('admin'));
+      return isRoleAdmin ? 'Admin' : 'GT';
+    }
+    return initialHashState.portal;
+  });
   const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
     initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState ? initialHashState.gtViewMode : 'sessions'
   );
@@ -491,11 +498,28 @@ export function App() {
       {/* Main Body View Switching */}
       <main className="flex-1 w-full mx-auto">
         
-        {/* Unauthenticated Landing Page View */}
+        {/* Landing Page View */}
         {(!isAuthenticated || activePortal === 'Landing') && (
           <LandingPage
             onOpenLogin={handleOpenLogin}
             onOpenUserGuide={() => setIsUserGuideOpen(true)}
+            isAuthenticated={isAuthenticated}
+            currentUser={currentUser}
+            onNavigateToPortal={(portal) => {
+              const isAdminUser = currentUser.role === 'Admin' || (typeof currentUser.role === 'string' && currentUser.role.toLowerCase().includes('admin'));
+              if (portal === 'Admin' && !isAdminUser) {
+                addToast('error', 'Access Denied (RBAC): Admin console is restricted to L&D Administrators.');
+                return;
+              }
+              setActivePortal(portal);
+              setSelectedSessionId(null);
+              setActiveQuiz(null);
+              if (portal === 'Admin') {
+                setIsAdminAuthenticated(true);
+                setAdminViewMode('tracker');
+              }
+            }}
+            onLogout={handleLogout}
           />
         )}
 
