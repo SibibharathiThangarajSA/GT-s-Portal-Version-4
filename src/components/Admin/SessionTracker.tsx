@@ -44,6 +44,77 @@ interface SessionTrackerProps {
 
 const TRACKER_STORAGE_KEY = 'gt_session_tracker_records_manual_v1';
 
+export const generateSessionCode = (trainerName: string, scheduleDate: string): string => {
+  const cleanTrainer = (trainerName || '').replace(/[^a-zA-Z]/g, '').toUpperCase();
+  let trainerCode = cleanTrainer.slice(0, 3);
+  if (trainerCode.length === 0) {
+    trainerCode = 'TRA';
+  } else if (trainerCode.length < 3) {
+    trainerCode = trainerCode.padEnd(3, 'X');
+  }
+
+  let dateCode = '0101';
+  if (scheduleDate && scheduleDate.includes('-')) {
+    const parts = scheduleDate.split('-');
+    if (parts.length === 3) {
+      const monthStr = parts[1].padStart(2, '0');
+      const dayStr = parts[2].padStart(2, '0');
+      dateCode = `${monthStr}${dayStr}`;
+    }
+  } else {
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    dateCode = `${mm}${dd}`;
+  }
+
+  return `${trainerCode}-GT-${dateCode}`;
+};
+
+export const format12Hour = (time24: string): string => {
+  if (!time24) return '';
+  const [hStr, mStr] = time24.split(':');
+  let h = parseInt(hStr, 10);
+  if (isNaN(h)) return time24;
+  const period = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const formattedH = h < 10 ? `0${h}` : `${h}`;
+  return `${formattedH}:${mStr || '00'} ${period}`;
+};
+
+export const parse12HourTo24Hour = (str12: string): string => {
+  if (!str12) return '';
+  const match = str12.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!match) return '';
+  let [_, hStr, mStr, period] = match;
+  let h = parseInt(hStr, 10);
+  if (period) {
+    const p = period.toUpperCase();
+    if (p === 'PM' && h < 12) h += 12;
+    if (p === 'AM' && h === 12) h = 0;
+  }
+  const formattedH = h < 10 ? `0${h}` : `${h}`;
+  return `${formattedH}:${mStr}`;
+};
+
+export const calculateHoursFromTimes = (start: string, end: string): number | null => {
+  if (!start || !end) return null;
+  const [sH, sM] = start.split(':').map(Number);
+  const [eH, eM] = end.split(':').map(Number);
+  if (isNaN(sH) || isNaN(sM) || isNaN(eH) || isNaN(eM)) return null;
+
+  let startMinutes = sH * 60 + sM;
+  let endMinutes = eH * 60 + eM;
+
+  if (endMinutes < startMinutes) {
+    endMinutes += 24 * 60;
+  }
+
+  const diffMinutes = endMinutes - startMinutes;
+  const hours = Math.round((diffMinutes / 60) * 10) / 10;
+  return hours > 0 ? hours : null;
+};
+
 export const SessionTracker: React.FC<SessionTrackerProps> = ({
   sessions = [],
   records: initialRecords,
@@ -90,6 +161,23 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Partial<SessionTrackerRecord> | null>(null);
   const [selectedRecordForNotes, setSelectedRecordForNotes] = useState<SessionTrackerRecord | null>(null);
+  const [startTimeVal, setStartTimeVal] = useState('09:00');
+  const [endTimeVal, setEndTimeVal] = useState('11:00');
+
+  // Dynamic available categories derived from created sessions + tracker records + defaults
+  const availableCategories = React.useMemo(() => {
+    const defaults = [
+      '.NET with C#',
+      'Insurance',
+      'SQL & Database Modelling',
+      'Frontend (React & Tailwind)',
+      'Campus to Corporate (C2C)',
+      'Azure & Cloud Services'
+    ];
+    const fromSessions = (sessions || []).map(s => s.category).filter((c): c is string => Boolean(c) && c.trim().length > 0);
+    const fromTracker = (trackerRecords || []).map(r => r.category).filter((c): c is string => Boolean(c) && c.trim().length > 0);
+    return Array.from(new Set([...defaults, ...fromSessions, ...fromTracker]));
+  }, [sessions, trackerRecords]);
 
   // Filter logic
   const filteredRecords = trackerRecords.filter(r => {
@@ -130,15 +218,19 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
 
   // Handlers
   const handleOpenAdd = () => {
+    const defaultDate = new Date().toISOString().split('T')[0];
+    const defaultCode = generateSessionCode('', defaultDate);
+    setStartTimeVal('09:00');
+    setEndTimeVal('11:00');
     setEditingRecord({
       id: `track-${Date.now()}`,
-      sessionCode: `SESS-GT-${Math.floor(100 + Math.random() * 900)}`,
+      sessionCode: defaultCode,
       sessionName: '',
-      category: '',
+      category: availableCategories[0] || '.NET with C#',
       trainerName: '',
-      scheduleDate: new Date().toISOString().split('T')[0],
-      scheduleTime: '09:00 AM - 12:00 PM',
-      durationHours: 10,
+      scheduleDate: defaultDate,
+      scheduleTime: '09:00 AM - 11:00 AM',
+      durationHours: 2,
       status: 'Scheduled',
       enrolledCount: 30,
       maxCapacity: 40,
@@ -152,6 +244,15 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
 
   const handleOpenEdit = (record: SessionTrackerRecord) => {
     setEditingRecord({ ...record });
+    if (record.scheduleTime) {
+      const parts = record.scheduleTime.split('-').map(s => s.trim());
+      if (parts.length === 2) {
+        const s24 = parse12HourTo24Hour(parts[0]);
+        const e24 = parse12HourTo24Hour(parts[1]);
+        if (s24) setStartTimeVal(s24);
+        if (e24) setEndTimeVal(e24);
+      }
+    }
     setIsAddEditModalOpen(true);
   };
 
@@ -565,33 +666,91 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
             <form onSubmit={handleSaveForm} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* Session Code */}
+                {/* Trainer Name */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Session Code / ID *</label>
+                  <label className="block text-slate-700 font-bold mb-1">Trainer / Instructor *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingRecord.trainerName || ''}
+                    onChange={(e) => {
+                      const nameVal = e.target.value;
+                      const autoCode = generateSessionCode(nameVal, editingRecord.scheduleDate || '');
+                      setEditingRecord(prev => prev ? ({
+                        ...prev,
+                        trainerName: nameVal,
+                        sessionCode: autoCode
+                      }) : null);
+                    }}
+                    placeholder="e.g. Janani Selvaraj"
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-medium"
+                  />
+                </div>
+
+                {/* Schedule Date */}
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Schedule Date *</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                    <input
+                      type="date"
+                      required
+                      value={editingRecord.scheduleDate || ''}
+                      onChange={(e) => {
+                        const dateVal = e.target.value;
+                        const autoCode = generateSessionCode(editingRecord.trainerName || '', dateVal);
+                        setEditingRecord(prev => prev ? ({
+                          ...prev,
+                          scheduleDate: dateVal,
+                          sessionCode: autoCode
+                        }) : null);
+                      }}
+                      className="w-full pl-9 pr-3 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Session Code (Auto Generated) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-700 font-bold">Session Code / ID *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const autoCode = generateSessionCode(editingRecord.trainerName || '', editingRecord.scheduleDate || '');
+                        setEditingRecord(prev => prev ? ({ ...prev, sessionCode: autoCode }) : null);
+                      }}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                      title="Auto-generate Session Code from Trainer & Date"
+                    >
+                      <Sparkles className="w-3 h-3 text-blue-600" />
+                      <span>Auto-Generate</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     required
                     value={editingRecord.sessionCode || ''}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, sessionCode: e.target.value })}
-                    placeholder="e.g. SESS-NET-01"
-                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-mono shadow-sm"
+                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, sessionCode: e.target.value }) : null)}
+                    placeholder="e.g. JAN-GT-0922"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-mono font-bold shadow-sm"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-GT-[MMDD] (e.g. JAN-GT-0922)</p>
                 </div>
 
                 {/* Category / Track */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Category / Learning Track *</label>
                   <select
-                    value={editingRecord.category || '.NET with C#'}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, category: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold"
+                    value={editingRecord.category || availableCategories[0] || '.NET with C#'}
+                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, category: e.target.value }) : null)}
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
                   >
-                    <option value=".NET with C#">.NET with C#</option>
-                    <option value="Insurance">Insurance</option>
-                    <option value="SQL">SQL & Database Modelling</option>
-                    <option value="Frontend">Frontend (React & Tailwind)</option>
-                    <option value="Campus to Corporate">Campus to Corporate (C2C)</option>
-                    <option value="Azure">Azure & Cloud</option>
+                    {availableCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -602,62 +761,95 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     type="text"
                     required
                     value={editingRecord.sessionName || ''}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, sessionName: e.target.value })}
+                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, sessionName: e.target.value }) : null)}
                     placeholder="e.g. ASP.NET Core Web API & Clean Architecture"
                     className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-bold shadow-sm"
                   />
                 </div>
 
-                {/* Trainer Name */}
+                {/* Start Time & End Time */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Trainer / Instructor *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingRecord.trainerName || ''}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, trainerName: e.target.value })}
-                    placeholder="e.g. Sarah Jenkins"
-                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
-                  />
+                  <label className="block text-slate-700 font-bold mb-1">Start Time *</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                    <input
+                      type="time"
+                      required
+                      value={startTimeVal}
+                      onChange={(e) => {
+                        const s = e.target.value;
+                        setStartTimeVal(s);
+                        const start12 = format12Hour(s);
+                        const end12 = format12Hour(endTimeVal);
+                        const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
+                        const hrs = calculateHoursFromTimes(s, endTimeVal);
+                        setEditingRecord(prev => prev ? ({
+                          ...prev,
+                          scheduleTime: schedTime,
+                          durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
+                        }) : null);
+                      }}
+                      className="w-full pl-9 pr-3 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
+                    />
+                  </div>
                 </div>
 
-                {/* Schedule Date */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Schedule Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={editingRecord.scheduleDate || ''}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, scheduleDate: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
-                  />
+                  <label className="block text-slate-700 font-bold mb-1">End Time *</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                    <input
+                      type="time"
+                      required
+                      value={endTimeVal}
+                      onChange={(e) => {
+                        const en = e.target.value;
+                        setEndTimeVal(en);
+                        const start12 = format12Hour(startTimeVal);
+                        const end12 = format12Hour(en);
+                        const schedTime = start12 && end12 ? `${start12} - ${end12}` : (start12 || end12);
+                        const hrs = calculateHoursFromTimes(startTimeVal, en);
+                        setEditingRecord(prev => prev ? ({
+                          ...prev,
+                          scheduleTime: schedTime,
+                          durationHours: hrs !== null && hrs > 0 ? hrs : (prev.durationHours || 1)
+                        }) : null);
+                      }}
+                      className="w-full pl-9 pr-3 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
+                    />
+                  </div>
                 </div>
 
-                {/* Schedule Time */}
+                {/* Formatted Schedule Time */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Schedule Time *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingRecord.scheduleTime || ''}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, scheduleTime: e.target.value })}
-                    placeholder="e.g. 09:00 AM - 12:00 PM"
-                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
-                  />
+                  <label className="block text-slate-700 font-bold mb-1">Schedule Time (Formatted) *</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
+                    <input
+                      type="text"
+                      required
+                      value={editingRecord.scheduleTime || ''}
+                      onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, scheduleTime: e.target.value }) : null)}
+                      placeholder="e.g. 09:00 AM - 11:00 AM"
+                      className="w-full pl-9 pr-3 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold"
+                    />
+                  </div>
                 </div>
 
-                {/* Duration Hours */}
+                {/* Duration Hours (Auto Computed) */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Hrs *</label>
+                  <label className="block text-slate-700 font-bold mb-1">Duration (Hrs) *</label>
                   <input
                     type="number"
-                    min="1"
+                    min="0.5"
+                    step="0.5"
                     required
-                    value={editingRecord.durationHours || 10}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, durationHours: Number(e.target.value) })}
-                    placeholder="e.g. 10"
-                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-mono shadow-sm"
+                    value={editingRecord.durationHours ?? ''}
+                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, durationHours: Number(e.target.value) }) : null)}
+                    placeholder="Calculated automatically"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-mono font-bold shadow-sm"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time</p>
                 </div>
 
                 {/* Notes / Remarks */}
@@ -666,7 +858,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   <textarea
                     rows={3}
                     value={editingRecord.notes || ''}
-                    onChange={(e) => setEditingRecord({ ...editingRecord, notes: e.target.value })}
+                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, notes: e.target.value }) : null)}
                     placeholder="Enter any feedback, special prerequisites, or curriculum observations..."
                     className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
                   />
@@ -709,7 +901,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-purple-600" />
-                <h3 className="font-bold text-sm">Session Remarks & Notes</h3>
+                <h3 className="font-bold text-sm">Session Description</h3>
               </div>
               <button
                 onClick={() => setSelectedRecordForNotes(null)}
