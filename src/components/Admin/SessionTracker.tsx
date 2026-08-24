@@ -1041,7 +1041,20 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
             <form onSubmit={handleSaveForm} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* Trainer Name Dropdown */}
+                {/* 1. Session Name / Title (First) */}
+                <div className="sm:col-span-2">
+                  <label className="block text-slate-700 font-bold mb-1">Session Name / Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingRecord.sessionName || ''}
+                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, sessionName: e.target.value }) : null)}
+                    placeholder="Session Name"
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-bold shadow-sm"
+                  />
+                </div>
+
+                {/* 2. Trainer Name Dropdown */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Trainer / Instructor *</label>
                   <select
@@ -1065,7 +1078,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   </select>
                 </div>
 
-                {/* Schedule Date */}
+                {/* 3. Schedule Date */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Schedule Date *</label>
                   <div className="relative flex items-center">
@@ -1100,7 +1113,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   </div>
                 </div>
 
-                {/* Session Code (Auto Generated) */}
+                {/* 4. Session Code (Auto Generated) */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Session Code / ID*</label>
                   <input
@@ -1110,10 +1123,9 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     placeholder="Auto generated (e.g. JAN-NET-0922)"
                     className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold shadow-sm cursor-not-allowed opacity-90"
                   />
-                  {/* <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-[Category (3)]-[MMDD] (e.g. JAN-NET-0922)</p> */}
                 </div>
 
-                {/* Category / Track */}
+                {/* 5. Category / Track */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Category / Learning Track *</label>
                   <select
@@ -1137,20 +1149,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   </select>
                 </div>
 
-                {/* Session Name */}
-                <div className="sm:col-span-2">
-                  <label className="block text-slate-700 font-bold mb-1">Session Name / Title *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingRecord.sessionName || ''}
-                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, sessionName: e.target.value }) : null)}
-                    placeholder="Session Name"
-                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-bold shadow-sm"
-                  />
-                </div>
-
-                {/* Start Time & End Time */}
+                {/* 6 & 7. Start Time & End Time */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Start Time *</label>
                   <div className="relative flex items-center">
@@ -1217,7 +1216,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   </div>
                 </div>
 
-                {/* Formatted Schedule Time (Disabled Auto Computed) */}
+                {/* 8. Formatted Schedule Time */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Schedule Time *</label>
                   <div className="relative flex items-center">
@@ -1232,7 +1231,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   </div>
                 </div>
 
-                {/* Duration (Hrs : Mins Auto Computed) */}
+                {/* 9. Duration (Hrs : Mins Auto Computed) */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Duration (Hrs : Mins Auto Computed) *</label>
                   <input
@@ -1242,10 +1241,9 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     placeholder="Auto computed from Start & End time"
                     className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold shadow-sm cursor-not-allowed opacity-90"
                   />
-                  {/* <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time (hrs:mins)</p> */}
                 </div>
 
-                {/* Notes / Remarks */}
+                {/* 10. Notes / Remarks */}
                 <div className="sm:col-span-2">
                   <label className="block text-slate-700 font-bold mb-1">Session Remarks / Additional Notes</label>
                   <textarea
