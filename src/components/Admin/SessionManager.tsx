@@ -172,6 +172,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
   const [sessionManagerMode, setSessionManagerMode] = useState<'modules' | 'tracker'>('modules');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'Published' | 'Draft' | 'Archived'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
 
   const statusCounts = React.useMemo(() => {
     let published = 0;
@@ -1770,7 +1771,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
               </button>
               
               <button
-                onClick={() => onDeleteSession(session.id)}
+                onClick={() => setSessionToDelete(session)}
                 style={{
                   background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
                   border: '1px solid #BFDBFE',
@@ -1787,6 +1788,50 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       })}
       </div>
       </>
+      )}
+
+      {/* Delete Session Confirmation Modal */}
+      {sessionToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-5 animate-scaleUp">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 flex-shrink-0 shadow-sm">
+                <Trash2 className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900">Delete Session Confirmation</h3>
+                <p className="text-xs text-slate-500 font-medium">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-xs text-slate-700 leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-slate-900">"{sessionToDelete.name}"</span>? All associated roadmap topics, study materials, assignments, and quizzes for this session will be permanently removed.
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setSessionToDelete(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (sessionToDelete) {
+                    onDeleteSession(sessionToDelete.id);
+                    setSessionToDelete(null);
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-lg shadow-rose-600/25 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Confirm Delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

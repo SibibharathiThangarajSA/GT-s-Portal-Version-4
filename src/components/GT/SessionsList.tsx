@@ -258,7 +258,7 @@ export const SessionsList: React.FC<SessionsListProps> = ({
                               className="p-2 hover:bg-blue-50 rounded-xl cursor-pointer transition-colors flex items-center justify-between text-xs group"
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                <span className="px-2 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-700 text-[10px] font-mono font-bold flex items-center gap-1 flex-shrink-0">
+                                <span className="px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700 text-[10px] font-mono font-bold flex items-center gap-1 flex-shrink-0">
                                   <FileText className="w-3 h-3" />
                                   <span>{doc.type}</span>
                                 </span>
