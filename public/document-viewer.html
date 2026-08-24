@@ -818,7 +818,35 @@
       const cleanUrl = safeFetchUrl.toLowerCase().split('?')[0];
       const lowerTitle = (customTitle || '').toLowerCase();
 
-      // CASE A: SharePoint / OneDrive Enterprise Presentations & Documents
+      // CASE A: Video Streaming Embed Links (YouTube / Vimeo / Loom / Google Drive Video)
+      const ytMatch = safeFetchUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+      const vimeoMatch = safeFetchUrl.match(/vimeo\.com\/(?:video\/)?([0-9]+)/i);
+      const loomMatch = safeFetchUrl.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/i);
+      const gdriveMatch = safeFetchUrl.match(/drive\.google\.com\/file\/d\/([^\/]+)/i);
+
+      if (ytMatch || vimeoMatch || loomMatch || gdriveMatch) {
+        formatBadge.textContent = 'VIDEO STREAM';
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'none';
+        dynamicTarget.style.display = 'block';
+
+        let embedSrc = safeFetchUrl;
+        if (ytMatch && ytMatch[1]) embedSrc = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
+        else if (vimeoMatch && vimeoMatch[1]) embedSrc = `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
+        else if (loomMatch && loomMatch[1]) embedSrc = `https://www.loom.com/embed/${loomMatch[1]}?autoplay=true`;
+        else if (gdriveMatch && gdriveMatch[1]) embedSrc = `https://drive.google.com/file/d/${gdriveMatch[1]}/preview`;
+
+        dynamicTarget.innerHTML = `
+          <div style="position: relative; width: 100%; height: calc(100vh - 140px); background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;">
+            <iframe src="${embedSrc}" style="width: 100%; height: 100%; border: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="true"></iframe>
+          </div>
+        `;
+        return;
+      }
+
+      // CASE B: SharePoint / OneDrive Enterprise Presentations & Documents
       if (safeFetchUrl.includes('sharepoint.com') || safeFetchUrl.includes('1drv.ms') || safeFetchUrl.includes('onedrive.live.com')) {
         formatBadge.textContent = 'POWERPOINT (M365)';
         loadingState.style.display = 'none';
@@ -827,7 +855,6 @@
         pdfTarget.style.display = 'none';
         dynamicTarget.style.display = 'block';
 
-        // Construct optimal SharePoint embed URL
         let embedUrl = safeFetchUrl;
         if (!embedUrl.includes('action=')) {
           const sep = embedUrl.includes('?') ? '&' : '?';
@@ -848,8 +875,6 @@
                 </button>
               </div>
             </div>
-
-            <!-- SharePoint / Office Embed Frame with SSO notice -->
             <div style="position: relative; width: 100%; height: calc(100vh - 180px); background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; box-shadow: 0 16px 40px rgba(0,0,0,0.45);">
               <iframe id="sharepoint-frame" src="${embedUrl}" style="width: 100%; height: 100%; border: none;" allowfullscreen="true"></iframe>
             </div>
@@ -858,25 +883,7 @@
         return;
       }
 
-      // CASE B: Other External Public URLs (Google Docs / Native)
-      if (/^https?:\/\//i.test(safeFetchUrl) && !safeFetchUrl.includes('localhost') && !safeFetchUrl.includes('127.0.0.1')) {
-        loadingState.style.display = 'none';
-        errorState.style.display = 'none';
-        container.style.display = 'block';
-        pdfTarget.style.display = 'block';
-        dynamicTarget.style.display = 'none';
-
-        if (cleanUrl.endsWith('.pptx') || cleanUrl.endsWith('.ppt') || cleanUrl.endsWith('.docx') || cleanUrl.endsWith('.doc') || cleanUrl.endsWith('.xlsx')) {
-          formatBadge.textContent = cleanUrl.endsWith('.ppt') || cleanUrl.endsWith('.pptx') ? 'PPT' : cleanUrl.endsWith('.xlsx') ? 'EXCEL' : 'DOC';
-          pdfTarget.src = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(safeFetchUrl)}`;
-        } else {
-          formatBadge.textContent = 'PDF';
-          pdfTarget.src = safeFetchUrl;
-        }
-        return;
-      }
-
-      // CASE B: Local Files, API Endpoints, & Blob URLs (from in-memory uploads)
+      // CASE C: Direct Document & Video Files (Local / Backend Uploads / API / Blobs)
       try {
         const res = await fetch(safeFetchUrl);
         if (!res.ok) {

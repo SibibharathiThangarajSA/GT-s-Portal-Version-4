@@ -182,9 +182,9 @@ const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?:
   return { provided: providedItems, additional: additionalItems };
 };
 
-const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://vjs.zencdn.net/v/oceans.mp4';
+const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
-const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'html5'; embedUrl: string } => {
+const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'loom' | 'gdrive' | 'html5'; embedUrl: string } => {
   if (!url) return { type: 'html5', embedUrl: '' };
 
   const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
@@ -195,6 +195,16 @@ const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'html5'; embedU
   const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/i);
   if (vimeoMatch && vimeoMatch[1]) {
     return { type: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+  }
+
+  const loomMatch = url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/i);
+  if (loomMatch && loomMatch[1]) {
+    return { type: 'loom', embedUrl: `https://www.loom.com/embed/${loomMatch[1]}` };
+  }
+
+  const gdriveMatch = url.match(/drive\.google\.com\/file\/d\/([^\/]+)/i);
+  if (gdriveMatch && gdriveMatch[1]) {
+    return { type: 'gdrive', embedUrl: `https://drive.google.com/file/d/${gdriveMatch[1]}/preview` };
   }
 
   return { type: 'html5', embedUrl: url };
@@ -632,7 +642,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-200/90 shadow-md flex items-center justify-center">
           {overviewVideoUrl ? (() => {
             const videoInfo = getEmbedUrl(overviewVideoUrl);
-            if (videoInfo.type === 'youtube' || videoInfo.type === 'vimeo') {
+            if (['youtube', 'vimeo', 'loom', 'gdrive'].includes(videoInfo.type)) {
               return (
                 <iframe
                   src={videoInfo.embedUrl}
