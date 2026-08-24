@@ -44,13 +44,21 @@ interface SessionTrackerProps {
 
 const TRACKER_STORAGE_KEY = 'gt_session_tracker_records_manual_v1';
 
-export const generateSessionCode = (trainerName: string, scheduleDate: string): string => {
-  const cleanTrainer = (trainerName || '').replace(/[^a-zA-Z]/g, '').toUpperCase();
+export const generateSessionCode = (trainerName: string, category: string, scheduleDate: string): string => {
+  const cleanTrainer = (trainerName || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
   let trainerCode = cleanTrainer.slice(0, 3);
   if (trainerCode.length === 0) {
     trainerCode = 'TRA';
   } else if (trainerCode.length < 3) {
     trainerCode = trainerCode.padEnd(3, 'X');
+  }
+
+  const cleanCategory = (category || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  let catCode = cleanCategory.slice(0, 3);
+  if (catCode.length === 0) {
+    catCode = 'CAT';
+  } else if (catCode.length < 3) {
+    catCode = catCode.padEnd(3, 'X');
   }
 
   let dateCode = '0101';
@@ -68,7 +76,7 @@ export const generateSessionCode = (trainerName: string, scheduleDate: string): 
     dateCode = `${mm}${dd}`;
   }
 
-  return `${trainerCode}-GT-${dateCode}`;
+  return `${trainerCode}-${catCode}-${dateCode}`;
 };
 
 export const format12Hour = (time24: string): string => {
@@ -266,7 +274,8 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   const handleOpenAdd = () => {
     const defaultDate = new Date().toISOString().split('T')[0];
     const defaultTrainer = availableTrainers[0] || 'Unassigned';
-    const defaultCode = generateSessionCode(defaultTrainer, defaultDate);
+    const defaultCategory = availableCategories[0] || '.NET with C#';
+    const defaultCode = generateSessionCode(defaultTrainer, defaultCategory, defaultDate);
     setStartTimeVal('09:00');
     setEndTimeVal('11:00');
     setEditingRecord({
@@ -720,7 +729,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     value={editingRecord.trainerName || availableTrainers[0] || 'Sarah Jenkins'}
                     onChange={(e) => {
                       const nameVal = e.target.value;
-                      const autoCode = generateSessionCode(nameVal, editingRecord.scheduleDate || '');
+                      const autoCode = generateSessionCode(nameVal, editingRecord.category || '', editingRecord.scheduleDate || '');
                       setEditingRecord(prev => prev ? ({
                         ...prev,
                         trainerName: nameVal,
@@ -748,7 +757,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                       value={editingRecord.scheduleDate || ''}
                       onChange={(e) => {
                         const dateVal = e.target.value;
-                        const autoCode = generateSessionCode(editingRecord.trainerName || '', dateVal);
+                        const autoCode = generateSessionCode(editingRecord.trainerName || '', editingRecord.category || '', dateVal);
                         setEditingRecord(prev => prev ? ({
                           ...prev,
                           scheduleDate: dateVal,
@@ -779,10 +788,10 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     type="text"
                     disabled
                     value={editingRecord.sessionCode || ''}
-                    placeholder="Auto generated (JAN-GT-0922)"
+                    placeholder="Auto generated (e.g. JAN-NET-0922)"
                     className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold shadow-sm cursor-not-allowed opacity-90"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-GT-[MMDD] ( JAN-GT-0922)</p>
+                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-[Category (3)]-[MMDD] (e.g. JAN-NET-0922)</p>
                 </div>
 
                 {/* Category / Track */}
@@ -790,7 +799,15 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                   <label className="block text-slate-700 font-bold mb-1">Category / Learning Track *</label>
                   <select
                     value={editingRecord.category || availableCategories[0] || '.NET with C#'}
-                    onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, category: e.target.value }) : null)}
+                    onChange={(e) => {
+                      const catVal = e.target.value;
+                      const autoCode = generateSessionCode(editingRecord.trainerName || '', catVal, editingRecord.scheduleDate || '');
+                      setEditingRecord(prev => prev ? ({
+                        ...prev,
+                        category: catVal,
+                        sessionCode: autoCode
+                      }) : null);
+                    }}
                     className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
                   >
                     {availableCategories.map((cat) => (
