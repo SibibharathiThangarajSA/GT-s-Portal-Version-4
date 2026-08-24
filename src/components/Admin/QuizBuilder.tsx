@@ -131,10 +131,10 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ session, onSaveQuiz, o
         </div>
 
         <div className="space-y-1">
-          <label className="text-slate-300 font-semibold text-xs flex items-center justify-between">
+          {/* <label className="text-slate-300 font-semibold text-xs flex items-center justify-between">
             <span>Passing Score (%)</span>
             <span className="text-[10px] text-slate-400 font-mono">0 - 100% max</span>
-          </label>
+          </label> */}
           <div className="relative flex items-center">
             <input
               type="number"

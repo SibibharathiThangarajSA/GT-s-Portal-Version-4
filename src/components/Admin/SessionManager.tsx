@@ -5,15 +5,15 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { useToast } from '../../context/ToastContext';
 import { deleteStudyMaterialApi, deleteAssignmentApi } from '../../services/api';
 import { UploadProgressOverlay } from '../UploadProgressOverlay';
-import { 
-  Plus, 
-  Search, 
-  Edit3, 
-  Trash2, 
-  CheckCircle2, 
-  Layers, 
-  FileText, 
-  HelpCircle, 
+import {
+  Plus,
+  Search,
+  Edit3,
+  Trash2,
+  CheckCircle2,
+  Layers,
+  FileText,
+  HelpCircle,
   ArrowLeft,
   Save,
   Clock,
@@ -447,13 +447,12 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
               </p>
             </div>
             <span
-              className={`text-xs font-mono font-bold uppercase px-3 py-1 rounded-full border self-start sm:self-auto shadow-sm transition-colors ${
-                editingSession.status === 'Publish' || editingSession.status === 'Published'
+              className={`text-xs font-mono font-bold uppercase px-3 py-1 rounded-full border self-start sm:self-auto shadow-sm transition-colors ${editingSession.status === 'Publish' || editingSession.status === 'Published'
                   ? 'bg-blue-50 text-blue-700 border-blue-200'
                   : editingSession.status === 'Archive' || editingSession.status === 'Archived'
-                  ? 'bg-violet-50 text-violet-700 border-violet-200'
-                  : 'bg-orange-50 text-orange-700 border-orange-200'
-              }`}
+                    ? 'bg-violet-50 text-violet-700 border-violet-200'
+                    : 'bg-orange-50 text-orange-700 border-orange-200'
+                }`}
             >
               {editingSession.status || 'Draft'} Mode
             </span>
@@ -464,11 +463,10 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('overview')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'overview'
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'overview'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'text-slate-700 hover:text-blue-700 hover:bg-white/80'
-              }`}
+                }`}
             >
               <BookOpen className={`w-3.5 h-3.5 ${activeTab === 'overview' ? 'text-white' : 'text-blue-600'}`} />
               <span>Session Overview</span>
@@ -477,11 +475,10 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('roadmap')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'roadmap'
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'roadmap'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'text-slate-700 hover:text-blue-700 hover:bg-white/80'
-              }`}
+                }`}
             >
               <Layers className={`w-3.5 h-3.5 ${activeTab === 'roadmap' ? 'text-white' : 'text-blue-600'}`} />
               <span>Road Map ({topicNodesCount})</span>
@@ -490,11 +487,10 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('provided')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'provided'
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'provided'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'text-slate-700 hover:text-blue-700 hover:bg-white/80'
-              }`}
+                }`}
             >
               <FileText className={`w-3.5 h-3.5 ${activeTab === 'provided' ? 'text-white' : 'text-blue-600'}`} />
               <span>Provided Materials ({providedCount})</span>
@@ -503,11 +499,10 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('additional')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'additional'
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'additional'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'text-slate-700 hover:text-blue-700 hover:bg-white/80'
-              }`}
+                }`}
             >
               <FolderOpen className={`w-3.5 h-3.5 ${activeTab === 'additional' ? 'text-white' : 'text-blue-600'}`} />
               <span>Additional Materials ({additionalCount})</span>
@@ -516,11 +511,10 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('assignments')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'assignments'
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'assignments'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'text-slate-700 hover:text-blue-700 hover:bg-white/80'
-              }`}
+                }`}
             >
               <ClipboardList className={`w-3.5 h-3.5 ${activeTab === 'assignments' ? 'text-white' : 'text-blue-600'}`} />
               <span>Assignments ({assignmentsCount})</span>
@@ -529,11 +523,10 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('quiz')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'quiz'
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'quiz'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'text-slate-700 hover:text-blue-700 hover:bg-white/80'
-              }`}
+                }`}
             >
               <HelpCircle className={`w-3.5 h-3.5 ${activeTab === 'quiz' ? 'text-white' : 'text-blue-600'}`} />
               <span>Quiz Builder</span>
@@ -594,28 +587,26 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-slate-700 font-bold block">Session Status *</label>
                   <span
-                    className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 shadow-2xs transition-all ${
-                      editingSession.status === 'Publish' || editingSession.status === 'Published'
+                    className={`text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 shadow-2xs transition-all ${editingSession.status === 'Publish' || editingSession.status === 'Published'
                         ? 'bg-blue-50 text-blue-700 border-blue-200'
                         : editingSession.status === 'Archive' || editingSession.status === 'Archived'
-                        ? 'bg-violet-50 text-violet-700 border-violet-200'
-                        : 'bg-orange-50 text-orange-700 border-orange-200'
-                    }`}
+                          ? 'bg-violet-50 text-violet-700 border-violet-200'
+                          : 'bg-orange-50 text-orange-700 border-orange-200'
+                      }`}
                   >
                     <span
-                      className={`w-2 h-2 rounded-full ${
-                        editingSession.status === 'Publish' || editingSession.status === 'Published'
+                      className={`w-2 h-2 rounded-full ${editingSession.status === 'Publish' || editingSession.status === 'Published'
                           ? 'bg-blue-600 animate-pulse'
                           : editingSession.status === 'Archive' || editingSession.status === 'Archived'
-                          ? 'bg-violet-600'
-                          : 'bg-orange-500'
-                      }`}
+                            ? 'bg-violet-600'
+                            : 'bg-orange-500'
+                        }`}
                     />
                     {editingSession.status === 'Publish' || editingSession.status === 'Published'
                       ? 'Publish'
                       : editingSession.status === 'Archive' || editingSession.status === 'Archived'
-                      ? 'Archive'
-                      : 'Draft'}
+                        ? 'Archive'
+                        : 'Draft'}
                   </span>
                 </div>
                 <select
@@ -623,8 +614,8 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                     editingSession.status === 'Published' || editingSession.status === 'Publish'
                       ? 'Publish'
                       : editingSession.status === 'Archived' || editingSession.status === 'Archive'
-                      ? 'Archive'
-                      : (editingSession.status || 'Draft')
+                        ? 'Archive'
+                        : (editingSession.status || 'Draft')
                   }
                   onChange={(e) => {
                     const val = e.target.value;
@@ -634,13 +625,12 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       isPublished: val === 'Publish' || val === 'Published'
                     });
                   }}
-                  className={`w-full bg-white border rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-4 shadow-sm font-bold transition-all ${
-                    editingSession.status === 'Publish' || editingSession.status === 'Published'
+                  className={`w-full bg-white border rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-4 shadow-sm font-bold transition-all ${editingSession.status === 'Publish' || editingSession.status === 'Published'
                       ? 'border-blue-300 focus:border-blue-600 focus:ring-blue-500/12'
                       : editingSession.status === 'Archive' || editingSession.status === 'Archived'
-                      ? 'border-violet-300 focus:border-violet-600 focus:ring-violet-500/12'
-                      : 'border-orange-300 focus:border-orange-500 focus:ring-orange-500/12'
-                  }`}
+                        ? 'border-violet-300 focus:border-violet-600 focus:ring-violet-500/12'
+                        : 'border-orange-300 focus:border-orange-500 focus:ring-orange-500/12'
+                    }`}
                 >
                   <option value="Publish">Publish</option>
                   <option value="Draft">Draft</option>
@@ -1451,7 +1441,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                     <div className="space-y-1">
                       <label className="text-slate-700 font-bold text-xs flex items-center justify-between">
                         <span>Passing Score (%)</span>
-                        <span className="text-[10px] text-slate-500 font-mono">0 - 100% max</span>
+                        {/* <span className="text-[10px] text-slate-500 font-mono">0 - 100% max</span> */}
                       </label>
                       <div className="relative flex items-center">
                         <input
@@ -1614,49 +1604,49 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                 </div>
               ))}
 
-                <div className="flex justify-end pt-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const currentQuizzes = [...(editingSession.quizzes || [])];
-                      const defaultQuiz = currentQuizzes[0] ? { ...currentQuizzes[0] } : {
-                        id: `quiz-${Date.now()}`,
-                        sessionId: editingSession.id || '',
-                        title: `${editingSession.name || 'Session'} Assessment`,
-                        description: `Assessment quiz for ${editingSession.name || 'Session'}`,
-                        passingScorePercent: 80,
-                        timeLimitMinutes: 15,
-                        questions: []
-                      };
-                      const newQ: QuizQuestion = {
-                        id: `q-${Date.now()}`,
-                        type: 'MCQ',
-                        prompt: 'Enter new question prompt...',
-                        options: ['Option A', 'Option B', 'Option C', 'Option D'],
-                        correctAnswer: 'Option A',
-                        explanation: 'Explanation for correct answer.',
-                        points: 10
-                      };
-                      defaultQuiz.questions = [...(defaultQuiz.questions || []), newQ];
-                      setEditingSession({ ...editingSession, quizzes: [defaultQuiz] });
+              <div className="flex justify-end pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentQuizzes = [...(editingSession.quizzes || [])];
+                    const defaultQuiz = currentQuizzes[0] ? { ...currentQuizzes[0] } : {
+                      id: `quiz-${Date.now()}`,
+                      sessionId: editingSession.id || '',
+                      title: `${editingSession.name || 'Session'} Assessment`,
+                      description: `Assessment quiz for ${editingSession.name || 'Session'}`,
+                      passingScorePercent: 80,
+                      timeLimitMinutes: 15,
+                      questions: []
+                    };
+                    const newQ: QuizQuestion = {
+                      id: `q-${Date.now()}`,
+                      type: 'MCQ',
+                      prompt: 'Enter new question prompt...',
+                      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+                      correctAnswer: 'Option A',
+                      explanation: 'Explanation for correct answer.',
+                      points: 10
+                    };
+                    defaultQuiz.questions = [...(defaultQuiz.questions || []), newQ];
+                    setEditingSession({ ...editingSession, quizzes: [defaultQuiz] });
 
-                      setTimeout(() => {
-                        const el = document.getElementById(`${newQ.id}-prompt`);
-                        if (el) {
-                          try {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            (el as HTMLInputElement).focus();
-                          } catch (err) {
-                            // ignore in non-browser environments
-                          }
+                    setTimeout(() => {
+                      const el = document.getElementById(`${newQ.id}-prompt`);
+                      if (el) {
+                        try {
+                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          (el as HTMLInputElement).focus();
+                        } catch (err) {
+                          // ignore in non-browser environments
                         }
-                      }, 80);
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all text-xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Quiz Question
-                  </button>
-                </div>
+                      }
+                    }, 80);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-600/20 transition-all text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Quiz Question
+                </button>
+              </div>
             </div>
           )}
 
@@ -1714,121 +1704,118 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
       ) : (
         <>
           {/* Filter & Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-        <div className="bg-slate-100 p-2 rounded-2xl border border-slate-200 flex items-center gap-2 overflow-x-auto w-full sm:w-auto no-scrollbar shadow-sm">
-          {(['ALL', 'Published', 'Draft', 'Archived'] as const).map((st) => (
-            <button
-              key={st}
-              onClick={() => setFilterStatus(st)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                filterStatus === st
-                  ? st === 'Draft'
-                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
-                    : st === 'Archived'
-                    ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20'
-                    : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'text-slate-700 hover:text-blue-700 hover:bg-slate-200/80'
-              }`}
-            >
-              <span>{st}</span>
-              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${
-                filterStatus === st ? 'bg-white/20 text-white font-extrabold' : 'bg-slate-200/90 text-slate-700 font-bold'
-              }`}>
-                {statusCounts[st]}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 text-blue-600 absolute left-3.5 top-3 z-10" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search session title..."
-            className="w-full rounded-xl pl-10 pr-4 py-2.5 text-xs bg-white text-slate-900 placeholder-slate-500 border border-slate-300 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm transition-all duration-200"
-          />
-        </div>
-      </div>
-
-      {/* Sessions Cards List */}
-      <div className="space-y-4">
-        {filteredSessions.map((session) => {
-          const currentStatus = getSessionStatus(session);
-          return (
-            <div
-              key={session.id}
-              className="bg-white border border-slate-200 hover:border-blue-300 rounded-2xl p-5 shadow-md hover:shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-all text-slate-900"
-              data-inspect-id="SessionCard"
-            >
-              <div className="flex items-start gap-4">
-                <img src={session.thumbnail?.trim() ? session.thumbnail : DEFAULT_SESSION_THUMBNAIL} alt={session.name} className="w-20 h-20 rounded-xl object-cover border border-slate-200 shadow-sm flex-shrink-0" />
-                <div className="space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      {session.category}
-                    </span>
-                    {session.trainerName && (
-                      <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                        Trainer: {session.trainerName}
-                      </span>
-                    )}
-                    <span
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                        currentStatus === 'Published'
-                          ? 'bg-blue-50 text-blue-800 border-blue-300'
-                          : currentStatus === 'Archived'
-                          ? 'bg-violet-50 text-violet-800 border-violet-300'
-                          : 'bg-orange-50 text-orange-800 border-orange-300'
-                      }`}
-                    >
-                      {currentStatus}
-                    </span>
-                  </div>
-
-                <h3 className="font-bold text-slate-900 text-base">{session.name}</h3>
-                <p className="text-slate-600 text-xs line-clamp-2 leading-relaxed">{session.description}</p>
-              </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+            <div className="bg-slate-100 p-2 rounded-2xl border border-slate-200 flex items-center gap-2 overflow-x-auto w-full sm:w-auto no-scrollbar shadow-sm">
+              {(['ALL', 'Published', 'Draft', 'Archived'] as const).map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setFilterStatus(st)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${filterStatus === st
+                      ? st === 'Draft'
+                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                        : st === 'Archived'
+                          ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20'
+                          : 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                      : 'text-slate-700 hover:text-blue-700 hover:bg-slate-200/80'
+                    }`}
+                >
+                  <span>{st}</span>
+                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${filterStatus === st ? 'bg-white/20 text-white font-extrabold' : 'bg-slate-200/90 text-slate-700 font-bold'
+                    }`}>
+                    {statusCounts[st]}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-200 self-end lg:self-center">
-              <button
-                onClick={() => {
-                  setEditingSession(deriveEditingSessionMaterials(session));
-                  setActiveTab('overview');
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
-                  border: '1px solid #BFDBFE',
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
-                }}
-                className="font-extrabold text-xs px-4 py-2.5 rounded-xl text-blue-800 hover:text-blue-900 flex items-center justify-center gap-2 transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md hover:border-blue-400 flex-1"
-                title="Edit Session Details & Content"
-              >
-                <Edit3 className="w-4 h-4 text-blue-700 fill-blue-700" />
-                <span className="text-blue-800 font-extrabold">Edit Session</span>
-              </button>
-              
-              <button
-                onClick={() => setSessionToDelete(session)}
-                style={{
-                  background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
-                  border: '1px solid #BFDBFE',
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
-                }}
-                className="p-2.5 rounded-xl text-blue-800 hover:text-rose-700 hover:border-rose-300 flex items-center justify-center transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
-                title="Delete Session"
-              >
-                <Trash2 className="w-4 h-4 text-rose-600" />
-              </button>
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-blue-600 absolute left-3.5 top-3 z-10" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search session title..."
+                className="w-full rounded-xl pl-10 pr-4 py-2.5 text-xs bg-white text-slate-900 placeholder-slate-500 border border-slate-300 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm transition-all duration-200"
+              />
             </div>
           </div>
-        );
-      })}
-      </div>
-      </>
+
+          {/* Sessions Cards List */}
+          <div className="space-y-4">
+            {filteredSessions.map((session) => {
+              const currentStatus = getSessionStatus(session);
+              return (
+                <div
+                  key={session.id}
+                  className="bg-white border border-slate-200 hover:border-blue-300 rounded-2xl p-5 shadow-md hover:shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-all text-slate-900"
+                  data-inspect-id="SessionCard"
+                >
+                  <div className="flex items-start gap-4">
+                    <img src={session.thumbnail?.trim() ? session.thumbnail : DEFAULT_SESSION_THUMBNAIL} alt={session.name} className="w-20 h-20 rounded-xl object-cover border border-slate-200 shadow-sm flex-shrink-0" />
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                          {session.category}
+                        </span>
+                        {session.trainerName && (
+                          <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            Trainer: {session.trainerName}
+                          </span>
+                        )}
+                        <span
+                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${currentStatus === 'Published'
+                              ? 'bg-blue-50 text-blue-800 border-blue-300'
+                              : currentStatus === 'Archived'
+                                ? 'bg-violet-50 text-violet-800 border-violet-300'
+                                : 'bg-orange-50 text-orange-800 border-orange-300'
+                            }`}
+                        >
+                          {currentStatus}
+                        </span>
+                      </div>
+
+                      <h3 className="font-bold text-slate-900 text-base">{session.name}</h3>
+                      <p className="text-slate-600 text-xs line-clamp-2 leading-relaxed">{session.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex items-center gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-200 self-end lg:self-center">
+                    <button
+                      onClick={() => {
+                        setEditingSession(deriveEditingSessionMaterials(session));
+                        setActiveTab('overview');
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
+                        border: '1px solid #BFDBFE',
+                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
+                      }}
+                      className="font-extrabold text-xs px-4 py-2.5 rounded-xl text-blue-800 hover:text-blue-900 flex items-center justify-center gap-2 transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md hover:border-blue-400 flex-1"
+                      title="Edit Session Details & Content"
+                    >
+                      <Edit3 className="w-4 h-4 text-blue-700 fill-blue-700" />
+                      <span className="text-blue-800 font-extrabold">Edit Session</span>
+                    </button>
+
+                    <button
+                      onClick={() => setSessionToDelete(session)}
+                      style={{
+                        background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 45%, #BFDBFE 100%)',
+                        border: '1px solid #BFDBFE',
+                        boxShadow: '0 4px 12px rgba(37, 99, 235, 0.12)',
+                      }}
+                      className="p-2.5 rounded-xl text-blue-800 hover:text-rose-700 hover:border-rose-300 flex items-center justify-center transition-all duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-md"
+                      title="Delete Session"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Delete Session Confirmation Modal */}
