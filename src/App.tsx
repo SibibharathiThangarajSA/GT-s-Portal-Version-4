@@ -782,8 +782,16 @@ export function App() {
 
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 py-6 bg-white/80 backdrop-blur-md text-center text-xs text-slate-500 font-mono">
-        Enterprise L&D Student Portal System • Built for Graduate Trainee Programs
+      <footer className="border-t border-slate-200/80 dark:border-slate-800 py-5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-center text-xs text-slate-600 dark:text-slate-400 font-sans shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 font-medium">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+            <span>This web application is developed and managed by <strong className="text-slate-900 dark:text-white font-extrabold">Team PrismIQ</strong></span>
+          </div>
+          <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+            GT Companion Portal System • Version 4.0
+          </div>
+        </div>
       </footer>
 
       {/* User Guide Full-Screen Modal */}
