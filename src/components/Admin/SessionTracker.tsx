@@ -858,7 +858,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     placeholder="Auto computed from Start & End time"
                     className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold cursor-not-allowed opacity-90"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time</p>
+                  {/* <p className="text-[10px] text-slate-500 mt-1 font-mono">Calculated automatically from Start & End time</p> */}
                 </div>
 
                 {/* Notes / Remarks */}
