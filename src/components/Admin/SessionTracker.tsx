@@ -1219,16 +1219,16 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
 
                 {/* Formatted Schedule Time (Disabled Auto Computed) */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Schedule Time (Auto Computed) *</label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <label className="block text-slate-700 font-bold mb-1">Schedule Time *</label>
+                  <div className="relative flex items-center">
                     <input
                       type="text"
                       disabled
                       value={editingRecord.scheduleTime || ''}
                       placeholder="Auto computed from Start & End time"
-                      className="w-full pl-9 pr-3 bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-semibold cursor-not-allowed opacity-90"
+                      className="w-full pl-3.5 pr-10 bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-semibold cursor-not-allowed opacity-90"
                     />
+                    <Clock className="absolute right-3 top-3 w-4 h-4 text-blue-600 pointer-events-none" />
                   </div>
                 </div>
 
