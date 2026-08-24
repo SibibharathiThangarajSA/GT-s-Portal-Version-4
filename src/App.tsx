@@ -789,9 +789,9 @@ export function App() {
             <span>This web application is developed and managed by <strong className="text-slate-900 dark:text-white font-extrabold">Team PrismIQ</strong></span>
           </div>
           <div className="hidden sm:block text-slate-300 dark:text-slate-700">•</div>
-          <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+          {/* <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
             GT Companion Portal System • Version 4.0
-          </div>
+          </div> */}
         </div>
       </footer>
 
