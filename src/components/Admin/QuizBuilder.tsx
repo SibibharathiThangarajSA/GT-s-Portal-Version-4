@@ -212,7 +212,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ session, onSaveQuiz, o
             type="text"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Question prompt (e.g. What keyword is used to defer LINQ execution?)..."
+            placeholder="Question prompt (What keyword is used to defer LINQ execution?)..."
             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
           />
 
@@ -233,7 +233,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ session, onSaveQuiz, o
               type="text"
               value={optionsStr}
               onChange={(e) => setOptionsStr(e.target.value)}
-              placeholder="Comma-separated options (e.g. yield, static, const, var)..."
+              placeholder="Comma-separated options (yield, static, const, var)..."
               className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
             />
           </div>

@@ -175,7 +175,7 @@ export const MaterialUploader: React.FC<MaterialUploaderProps> = ({ session, onS
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. C# Memory Management & Garbage Collector Deep-Dive.pdf"
+              placeholder="C# Memory Management & Garbage Collector Deep-Dive.pdf"
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -260,7 +260,7 @@ export const MaterialUploader: React.FC<MaterialUploaderProps> = ({ session, onS
               type="text"
               value={versionNote}
               onChange={(e) => setVersionNote(e.target.value)}
-              placeholder="e.g. Added section on .NET 8 GC enhancements"
+              placeholder="Added section on .NET 8 GC enhancements"
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500"
             />
           </div>

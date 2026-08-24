@@ -88,7 +88,7 @@ export const AdminAuthGate: React.FC<AdminAuthGateProps> = ({ onLoginSuccess, on
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. Anukraha.Magdalene@valuemomentum.com"
+              placeholder="Anukraha.Magdalene@valuemomentum.com"
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               required
             />

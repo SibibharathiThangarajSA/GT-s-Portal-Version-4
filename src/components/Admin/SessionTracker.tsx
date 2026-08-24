@@ -183,6 +183,14 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
     ];
   }, [sessions, trackerRecords]);
 
+  // Dynamic available trainers derived strictly from created sessions + tracker records
+  const availableTrainers = React.useMemo(() => {
+    const fromSessions = (sessions || []).map(s => s.trainerName).filter((t): t is string => Boolean(t) && t.trim().length > 0);
+    const fromTracker = (trackerRecords || []).map(r => r.trainerName).filter((t): t is string => Boolean(t) && t.trim().length > 0);
+    const defaults = ['Sarah Jenkins', 'Alex Vance', 'Janani Selvaraj', 'Dr. Aris Vance'];
+    return Array.from(new Set([...fromSessions, ...fromTracker, ...defaults]));
+  }, [sessions, trackerRecords]);
+
   // Filter logic
   const filteredRecords = trackerRecords.filter(r => {
     const matchesCategory = categoryFilter === 'ALL' || r.category === categoryFilter;
@@ -223,7 +231,8 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   // Handlers
   const handleOpenAdd = () => {
     const defaultDate = new Date().toISOString().split('T')[0];
-    const defaultCode = generateSessionCode('', defaultDate);
+    const defaultTrainer = availableTrainers[0] || 'Sarah Jenkins';
+    const defaultCode = generateSessionCode(defaultTrainer, defaultDate);
     setStartTimeVal('09:00');
     setEndTimeVal('11:00');
     setEditingRecord({
@@ -231,7 +240,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
       sessionCode: defaultCode,
       sessionName: '',
       category: availableCategories[0] || '.NET with C#',
-      trainerName: '',
+      trainerName: defaultTrainer,
       scheduleDate: defaultDate,
       scheduleTime: '09:00 AM - 11:00 AM',
       durationHours: 2,
@@ -670,13 +679,11 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
             <form onSubmit={handleSaveForm} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* Trainer Name */}
+                {/* Trainer Name Dropdown */}
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">Trainer / Instructor *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editingRecord.trainerName || ''}
+                  <select
+                    value={editingRecord.trainerName || availableTrainers[0] || 'Sarah Jenkins'}
                     onChange={(e) => {
                       const nameVal = e.target.value;
                       const autoCode = generateSessionCode(nameVal, editingRecord.scheduleDate || '');
@@ -686,9 +693,14 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                         sessionCode: autoCode
                       }) : null);
                     }}
-                    placeholder="Trainer Name"
-                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-medium"
-                  />
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold cursor-pointer"
+                  >
+                    {availableTrainers.map((tr) => (
+                      <option key={tr} value={tr}>
+                        {tr}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Schedule Date */}
@@ -729,10 +741,10 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     type="text"
                     disabled
                     value={editingRecord.sessionCode || ''}
-                    placeholder="Auto generated (e.g. JAN-GT-0922)"
+                    placeholder="Auto generated (JAN-GT-0922)"
                     className="w-full bg-slate-100 border border-slate-300 rounded-xl p-2.5 text-slate-700 font-mono font-bold shadow-sm cursor-not-allowed opacity-90"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-GT-[MMDD] (e.g. JAN-GT-0922)</p>
+                  <p className="text-[10px] text-slate-500 mt-1 font-mono">Format: [Trainer (3)]-GT-[MMDD] ( JAN-GT-0922)</p>
                 </div>
 
                 {/* Category / Track */}
@@ -759,7 +771,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                     required
                     value={editingRecord.sessionName || ''}
                     onChange={(e) => setEditingRecord(prev => prev ? ({ ...prev, sessionName: e.target.value }) : null)}
-                    placeholder="e.g. ASP.NET Core Web API & Clean Architecture"
+                    placeholder="Session Name"
                     className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 font-bold shadow-sm"
                   />
                 </div>

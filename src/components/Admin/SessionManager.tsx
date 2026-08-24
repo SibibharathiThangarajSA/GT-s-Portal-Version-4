@@ -543,7 +543,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                   required
                   value={editingSession.name || ''}
                   onChange={(e) => setEditingSession({ ...editingSession, name: e.target.value })}
-                  placeholder="e.g. .NET Core Web API & Microservices Architecture"
+                  placeholder=".NET Core Web API & Microservices Architecture"
                   className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-bold"
                 />
               </div>
@@ -567,7 +567,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                   required
                   value={editingSession.category ?? ''}
                   onChange={(e) => setEditingSession({ ...editingSession, category: e.target.value as CategoryType })}
-                  placeholder="e.g. .NET with C#, Insurance, SQL, C2C..."
+                  placeholder=".NET with C#, Insurance, SQL, C2C..."
                   className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold"
                 />
               </div>
@@ -578,7 +578,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                   type="text"
                   value={editingSession.trainerName ?? ''}
                   onChange={(e) => setEditingSession({ ...editingSession, trainerName: e.target.value })}
-                  placeholder="e.g. Santhosh, Harish, Janani..."
+                  placeholder="Santhosh, Harish, Janani..."
                   className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-semibold"
                 />
               </div>
@@ -711,7 +711,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                           type="text"
                           value={topic.title}
                           onChange={(e) => handleUpdateTopicNode(tIdx, { title: e.target.value })}
-                          placeholder="e.g. C# Fundamentals & Object Oriented Concepts"
+                          placeholder="C# Fundamentals & Object Oriented Concepts"
                           className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm font-bold"
                         />
                       </div>

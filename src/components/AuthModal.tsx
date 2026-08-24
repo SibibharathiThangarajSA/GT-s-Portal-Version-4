@@ -701,7 +701,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : selectedRole === 'Admin' ? 'text-emerald-500' : 'text-blue-500'}`} />
                 <input
                   type="email"
-                  placeholder="e.g. employee.name@valuemomentum.com"
+                  placeholder="employee.name@valuemomentum.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -1089,7 +1089,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
                   <input
                     type="email"
-                    placeholder="e.g. employee.name@valuemomentum.com"
+                    placeholder="employee.name@valuemomentum.com"
                     value={recoveryEmail}
                     onChange={(e) => {
                       setRecoveryEmail(e.target.value);

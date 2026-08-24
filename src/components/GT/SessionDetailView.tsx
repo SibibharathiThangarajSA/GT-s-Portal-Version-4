@@ -1401,7 +1401,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   required
                   value={videoInputTitle}
                   onChange={(e) => setVideoInputTitle(e.target.value)}
-                  placeholder="e.g. Full Session Overview & Objectives Walkthrough"
+                  placeholder="Full Session Overview & Objectives Walkthrough"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600"
                 />
               </div>
@@ -1504,7 +1504,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   required
                   value={matTitle}
                   onChange={(e) => setMatTitle(e.target.value)}
-                  placeholder="e.g. Official C# Memory Profiling Guide"
+                  placeholder="Official C# Memory Profiling Guide"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600"
                 />
               </div>
@@ -1597,7 +1597,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   required
                   value={matTitle}
                   onChange={(e) => setMatTitle(e.target.value)}
-                  placeholder="e.g. Advanced Microservices Benchmark Whitepaper"
+                  placeholder="Advanced Microservices Benchmark Whitepaper"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600"
                 />
               </div>
@@ -1608,7 +1608,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   type="text"
                   value={matSource}
                   onChange={(e) => setMatSource(e.target.value)}
-                  placeholder="e.g. Alex Vance or External Tech Blog"
+                  placeholder="Alex Vance or External Tech Blog"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600"
                 />
               </div>

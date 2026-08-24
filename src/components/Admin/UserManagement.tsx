@@ -891,7 +891,7 @@ export const UserManagement: React.FC = () => {
                           required
                           value={entry.name}
                           onChange={(e) => handleUpdateEntry(index, 'name', e.target.value)}
-                          placeholder="e.g. Name"
+                          placeholder="Name"
                           className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
                         />
                       </div>
@@ -982,7 +982,7 @@ export const UserManagement: React.FC = () => {
                           required={!isAssociate}
                           value={entry.email || ''}
                           onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
-                          placeholder={isAssociate ? 'e.g. name@valuemomentum.com (Optional)' : 'e.g. name@valuemomentum.com'}
+                          placeholder={isAssociate ? 'name@valuemomentum.com (Optional)' : 'name@valuemomentum.com'}
                           className="w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                         />
                         {entry.email && entry.email.includes('@') && (
@@ -1002,7 +1002,7 @@ export const UserManagement: React.FC = () => {
                           type="text"
                           value={entry.designation || ''}
                           onChange={(e) => handleUpdateEntry(index, 'designation', e.target.value)}
-                          placeholder="e.g. Graduate Trainee, Associate Software Engineer, Lead - L&D"
+                          placeholder="Graduate Trainee, Associate Software Engineer, Lead - L&D"
                           className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 shadow-xs"
                         />
                       </div>
@@ -1167,7 +1167,7 @@ export const UserManagement: React.FC = () => {
                   type="email"
                   value={editingUser.email || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  placeholder="e.g. name@valuemomentum.com"
+                  placeholder="name@valuemomentum.com"
                   className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none focus:border-blue-600"
                 />
               </div>
@@ -1181,7 +1181,7 @@ export const UserManagement: React.FC = () => {
                   type="text"
                   value={editingUser.designation || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, designation: e.target.value })}
-                  placeholder="e.g. Graduate Trainee, Associate Software Engineer, L&D Lead"
+                  placeholder="Graduate Trainee, Associate Software Engineer, L&D Lead"
                   className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                 />
               </div>
