@@ -85,7 +85,7 @@ const DEFAULT_SESSION_THUMBNAIL = 'https://images.unsplash.com/photo-15193899504
  * yet saved has a client-side placeholder, and there is nothing on the server to delete.
  */
 const isPersistedId = (value?: string): boolean =>
-  !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  !!value && value.trim().length > 0 && !value.startsWith('temp-') && !value.startsWith('new-') && !value.startsWith('draft-');
 
 export const getSessionStatus = (s: Partial<Session>): 'Published' | 'Draft' | 'Archived' => {
   const statusStr = (s.status || '').toString().trim();
@@ -381,7 +381,7 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
     if (!editingSession) return;
     const list = editingSession.assignments || [];
     const newAssign: SessionAssignment = {
-      id: `assign-${Date.now()}`,
+      id: `temp-assign-${Date.now()}`,
       sessionId: editingSession.id || '',
       title: 'New Session Assignment',
       description: 'Complete hands-on task based on roadmap learnings.',
@@ -1449,8 +1449,10 @@ export const SessionManager: React.FC<SessionManagerProps> = ({
                       <label className="text-slate-700 font-bold block">Passing Score (%)</label>
                       <input
                         type="number"
+                        min="0"
+                        max="100"
                         value={currentQuiz.passingScorePercent || 80}
-                        onChange={(e) => updateQuizMetadata({ passingScorePercent: Number(e.target.value) })}
+                        onChange={(e) => updateQuizMetadata({ passingScorePercent: Math.min(100, Math.max(0, Number(e.target.value) || 0)) })}
                         placeholder="80"
                         className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-500/12 shadow-sm"
                       />

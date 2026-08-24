@@ -1303,11 +1303,12 @@ async function startServer() {
   app.delete("/api/assignments/:id", async (req, res) => {
     const sessions = getAllSessions();
     let deletedAssign: any = null;
+    const targetId = (req.params.id || '').toString().trim().toLowerCase();
     sessions.forEach((s: any) => {
       if (Array.isArray(s.assignments)) {
-        const found = s.assignments.find((a: any) => a.id === req.params.id);
+        const found = s.assignments.find((a: any) => a.id && a.id.toString().trim().toLowerCase() === targetId);
         if (found) deletedAssign = found;
-        s.assignments = s.assignments.filter((a: any) => a.id !== req.params.id);
+        s.assignments = s.assignments.filter((a: any) => !(a.id && a.id.toString().trim().toLowerCase() === targetId));
       }
     });
     saveAllSessions(sessions);
@@ -1387,10 +1388,17 @@ async function startServer() {
 
   app.get("/api/notes", (req, res) => {
     const { userId, sessionId } = req.query;
+    if (!userId || !userId.toString().trim()) {
+      return res.json([]);
+    }
+    const cleanUser = userId.toString().trim().toLowerCase();
+    const cleanSession = sessionId ? sessionId.toString().trim().toLowerCase() : null;
     const notes = getAllNotes();
     const filtered = notes.filter((n: any) => {
-      const matchUser = !userId || (n.userId && n.userId.toString().toLowerCase() === userId.toString().toLowerCase());
-      const matchSession = !sessionId || (n.sessionId && n.sessionId.toString().toLowerCase() === sessionId.toString().toLowerCase());
+      const noteUser = (n.userId || n.userEmail || '').toString().trim().toLowerCase();
+      const noteEmail = (n.userEmail || n.userId || '').toString().trim().toLowerCase();
+      const matchUser = noteUser === cleanUser || noteEmail === cleanUser;
+      const matchSession = !cleanSession || (n.sessionId && n.sessionId.toString().trim().toLowerCase() === cleanSession);
       return matchUser && matchSession;
     });
     res.json(filtered);
@@ -1398,10 +1406,19 @@ async function startServer() {
 
   app.post("/api/notes", (req, res) => {
     const newNote = req.body;
-    if (!newNote) return res.status(400).json({ message: "Invalid note data" });
+    if (!newNote || (!newNote.userId && !newNote.userEmail)) {
+      return res.status(400).json({ message: "Invalid note data: userId is required" });
+    }
     const notes = getAllNotes();
     const id = newNote.id || `note-${Date.now()}`;
-    const noteWithId = { ...newNote, id, updatedAt: new Date().toISOString() };
+    const cleanUser = (newNote.userId || newNote.userEmail || '').toString().trim().toLowerCase();
+    const noteWithId = {
+      ...newNote,
+      id,
+      userId: cleanUser,
+      userEmail: newNote.userEmail || cleanUser,
+      updatedAt: new Date().toISOString()
+    };
     const existingIdx = notes.findIndex((n: any) => n.id === id);
     if (existingIdx !== -1) {
       notes[existingIdx] = noteWithId;
@@ -1415,17 +1432,30 @@ async function startServer() {
   app.put("/api/notes/bulk", (req, res) => {
     const { userId, sessionId, notes: userNotes } = req.body || {};
     if (!Array.isArray(userNotes)) return res.status(400).json({ message: "Invalid notes array" });
+    if (!userId || !userId.toString().trim()) return res.status(400).json({ message: "Missing userId" });
+
     const notes = getAllNotes();
-    const cleanUser = (userId || '').toString().toLowerCase();
-    const cleanSession = (sessionId || '').toString().toLowerCase();
+    const cleanUser = userId.toString().trim().toLowerCase();
+    const cleanSession = (sessionId || '').toString().trim().toLowerCase();
     const remaining = notes.filter((n: any) => {
-      const isThisUser = cleanUser && n.userId && n.userId.toString().toLowerCase() === cleanUser;
-      const isThisSession = cleanSession && n.sessionId && n.sessionId.toString().toLowerCase() === cleanSession;
+      const noteUser = (n.userId || n.userEmail || '').toString().trim().toLowerCase();
+      const noteEmail = (n.userEmail || n.userId || '').toString().trim().toLowerCase();
+      const noteSession = (n.sessionId || '').toString().trim().toLowerCase();
+
+      const isThisUser = noteUser === cleanUser || noteEmail === cleanUser;
+      const isThisSession = !cleanSession || noteSession === cleanSession;
       return !(isThisUser && isThisSession);
     });
-    const updated = [...userNotes, ...remaining];
+
+    const sanitizedUserNotes = userNotes.map((n: any) => ({
+      ...n,
+      userId: n.userId || cleanUser,
+      userEmail: n.userEmail || cleanUser
+    }));
+
+    const updated = [...sanitizedUserNotes, ...remaining];
     saveAllNotes(updated);
-    res.json({ success: true, count: userNotes.length });
+    res.json({ success: true, count: sanitizedUserNotes.length });
   });
 
   app.delete("/api/notes/:id", (req, res) => {

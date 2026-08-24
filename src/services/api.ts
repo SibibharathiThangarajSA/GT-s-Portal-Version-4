@@ -779,8 +779,9 @@ export const saveFullSessionApi = async (sessionData: Partial<Session>): Promise
       attachmentUrl: assign.attachmentUrl || undefined
     };
 
-    if (assign.id && isGuid(assign.id)) {
-      await updateAssignmentApi(assign.id, payload).catch(err => console.warn('Failed to update assignment', err));
+    const isExistingAssign = !!assign.id && !assign.id.startsWith('temp-') && !assign.id.startsWith('new-');
+    if (isExistingAssign) {
+      await updateAssignmentApi(assign.id!, payload).catch(err => console.warn('Failed to update assignment', err));
     } else {
       await createAssignmentApi(payload).catch(err => console.warn('Failed to create assignment', err));
     }
@@ -1267,13 +1268,20 @@ export const fetchUserPersonalNotesApi = async (userId: string, sessionId: strin
   const cleanSession = (sessionId || '').trim();
   const key = `gt_personal_notes_${cleanUser}_${cleanSession}`;
 
+  const filterForUser = (items: any[]) => items.filter((n: any) => {
+    const noteUser = (n.userId || n.userEmail || '').toString().trim().toLowerCase();
+    const noteEmail = (n.userEmail || n.userId || '').toString().trim().toLowerCase();
+    return noteUser === cleanUser || noteEmail === cleanUser;
+  });
+
   try {
     const res = await fetch(`/api/notes?userId=${encodeURIComponent(cleanUser)}&sessionId=${encodeURIComponent(cleanSession)}`);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
-        localStorage.setItem(key, JSON.stringify(data));
-        return data;
+        const userScoped = filterForUser(data);
+        localStorage.setItem(key, JSON.stringify(userScoped));
+        return userScoped;
       }
     }
   } catch (err) {
@@ -1284,7 +1292,7 @@ export const fetchUserPersonalNotesApi = async (userId: string, sessionId: strin
     const stored = localStorage.getItem(key);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) return filterForUser(parsed);
     }
   } catch (err) {
     console.warn('Failed to read user personal notes from storage', err);
@@ -1297,8 +1305,14 @@ export const saveUserPersonalNotesApi = async (userId: string, sessionId: string
   const cleanSession = (sessionId || '').trim();
   const key = `gt_personal_notes_${cleanUser}_${cleanSession}`;
 
+  const boundNotes = (notes || []).map(n => ({
+    ...n,
+    userId: n.userId || cleanUser,
+    userEmail: n.userEmail || cleanUser
+  }));
+
   try {
-    localStorage.setItem(key, JSON.stringify(notes));
+    localStorage.setItem(key, JSON.stringify(boundNotes));
   } catch (err) {
     console.warn('Failed to save user personal notes to local storage', err);
   }
@@ -1307,7 +1321,7 @@ export const saveUserPersonalNotesApi = async (userId: string, sessionId: string
     const res = await fetch('/api/notes/bulk', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: cleanUser, sessionId: cleanSession, notes })
+      body: JSON.stringify({ userId: cleanUser, sessionId: cleanSession, notes: boundNotes })
     });
     return res.ok;
   } catch (err) {

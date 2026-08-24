@@ -134,8 +134,10 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({ session, onSaveQuiz, o
           <label className="text-slate-300 font-semibold">Passing Score (%)</label>
           <input
             type="number"
+            min="0"
+            max="100"
             value={passingScore}
-            onChange={(e) => setPassingScore(Number(e.target.value))}
+            onChange={(e) => setPassingScore(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
             className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500"
           />
         </div>

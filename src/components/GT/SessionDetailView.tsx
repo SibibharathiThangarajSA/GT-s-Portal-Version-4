@@ -359,9 +359,9 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const [matTags, setMatTags] = useState('');
 
   // User Scoping for Private Notes
-  const userKey = (currentUser?.id || currentUser?.email || 'default_associate').trim().toLowerCase();
+  const userKey = (currentUser?.email || currentUser?.id || 'guest').trim().toLowerCase();
   const userName = currentUser?.name || currentUser?.email || 'Associate';
-  const userEmail = currentUser?.email || '';
+  const userEmail = currentUser?.email || userKey;
 
   // Notes state - Scoped strictly to currentUser and this session
   const [personalNotesList, setPersonalNotesList] = useState<PersonalNote[]>([]);
