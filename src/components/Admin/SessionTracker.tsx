@@ -783,7 +783,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
 
                 {/* Session Code (Auto Generated) */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Session Code / ID (Auto Generated) *</label>
+                  <label className="block text-slate-700 font-bold mb-1">Session Code / ID*</label>
                   <input
                     type="text"
                     disabled
