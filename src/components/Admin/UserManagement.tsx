@@ -348,22 +348,26 @@ export const UserManagement: React.FC = () => {
         seenBatchEmailRoles.add(roleEmailKey);
       }
 
-      // VAM ID numeric 10-digit validation
+      // VAM ID numeric 10-digit validation (Role Scoped)
       if (entry.vamId && entry.vamId.trim() && entry.vamId.trim() !== '-') {
         const cleanVam = entry.vamId.replace(/\D/g, '').trim().slice(0, 10);
         if (cleanVam) {
-          const existingUserWithVam = users.find(
-            (u) => u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam
+          const existingUserWithVamSameRole = users.find(
+            (u) => u.role === entry.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam
           );
-          if (existingUserWithVam) {
-            addToast('error', `${rowLabel}VAM ID "${cleanVam}" already exists for ${existingUserWithVam.name}.`);
+          if (existingUserWithVamSameRole) {
+            addToast(
+              'error',
+              `${rowLabel}VAM ID "${cleanVam}" is already registered for another ${entry.role} (${existingUserWithVamSameRole.name}). Same VAM ID can only be registered under a different role.`
+            );
             return;
           }
-          if (seenBatchVamIds.has(cleanVam)) {
-            addToast('error', `${rowLabel}VAM ID "${cleanVam}" is duplicated in multiple rows.`);
+          const roleVamKey = `${entry.role}:${cleanVam}`;
+          if (seenBatchVamIds.has(roleVamKey)) {
+            addToast('error', `${rowLabel}VAM ID "${cleanVam}" for role "${entry.role}" is duplicated in multiple rows.`);
             return;
           }
-          seenBatchVamIds.add(cleanVam);
+          seenBatchVamIds.add(roleVamKey);
         }
       }
     }
@@ -448,6 +452,20 @@ export const UserManagement: React.FC = () => {
         addToast(
           'error',
           `Email ID "${cleanEmail}" is already registered for another ${editingUser.role} (${existingUserWithEmailSameRole.name}). Same email can only be registered under a different role.`
+        );
+        return;
+      }
+    }
+
+    const cleanVam = (editingUser.vamId || '').replace(/\D/g, '').trim().slice(0, 10);
+    if (cleanVam && cleanVam !== '-') {
+      const existingUserWithVamSameRole = users.find(
+        (u) => u.id !== editingUser.id && u.role === editingUser.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam
+      );
+      if (existingUserWithVamSameRole) {
+        addToast(
+          'error',
+          `VAM ID "${cleanVam}" is already registered for another ${editingUser.role} (${existingUserWithVamSameRole.name}). Same VAM ID can only be registered under a different role.`
         );
         return;
       }
@@ -962,15 +980,45 @@ export const UserManagement: React.FC = () => {
                             {(entry.vamId || '').replace(/\D/g, '').length}/10
                           </span>
                         </div>
-                        <input
-                          type="tel"
-                          inputMode="numeric"
-                          maxLength={10}
-                          value={entry.vamId || ''}
-                          onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          placeholder={isAssociate ? '10-digit VAM ID (Optional)' : '1000012345'}
-                          className="w-full border rounded-xl px-3.5 py-2.5 font-mono font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
-                        />
+                        {(() => {
+                          const cleanVam = (entry.vamId || '').replace(/\D/g, '').trim();
+                          const existingWithVamSameRole = cleanVam.length > 0 ? users.find((u) => u.role === entry.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
+                          const isBatchVamRoleDuplicate = cleanVam.length > 0 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.vamId || '').replace(/\D/g, '').trim() === cleanVam);
+                          const isVamError = Boolean(existingWithVamSameRole || isBatchVamRoleDuplicate);
+                          const showError = hasSubmittedAddForm && isVamError;
+
+                          return (
+                            <div>
+                              <input
+                                type="tel"
+                                inputMode="numeric"
+                                maxLength={10}
+                                value={entry.vamId || ''}
+                                onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                placeholder={isAssociate ? '10-digit VAM ID (Optional)' : '1000012345'}
+                                className={`w-full border rounded-xl px-3.5 py-2.5 font-mono font-medium focus:outline-none shadow-xs bg-white text-slate-900 transition-colors ${
+                                  showError
+                                    ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
+                                    : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
+                                }`}
+                              />
+
+                              {showError && existingWithVamSameRole && (
+                                <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                                  <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                                  <span>VAM ID already exists for another <strong>{entry.role}</strong> ({existingWithVamSameRole.name}). Same VAM ID can only be registered under a different role.</span>
+                                </p>
+                              )}
+
+                              {showError && isBatchVamRoleDuplicate && !existingWithVamSameRole && (
+                                <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                                  <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                                  <span>Duplicate VAM ID entered for <strong>{entry.role}</strong> role in another row</span>
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* 4. Phone Number with Country Code Dropdown */}
@@ -1228,15 +1276,37 @@ export const UserManagement: React.FC = () => {
                     {(editingUser.vamId || '').replace(/\D/g, '').length}/10
                   </span>
                 </div>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={10}
-                  value={editingUser.vamId || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, vamId: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                  placeholder="e.g. 1000012345"
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-mono shadow-xs focus:outline-none focus:border-blue-600"
-                />
+                {(() => {
+                  const cleanVam = (editingUser.vamId || '').replace(/\D/g, '').trim();
+                  const existingWithVamSameRole = cleanVam.length > 0 ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
+                  const isVamError = Boolean(existingWithVamSameRole);
+                  const showError = hasSubmittedEditForm && isVamError;
+
+                  return (
+                    <div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={editingUser.vamId || ''}
+                        onChange={(e) => setEditingUser({ ...editingUser, vamId: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                        placeholder="1000012345"
+                        className={`w-full bg-white border rounded-xl px-3.5 py-2.5 font-mono shadow-xs focus:outline-none text-slate-900 transition-colors ${
+                          showError
+                            ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
+                            : 'border-slate-300 focus:border-blue-600'
+                        }`}
+                      />
+
+                      {showError && existingWithVamSameRole && (
+                        <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                          <span>VAM ID already exists for another <strong>{editingUser.role}</strong> ({existingWithVamSameRole.name}). Same VAM ID can only be registered under a different role.</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Phone Number with Country Code Dropdown */}
