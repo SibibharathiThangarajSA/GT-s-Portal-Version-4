@@ -604,6 +604,28 @@ export function App() {
                     <span>Session Tracker</span>
                   </button>
                   <button
+                    onClick={() => setAdminViewMode('sessions')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                      adminViewMode === 'sessions'
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                        : 'text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-700/70'
+                    }`}
+                  >
+                    <BookOpen className={`w-3.5 h-3.5 ${adminViewMode === 'sessions' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                    <span>Session Management</span>
+                  </button>
+                  <button
+                    onClick={() => setAdminViewMode('dashboard')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                      adminViewMode === 'dashboard'
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                        : 'text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-700/70'
+                    }`}
+                  >
+                    <LayoutDashboard className={`w-3.5 h-3.5 ${adminViewMode === 'dashboard' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                    <span>Session Overview</span>
+                  </button>
+                  <button
                     onClick={() => setAdminViewMode('user-management')}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
                       adminViewMode === 'user-management'
@@ -614,29 +636,30 @@ export function App() {
                     <Users className={`w-3.5 h-3.5 ${adminViewMode === 'user-management' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
                     <span>User Management</span>
                   </button>
-                  <button
-                    onClick={() => setAdminViewMode('sessions')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-                      adminViewMode === 'sessions'
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                        : 'text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-700/70'
-                    }`}
-                  >
-                    Session Management
-                  </button>
-                  <button
-                    onClick={() => setAdminViewMode('dashboard')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-                      adminViewMode === 'dashboard'
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-                        : 'text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-slate-700/70'
-                    }`}
-                  >
-                    Admin Overview
-                  </button>
                 </div>
 
-                {adminViewMode === 'dashboard' ? (
+                {adminViewMode === 'tracker' ? (
+                  <SessionTracker sessions={sessions} />
+                ) : adminViewMode === 'sessions' ? (
+                  <SessionManager
+                    sessions={sessions}
+                    onSaveSession={handleSaveAdminSession}
+                    onDeleteSession={handleDeleteAdminSession}
+                    onOpenRoadmapBuilder={(s) => {
+                      setActiveAdminSession(s);
+                      setAdminViewMode('roadmap-builder');
+                    }}
+                    onOpenMaterialUploader={(s) => {
+                      setActiveAdminSession(s);
+                      setAdminViewMode('material-uploader');
+                    }}
+                    onOpenQuizBuilder={(s) => {
+                      setActiveAdminSession(s);
+                      setAdminViewMode('quiz-builder');
+                    }}
+                    onBackToDashboard={() => setAdminViewMode('dashboard')}
+                  />
+                ) : adminViewMode === 'dashboard' ? (
                   <AdminDashboard
                     sessions={sessions}
                     onAddNewSession={() => setAdminViewMode('sessions')}
@@ -662,27 +685,6 @@ export function App() {
                   />
                 ) : adminViewMode === 'user-management' ? (
                   <UserManagement />
-                ) : adminViewMode === 'sessions' ? (
-                  <SessionManager
-                    sessions={sessions}
-                    onSaveSession={handleSaveAdminSession}
-                    onDeleteSession={handleDeleteAdminSession}
-                    onOpenRoadmapBuilder={(s) => {
-                      setActiveAdminSession(s);
-                      setAdminViewMode('roadmap-builder');
-                    }}
-                    onOpenMaterialUploader={(s) => {
-                      setActiveAdminSession(s);
-                      setAdminViewMode('material-uploader');
-                    }}
-                    onOpenQuizBuilder={(s) => {
-                      setActiveAdminSession(s);
-                      setAdminViewMode('quiz-builder');
-                    }}
-                    onBackToDashboard={() => setAdminViewMode('dashboard')}
-                  />
-                ) : adminViewMode === 'tracker' ? (
-                  <SessionTracker sessions={sessions} />
                 ) : adminViewMode === 'roadmap-builder' && activeAdminSession ? (
                   <RoadmapBuilder
                     session={activeAdminSession}
@@ -711,7 +713,7 @@ export function App() {
                     onBack={() => setAdminViewMode('sessions')}
                   />
                 ) : (
-                  <UserManagement />
+                  <SessionTracker sessions={sessions} />
                 )}
 
               </div>

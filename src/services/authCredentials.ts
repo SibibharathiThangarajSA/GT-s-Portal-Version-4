@@ -303,16 +303,12 @@ export const syncServerCredentialsOverrides = async (): Promise<void> => {
 };
 
 /**
- * Checks if the email domain is permitted (@valuemomentum.com, @owlsure.com, or registered in User Management)
+ * Checks if the email domain is permitted (strictly @valuemomentum.com or @owlsure.com)
  */
 export const isAllowedDomain = (email: string): boolean => {
   if (!email || typeof email !== 'string') return false;
   const lower = email.trim().toLowerCase();
-  if (lower.endsWith('@valuemomentum.com') || lower.endsWith('@owlsure.com')) {
-    return true;
-  }
-  const records = getUserManagementRecords();
-  return records.some((r) => r.email && r.email !== '-' && r.email.trim().toLowerCase() === lower);
+  return lower.endsWith('@valuemomentum.com') || lower.endsWith('@owlsure.com');
 };
 
 /**

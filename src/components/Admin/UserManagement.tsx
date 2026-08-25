@@ -63,6 +63,13 @@ export const getEffectiveDesignation = (user: { designation?: string; role?: str
   return 'Graduate Trainee';
 };
 
+export const isValidEnterpriseEmail = (email: string): boolean => {
+  if (!email || typeof email !== 'string') return false;
+  const lower = email.trim().toLowerCase();
+  return lower.endsWith('@valuemomentum.com') || lower.endsWith('@owlsure.com');
+};
+
+
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserManagementRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -298,11 +305,19 @@ export const UserManagement: React.FC = () => {
       }
       seenBatchPhones.add(cleanPhone);
 
-      // Email & VAM validations for Employee / Admin roles
-      if (entry.role !== 'Associate') {
-        const cleanEmail = entry.email.trim().toLowerCase();
+      // Email & VAM validations for Employee / Admin / Associate roles
+      const cleanEmail = entry.email ? entry.email.trim().toLowerCase() : '';
+      if (entry.role !== 'Associate' || cleanEmail.length > 0) {
         if (!cleanEmail || !cleanEmail.includes('@')) {
-          addToast('error', `${rowLabel}Valid enterprise email is required for ${entry.role}.`);
+          addToast('error', `${rowLabel}Valid enterprise email is required.`);
+          return;
+        }
+
+        if (!isValidEnterpriseEmail(cleanEmail)) {
+          addToast(
+            'error',
+            `${rowLabel}Invalid email domain. Only enterprise email domains (@valuemomentum.com and @owlsure.com) are allowed.`
+          );
           return;
         }
 
@@ -388,10 +403,14 @@ export const UserManagement: React.FC = () => {
       return;
     }
 
-    if (editingUser.role !== 'Associate') {
-      const cleanEmail = (editingUser.email || '').trim().toLowerCase();
+    const cleanEmail = (editingUser.email || '').trim().toLowerCase();
+    if (editingUser.role !== 'Associate' || (cleanEmail && cleanEmail !== '-')) {
       if (!cleanEmail || !cleanEmail.includes('@')) {
-        addToast('error', `Valid enterprise email is required for ${editingUser.role}.`);
+        addToast('error', 'Valid enterprise email is required.');
+        return;
+      }
+      if (!isValidEnterpriseEmail(cleanEmail)) {
+        addToast('error', 'Invalid email domain. Only @valuemomentum.com and @owlsure.com are allowed.');
         return;
       }
     }
@@ -977,20 +996,42 @@ export const UserManagement: React.FC = () => {
                         <label className="block text-slate-700 font-bold mb-1.5">
                           Mail ID {!isAssociate ? '*' : <span className="text-slate-400 font-normal">(Optional for Associate)</span>}
                         </label>
-                        <input
-                          type="email"
-                          required={!isAssociate}
-                          value={entry.email || ''}
-                          onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
-                          placeholder={isAssociate ? 'name@valuemomentum.com (Optional)' : 'name@valuemomentum.com'}
-                          className="w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
-                        />
-                        {entry.email && entry.email.includes('@') && (
-                          <p className="text-[11px] text-blue-600 font-semibold mt-1.5 flex items-center gap-1">
-                            <Key className="w-3 h-3 shrink-0" />
-                            <span>Initial Login Password: <strong>{getDefaultPasswordForEmail(entry.email)}</strong></span>
-                          </p>
-                        )}
+                        {(() => {
+                          const cleanE = (entry.email || '').trim().toLowerCase();
+                          const hasEmail = cleanE.length > 0;
+                          const isInvalidDomain = hasEmail && !isValidEnterpriseEmail(cleanE);
+
+                          return (
+                            <div>
+                              <input
+                                type="email"
+                                required={!isAssociate}
+                                value={entry.email || ''}
+                                onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
+                                placeholder={isAssociate ? 'name@valuemomentum.com (Optional)' : 'name@valuemomentum.com'}
+                                className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white text-slate-900 transition-colors ${
+                                  isInvalidDomain
+                                    ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
+                                    : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
+                                }`}
+                              />
+
+                              {isInvalidDomain && (
+                                <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                                  <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                                  <span>Only <strong>@valuemomentum.com</strong> and <strong>@owlsure.com</strong> email domains are permitted.</span>
+                                </p>
+                              )}
+
+                              {!isInvalidDomain && entry.email && entry.email.includes('@') && (
+                                <p className="text-[11px] text-blue-600 font-semibold mt-1.5 flex items-center gap-1">
+                                  <Key className="w-3 h-3 shrink-0" />
+                                  <span>Initial Login Password: <strong>{getDefaultPasswordForEmail(entry.email)}</strong></span>
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* 6. Designation (ALWAYS ENABLED for all roles) */}
@@ -1163,13 +1204,34 @@ export const UserManagement: React.FC = () => {
               {/* Mail ID */}
               <div>
                 <label className="block text-slate-700 font-bold mb-1.5">Mail ID</label>
-                <input
-                  type="email"
-                  value={editingUser.email || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  placeholder="name@valuemomentum.com"
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none focus:border-blue-600"
-                />
+                {(() => {
+                  const cleanE = (editingUser.email || '').trim().toLowerCase();
+                  const hasEmail = cleanE.length > 0 && cleanE !== '-';
+                  const isInvalidDomain = hasEmail && !isValidEnterpriseEmail(cleanE);
+
+                  return (
+                    <div>
+                      <input
+                        type="email"
+                        value={editingUser.email || ''}
+                        onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                        placeholder="name@valuemomentum.com"
+                        className={`w-full bg-white border rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none text-slate-900 transition-colors ${
+                          isInvalidDomain
+                            ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
+                            : 'border-slate-300 focus:border-blue-600'
+                        }`}
+                      />
+
+                      {isInvalidDomain && (
+                        <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                          <span>Only <strong>@valuemomentum.com</strong> and <strong>@owlsure.com</strong> email domains are permitted.</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Designation (ALWAYS ENABLED) */}
