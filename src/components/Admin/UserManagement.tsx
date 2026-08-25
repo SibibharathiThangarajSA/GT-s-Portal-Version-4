@@ -80,6 +80,10 @@ export const UserManagement: React.FC = () => {
   // Edit modal country code state
   const [editCountryCode, setEditCountryCode] = useState('+91');
 
+  // Submit attempt state for showing validation warnings only after submit button click
+  const [hasSubmittedAddForm, setHasSubmittedAddForm] = useState(false);
+  const [hasSubmittedEditForm, setHasSubmittedEditForm] = useState(false);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -191,6 +195,7 @@ export const UserManagement: React.FC = () => {
 
   // Open Add Modal with 1 fresh row
   const handleOpenAddModal = () => {
+    setHasSubmittedAddForm(false);
     setFormEntries([
       {
         id: `entry-${Date.now()}-0`,
@@ -262,8 +267,9 @@ export const UserManagement: React.FC = () => {
   // Save new credentials
   const handleSaveAddModal = async (e: React.FormEvent) => {
     e.preventDefault();
+    setHasSubmittedAddForm(true);
 
-    const seenBatchPhones = new Set<string>();
+    const seenBatchPhoneRoles = new Set<string>();
     const seenBatchEmailRoles = new Set<string>();
     const seenBatchVamIds = new Set<string>();
 
@@ -283,27 +289,28 @@ export const UserManagement: React.FC = () => {
         return;
       }
 
-      // Check if phone number already exists in registered roster
-      const existingUserWithPhone = users.find(
-        (u) => (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone
+      // Check if phone number already exists under the SAME role in registered roster
+      const existingUserWithPhoneSameRole = users.find(
+        (u) => u.role === entry.role && (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone
       );
-      if (existingUserWithPhone) {
+      if (existingUserWithPhoneSameRole) {
         addToast(
           'error',
-          `${rowLabel}Phone number "${cleanPhone}" already exists for ${existingUserWithPhone.name} (${existingUserWithPhone.role}). Duplicate phone numbers are not allowed.`
+          `${rowLabel}Phone number "${cleanPhone}" is already registered for another ${entry.role} (${existingUserWithPhoneSameRole.name}). Same phone number can only be registered under a different role.`
         );
         return;
       }
 
-      // Check if phone number is duplicated within the current add form entries
-      if (seenBatchPhones.has(cleanPhone)) {
+      // Check if phone number is duplicated for the SAME role within the current add form entries
+      const rolePhoneKey = `${entry.role}:${cleanPhone}`;
+      if (seenBatchPhoneRoles.has(rolePhoneKey)) {
         addToast(
           'error',
-          `${rowLabel}Phone number "${cleanPhone}" is entered more than once. Each user must have a unique phone number.`
+          `${rowLabel}Phone number "${cleanPhone}" for role "${entry.role}" is entered in multiple rows.`
         );
         return;
       }
-      seenBatchPhones.add(cleanPhone);
+      seenBatchPhoneRoles.add(rolePhoneKey);
 
       // Email & VAM validations for Employee / Admin / Associate roles
       const cleanEmail = entry.email ? entry.email.trim().toLowerCase() : '';
@@ -399,6 +406,7 @@ export const UserManagement: React.FC = () => {
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    setHasSubmittedEditForm(true);
 
     if (!editingUser.name.trim()) {
       addToast('error', 'Name is required.');
@@ -408,6 +416,17 @@ export const UserManagement: React.FC = () => {
     const cleanPhone = editingUser.phoneNumber.replace(/\D/g, '').trim();
     if (!cleanPhone || cleanPhone.length < 10) {
       addToast('error', 'Valid 10-digit mobile number is required.');
+      return;
+    }
+
+    const existingUserWithPhoneSameRole = users.find(
+      (u) => u.id !== editingUser.id && u.role === editingUser.role && (u.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone
+    );
+    if (existingUserWithPhoneSameRole) {
+      addToast(
+        'error',
+        `Phone number "${cleanPhone}" is already registered for another ${editingUser.role} (${existingUserWithPhoneSameRole.name}). Same phone number can only be registered under a different role.`
+      );
       return;
     }
 
@@ -758,7 +777,10 @@ export const UserManagement: React.FC = () => {
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => setEditingUser({ ...u, designation: displayDesignation })}
+                            onClick={() => {
+                              setEditingUser({ ...u, designation: displayDesignation });
+                              setHasSubmittedEditForm(false);
+                            }}
                             className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors cursor-pointer"
                             title="Edit Credentials"
                           >
@@ -961,14 +983,15 @@ export const UserManagement: React.FC = () => {
                         </div>
                         {(() => {
                           const cleanP = (entry.phoneNumber || '').replace(/\D/g, '');
-                          const existingWithPhone = cleanP.length === 10 ? users.find((u) => (u.phoneNumber || '').replace(/\D/g, '') === cleanP) : null;
-                          const isBatchDuplicate = cleanP.length === 10 && formEntries.some((other, oIdx) => oIdx !== index && (other.phoneNumber || '').replace(/\D/g, '') === cleanP);
-                          const isPhoneError = Boolean(existingWithPhone || isBatchDuplicate);
+                          const existingWithPhoneSameRole = cleanP.length === 10 ? users.find((u) => u.role === entry.role && (u.phoneNumber || '').replace(/\D/g, '') === cleanP) : null;
+                          const isBatchPhoneRoleDuplicate = cleanP.length === 10 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.phoneNumber || '').replace(/\D/g, '') === cleanP);
+                          const isPhoneError = Boolean(existingWithPhoneSameRole || isBatchPhoneRoleDuplicate);
+                          const showError = hasSubmittedAddForm && isPhoneError;
 
                           return (
                             <div>
                               <div
-                                className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${isPhoneError
+                                className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${showError
                                   ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
                                   : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
                                   }`}
@@ -995,17 +1018,17 @@ export const UserManagement: React.FC = () => {
                                 />
                               </div>
 
-                              {existingWithPhone && (
+                              {showError && existingWithPhoneSameRole && (
                                 <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
                                   <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
-                                  <span>Number already exists for <strong>{existingWithPhone.name}</strong> ({existingWithPhone.role})</span>
+                                  <span>Number already exists for another <strong>{entry.role}</strong> ({existingWithPhoneSameRole.name}). Same number can only be registered under a different role.</span>
                                 </p>
                               )}
 
-                              {isBatchDuplicate && !existingWithPhone && (
+                              {showError && isBatchPhoneRoleDuplicate && !existingWithPhoneSameRole && (
                                 <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
                                   <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
-                                  <span>Duplicate number entered in another row</span>
+                                  <span>Duplicate number entered for <strong>{entry.role}</strong> role in another row</span>
                                 </p>
                               )}
                             </div>
@@ -1025,6 +1048,7 @@ export const UserManagement: React.FC = () => {
                           const existingWithEmailSameRole = hasEmail ? users.find((u) => u.role === entry.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanE) : null;
                           const isBatchEmailRoleDuplicate = hasEmail && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.email || '').trim().toLowerCase() === cleanE);
                           const isEmailError = isInvalidDomain || Boolean(existingWithEmailSameRole || isBatchEmailRoleDuplicate);
+                          const showError = hasSubmittedAddForm && isEmailError;
 
                           return (
                             <div>
@@ -1035,27 +1059,27 @@ export const UserManagement: React.FC = () => {
                                 onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
                                 placeholder={isAssociate ? 'name@valuemomentum.com (Optional)' : 'name@valuemomentum.com'}
                                 className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white text-slate-900 transition-colors ${
-                                  isEmailError
+                                  showError
                                     ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
                                     : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
                                 }`}
                               />
 
-                              {isInvalidDomain && (
+                              {showError && isInvalidDomain && (
                                 <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
                                   <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
                                   <span>Only <strong>@valuemomentum.com</strong> and <strong>@owlsure.com</strong> email domains are permitted.</span>
                                 </p>
                               )}
 
-                              {!isInvalidDomain && existingWithEmailSameRole && (
+                              {showError && !isInvalidDomain && existingWithEmailSameRole && (
                                 <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
                                   <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
                                   <span>Email already registered for another <strong>{entry.role}</strong> ({existingWithEmailSameRole.name}). Same email can only be registered under a different role.</span>
                                 </p>
                               )}
 
-                              {!isInvalidDomain && !existingWithEmailSameRole && isBatchEmailRoleDuplicate && (
+                              {showError && !isInvalidDomain && !existingWithEmailSameRole && isBatchEmailRoleDuplicate && (
                                 <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
                                   <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
                                   <span>Duplicate email entered for <strong>{entry.role}</strong> role in another row</span>
@@ -1223,28 +1247,51 @@ export const UserManagement: React.FC = () => {
                     {(editingUser.phoneNumber || '').replace(/\D/g, '').length}/10
                   </span>
                 </div>
-                <div className="flex rounded-xl border bg-white overflow-hidden shadow-xs border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10">
-                  <select
-                    value={editCountryCode}
-                    onChange={(e) => setEditCountryCode(e.target.value)}
-                    className="bg-slate-100/90 px-3 py-2.5 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
-                  >
-                    {COUNTRY_CODES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    value={editingUser.phoneNumber}
-                    onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                    placeholder="Enter Mobile Number"
-                    className="w-full px-3.5 py-2.5 font-mono text-slate-900 focus:outline-none"
-                  />
-                </div>
+                {(() => {
+                  const cleanP = (editingUser.phoneNumber || '').replace(/\D/g, '');
+                  const existingWithPhoneSameRole = cleanP.length === 10 ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && (u.phoneNumber || '').replace(/\D/g, '') === cleanP) : null;
+                  const isPhoneError = Boolean(existingWithPhoneSameRole);
+                  const showError = hasSubmittedEditForm && isPhoneError;
+
+                  return (
+                    <div>
+                      <div
+                        className={`flex rounded-xl border bg-white overflow-hidden shadow-xs transition-colors ${showError
+                          ? 'border-rose-400 focus-within:border-rose-600 focus-within:ring-2 focus-within:ring-rose-500/20'
+                          : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/10'
+                          }`}
+                      >
+                        <select
+                          value={editCountryCode}
+                          onChange={(e) => setEditCountryCode(e.target.value)}
+                          className="bg-slate-100/90 px-3 py-2.5 text-xs font-bold text-slate-700 border-r border-slate-300 focus:outline-none cursor-pointer"
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.label}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          value={editingUser.phoneNumber}
+                          onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          placeholder="Enter Mobile Number"
+                          className="w-full px-3.5 py-2.5 font-mono text-slate-900 focus:outline-none"
+                        />
+                      </div>
+
+                      {showError && existingWithPhoneSameRole && (
+                        <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                          <span>Number already exists for another <strong>{editingUser.role}</strong> ({existingWithPhoneSameRole.name}). Same number can only be registered under a different role.</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Mail ID */}
@@ -1256,6 +1303,7 @@ export const UserManagement: React.FC = () => {
                   const isInvalidDomain = hasEmail && !isValidEnterpriseEmail(cleanE);
                   const existingOtherWithEmailSameRole = hasEmail ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanE) : null;
                   const isEmailError = isInvalidDomain || Boolean(existingOtherWithEmailSameRole);
+                  const showError = hasSubmittedEditForm && isEmailError;
 
                   return (
                     <div>
@@ -1265,20 +1313,20 @@ export const UserManagement: React.FC = () => {
                         onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                         placeholder="name@valuemomentum.com"
                         className={`w-full bg-white border rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none text-slate-900 transition-colors ${
-                          isEmailError
+                          showError
                             ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
                             : 'border-slate-300 focus:border-blue-600'
                         }`}
                       />
 
-                      {isInvalidDomain && (
+                      {showError && isInvalidDomain && (
                         <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
                           <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
                           <span>Only <strong>@valuemomentum.com</strong> and <strong>@owlsure.com</strong> email domains are permitted.</span>
                         </p>
                       )}
 
-                      {!isInvalidDomain && existingOtherWithEmailSameRole && (
+                      {showError && !isInvalidDomain && existingOtherWithEmailSameRole && (
                         <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
                           <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
                           <span>Email already registered for another <strong>{editingUser.role}</strong> ({existingOtherWithEmailSameRole.name}). Same email can only be registered under a different role.</span>
