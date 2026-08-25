@@ -1180,28 +1180,6 @@ export const UserManagement: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4 text-xs flex flex-col">
-              {/* Single 'Credential already exists' Warning Banner */}
-              {(() => {
-                const cleanVam = (editingUser.vamId || '').replace(/\D/g, '').trim();
-                const cleanPhone = (editingUser.phoneNumber || '').replace(/\D/g, '').trim();
-                const cleanEmail = (editingUser.email || '').trim().toLowerCase();
-
-                const existingWithPhoneSameRole = cleanPhone.length === 10 ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && (u.phoneNumber || '').replace(/\D/g, '') === cleanPhone) : null;
-                const existingWithEmailSameRole = cleanEmail.length > 0 && cleanEmail !== '-' ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail) : null;
-                const existingWithVamSameRole = cleanVam.length > 0 ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
-
-                const isCredentialAlreadyExists = Boolean(existingWithPhoneSameRole || existingWithEmailSameRole || existingWithVamSameRole);
-
-                if (hasSubmittedEditForm && isCredentialAlreadyExists) {
-                  return (
-                    <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 font-extrabold text-xs flex items-center gap-2.5 shadow-xs animate-fadeIn">
-                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                      <span>Credential already exists</span>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
 
               {/* Role */}
               <div>
@@ -1338,6 +1316,13 @@ export const UserManagement: React.FC = () => {
                           <span>Only <strong>@valuemomentum.com</strong> and <strong>@owlsure.com</strong> email domains are permitted.</span>
                         </p>
                       )}
+
+                      {!isEmailError && editingUser.email && editingUser.email !== '-' && editingUser.email.includes('@') && (
+                        <p className="text-[11px] text-blue-600 font-semibold mt-1.5 flex items-center gap-1">
+                          <Key className="w-3 h-3 shrink-0" />
+                          <span>Initial Login Password: <strong>{getDefaultPasswordForEmail(editingUser.email)}</strong></span>
+                        </p>
+                      )}
                     </div>
                   );
                 })()}
@@ -1356,6 +1341,40 @@ export const UserManagement: React.FC = () => {
                   className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-medium shadow-xs focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                 />
               </div>
+
+              {/* Added On */}
+              <div>
+                <label className="block text-slate-700 font-bold mb-1.5">Added On</label>
+                <input
+                  type="text"
+                  readOnly
+                  value={editingUser.addedOn || getTodayFormatted()}
+                  className="w-full bg-slate-100 border border-slate-200 text-slate-600 rounded-xl px-3.5 py-2.5 font-medium cursor-not-allowed"
+                />
+              </div>
+
+              {/* Single 'Credential already exists' Warning Banner below Added On field */}
+              {(() => {
+                const cleanVam = (editingUser.vamId || '').replace(/\D/g, '').trim();
+                const cleanPhone = (editingUser.phoneNumber || '').replace(/\D/g, '').trim();
+                const cleanEmail = (editingUser.email || '').trim().toLowerCase();
+
+                const existingWithPhoneSameRole = cleanPhone.length === 10 ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && (u.phoneNumber || '').replace(/\D/g, '') === cleanPhone) : null;
+                const existingWithEmailSameRole = cleanEmail.length > 0 && cleanEmail !== '-' ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail) : null;
+                const existingWithVamSameRole = cleanVam.length > 0 ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
+
+                const isCredentialAlreadyExists = Boolean(existingWithPhoneSameRole || existingWithEmailSameRole || existingWithVamSameRole);
+
+                if (hasSubmittedEditForm && isCredentialAlreadyExists) {
+                  return (
+                    <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 font-extrabold text-xs flex items-center gap-2.5 shadow-xs animate-fadeIn mt-1">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>Credential already exists</span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
