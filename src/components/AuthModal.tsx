@@ -722,21 +722,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             {/* Password Field */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] font-bold text-slate-700">Password *</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRecoveryEmail(email || '');
-                    setErrorMsg('');
-                    setSuccessMsg('');
-                    setView('forgot-email');
-                  }}
-                  className={`text-[11px] font-semibold hover:underline cursor-pointer ${selectedRole === 'Admin' ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-800'}`}
-                >
-                  Forgot Password?
-                </button>
-              </div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">Password *</label>
               <div className="relative">
                 <Lock className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : selectedRole === 'Admin' ? 'text-emerald-500' : 'text-blue-500'}`} />
                 <input
@@ -763,6 +749,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* Forgot Password Link directly below password input */}
+              <div className="flex items-center justify-end mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecoveryEmail(email || '');
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                    setView('forgot-email');
+                  }}
+                  className={`text-[11px] font-semibold hover:underline cursor-pointer ${selectedRole === 'Admin' ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-800'}`}
+                >
+                  Forgot Password?
                 </button>
               </div>
 
