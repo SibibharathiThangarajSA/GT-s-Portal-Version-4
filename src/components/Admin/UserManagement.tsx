@@ -904,36 +904,6 @@ export const UserManagement: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Single 'Credential already exists' Warning Banner */}
-                    {(() => {
-                      const cleanVam = (entry.vamId || '').replace(/\D/g, '').trim();
-                      const cleanPhone = (entry.phoneNumber || '').replace(/\D/g, '').trim();
-                      const cleanEmail = (entry.email || '').trim().toLowerCase();
-
-                      const existingWithPhoneSameRole = cleanPhone.length === 10 ? users.find((u) => u.role === entry.role && (u.phoneNumber || '').replace(/\D/g, '') === cleanPhone) : null;
-                      const existingWithEmailSameRole = cleanEmail.length > 0 ? users.find((u) => u.role === entry.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail) : null;
-                      const existingWithVamSameRole = cleanVam.length > 0 ? users.find((u) => u.role === entry.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
-
-                      const isBatchPhoneDuplicate = cleanPhone.length === 10 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.phoneNumber || '').replace(/\D/g, '') === cleanPhone);
-                      const isBatchEmailDuplicate = cleanEmail.length > 0 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.email || '').trim().toLowerCase() === cleanEmail);
-                      const isBatchVamDuplicate = cleanVam.length > 0 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.vamId || '').replace(/\D/g, '').trim() === cleanVam);
-
-                      const isCredentialAlreadyExists = Boolean(
-                        existingWithPhoneSameRole || existingWithEmailSameRole || existingWithVamSameRole ||
-                        isBatchPhoneDuplicate || isBatchEmailDuplicate || isBatchVamDuplicate
-                      );
-
-                      if (hasSubmittedAddForm && isCredentialAlreadyExists) {
-                        return (
-                          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 font-extrabold text-xs flex items-center gap-2.5 shadow-xs animate-fadeIn">
-                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                            <span>Credential already exists</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-
                     {/* Entry Vertical Fields Container */}
                     <div className="flex flex-col space-y-4 text-xs">
 
@@ -1118,17 +1088,37 @@ export const UserManagement: React.FC = () => {
                         />
                       </div>
 
-                    </div>
+                      {/* Single 'Credential already exists' Warning Banner below Added On field */}
+                      {(() => {
+                        const cleanVam = (entry.vamId || '').replace(/\D/g, '').trim();
+                        const cleanPhone = (entry.phoneNumber || '').replace(/\D/g, '').trim();
+                        const cleanEmail = (entry.email || '').trim().toLowerCase();
 
-                    {/* Default Password Hint */}
-                    {!isAssociate && entry.email && entry.email.includes('@') && (
-                      <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 flex items-center gap-2">
-                        <Key className="w-4 h-4 text-blue-600 shrink-0" />
-                        <span>
-                          Default login password will be auto-set to: <strong className="font-mono text-blue-900 bg-blue-100/80 px-1.5 py-0.5 rounded border border-blue-300">{getDefaultPasswordForEmail(entry.email)}</strong>
-                        </span>
-                      </div>
-                    )}
+                        const existingWithPhoneSameRole = cleanPhone.length === 10 ? users.find((u) => u.role === entry.role && (u.phoneNumber || '').replace(/\D/g, '') === cleanPhone) : null;
+                        const existingWithEmailSameRole = cleanEmail.length > 0 ? users.find((u) => u.role === entry.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail) : null;
+                        const existingWithVamSameRole = cleanVam.length > 0 ? users.find((u) => u.role === entry.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
+
+                        const isBatchPhoneDuplicate = cleanPhone.length === 10 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.phoneNumber || '').replace(/\D/g, '') === cleanPhone);
+                        const isBatchEmailDuplicate = cleanEmail.length > 0 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.email || '').trim().toLowerCase() === cleanEmail);
+                        const isBatchVamDuplicate = cleanVam.length > 0 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.vamId || '').replace(/\D/g, '').trim() === cleanVam);
+
+                        const isCredentialAlreadyExists = Boolean(
+                          existingWithPhoneSameRole || existingWithEmailSameRole || existingWithVamSameRole ||
+                          isBatchPhoneDuplicate || isBatchEmailDuplicate || isBatchVamDuplicate
+                        );
+
+                        if (hasSubmittedAddForm && isCredentialAlreadyExists) {
+                          return (
+                            <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 font-extrabold text-xs flex items-center gap-2.5 shadow-xs animate-fadeIn mt-1">
+                              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                              <span>Credential already exists</span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                    </div>
                   </div>
                 );
               })}
