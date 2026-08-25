@@ -518,6 +518,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Partial<SessionTrackerRecord> | null>(null);
   const [selectedRecordForNotes, setSelectedRecordForNotes] = useState<SessionTrackerRecord | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<SessionTrackerRecord | null>(null);
   const [startTimeVal, setStartTimeVal] = useState('09:00');
   const [endTimeVal, setEndTimeVal] = useState('11:00');
   const [activeClockPickerTarget, setActiveClockPickerTarget] = useState<'start' | 'end' | null>(null);
@@ -634,16 +635,20 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
     setIsAddEditModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+    const target = recordToDelete;
+    setRecordToDelete(null);
     setTrackerRecords(prev => {
-      const updated = prev.filter(r => r.id !== id);
+      const updated = prev.filter(r => r.id !== target.id);
       try {
         localStorage.setItem(TRACKER_STORAGE_KEY, JSON.stringify(updated));
       } catch {}
       return updated;
     });
-    await deleteSessionTrackerRecordApi(id);
-    if (onDeleteRecord) onDeleteRecord(id);
+    await deleteSessionTrackerRecordApi(target.id);
+    if (onDeleteRecord) onDeleteRecord(target.id);
+    addToast('info', `Removed "${target.sessionName}" from tracker.`);
   };
 
   const handleSaveForm = async (e: React.FormEvent) => {
@@ -1006,7 +1011,7 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
                           <Edit3 className="w-4 h-4 text-blue-600" />
                         </button>
                         <button
-                          onClick={() => handleDelete(record.id)}
+                          onClick={() => setRecordToDelete(record)}
                           className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
                           title="Delete Record"
                         >
@@ -1362,6 +1367,40 @@ export const SessionTracker: React.FC<SessionTrackerProps> = ({
           }}
           onClose={() => setActiveClockPickerTarget(null)}
         />
+      )}
+
+      {/* POPUP MODAL: DELETE RECORD CONFIRMATION */}
+      {recordToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 max-w-sm w-full p-6 shadow-2xl space-y-4 text-slate-900 animate-fadeIn">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h4 className="text-base font-extrabold text-slate-900">Delete Session Record</h4>
+              <p className="text-xs text-slate-500">
+                Are you sure you want to delete <strong className="text-slate-900">"{recordToDelete.sessionName}"</strong> ({recordToDelete.sessionCode})? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setRecordToDelete(null)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-xs cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Confirm Delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
