@@ -641,7 +641,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* VIEW 1: STANDARD EMAIL + PASSWORD LOGIN                  */}
         {/* ======================================================== */}
         {view === 'login' && (
-          <form onSubmit={handleLoginSubmit} className="space-y-5" autoComplete="off">
+          <form onSubmit={handleLoginSubmit} className="space-y-4" autoComplete="off">
 
             {/* Header Title & Subtitle Matching Screenshot */}
             <div className="text-center space-y-1 pt-1">
@@ -722,7 +722,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             {/* Password Field */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">Password *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-700">Password *</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecoveryEmail(email || '');
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                    setView('forgot-email');
+                  }}
+                  className={`text-[11px] font-semibold hover:underline cursor-pointer ${selectedRole === 'Admin' ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-800'}`}
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <div className="relative">
                 <Lock className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : selectedRole === 'Admin' ? 'text-emerald-500' : 'text-blue-500'}`} />
                 <input
@@ -761,27 +775,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
             </div>
 
-            {/* Forgot Password */}
-            <div className="flex items-center justify-end text-xs text-slate-600 font-medium pt-0.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setRecoveryEmail(email || '');
-                  setErrorMsg('');
-                  setSuccessMsg('');
-                  setView('forgot-email');
-                }}
-                className={`font-semibold hover:underline cursor-pointer ${selectedRole === 'Admin' ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-600 hover:text-blue-800'}`}
-              >
-                Forgot Password?
-              </button>
-            </div>
-
             {/* Login Submit Button */}
             <button
               type="submit"
               disabled={isLoginDisabled}
-              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all mt-3 cursor-pointer ${isLoginDisabled
+              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${isLoginDisabled
                 ? 'bg-slate-300 text-slate-500 shadow-none cursor-not-allowed border border-slate-200'
                 : selectedRole === 'Admin'
                   ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
