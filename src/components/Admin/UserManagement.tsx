@@ -264,7 +264,7 @@ export const UserManagement: React.FC = () => {
     e.preventDefault();
 
     const seenBatchPhones = new Set<string>();
-    const seenBatchEmails = new Set<string>();
+    const seenBatchEmailRoles = new Set<string>();
     const seenBatchVamIds = new Set<string>();
 
     // Validation
@@ -321,34 +321,42 @@ export const UserManagement: React.FC = () => {
           return;
         }
 
-        const existingUserWithEmail = users.find(
-          (u) => u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail
+        // Check if email already exists under the SAME role
+        const existingUserWithEmailSameRole = users.find(
+          (u) => u.role === entry.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail
         );
-        if (existingUserWithEmail) {
-          addToast('error', `${rowLabel}Email ID "${cleanEmail}" is already registered for ${existingUserWithEmail.name}.`);
+        if (existingUserWithEmailSameRole) {
+          addToast(
+            'error',
+            `${rowLabel}Email ID "${cleanEmail}" is already registered for another ${entry.role} (${existingUserWithEmailSameRole.name}). Same email can only be registered under a different role.`
+          );
           return;
         }
 
-        if (seenBatchEmails.has(cleanEmail)) {
-          addToast('error', `${rowLabel}Email "${cleanEmail}" is duplicated in multiple rows.`);
+        const roleEmailKey = `${entry.role}:${cleanEmail}`;
+        if (seenBatchEmailRoles.has(roleEmailKey)) {
+          addToast('error', `${rowLabel}Email "${cleanEmail}" with role "${entry.role}" is duplicated in multiple rows.`);
           return;
         }
-        seenBatchEmails.add(cleanEmail);
+        seenBatchEmailRoles.add(roleEmailKey);
+      }
 
-        if (entry.vamId && entry.vamId.trim() && entry.vamId.trim() !== '-') {
-          const cleanVam = entry.vamId.trim();
+      // VAM ID numeric 10-digit validation
+      if (entry.vamId && entry.vamId.trim() && entry.vamId.trim() !== '-') {
+        const cleanVam = entry.vamId.replace(/\D/g, '').trim().slice(0, 10);
+        if (cleanVam) {
           const existingUserWithVam = users.find(
-            (u) => u.vamId && u.vamId !== '-' && u.vamId.trim().toLowerCase() === cleanVam.toLowerCase()
+            (u) => u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam
           );
           if (existingUserWithVam) {
             addToast('error', `${rowLabel}VAM ID "${cleanVam}" already exists for ${existingUserWithVam.name}.`);
             return;
           }
-          if (seenBatchVamIds.has(cleanVam.toLowerCase())) {
+          if (seenBatchVamIds.has(cleanVam)) {
             addToast('error', `${rowLabel}VAM ID "${cleanVam}" is duplicated in multiple rows.`);
             return;
           }
-          seenBatchVamIds.add(cleanVam.toLowerCase());
+          seenBatchVamIds.add(cleanVam);
         }
       }
     }
@@ -413,6 +421,17 @@ export const UserManagement: React.FC = () => {
         addToast('error', 'Invalid email domain. Only @valuemomentum.com and @owlsure.com are allowed.');
         return;
       }
+
+      const existingUserWithEmailSameRole = users.find(
+        (u) => u.id !== editingUser.id && u.role === editingUser.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail
+      );
+      if (existingUserWithEmailSameRole) {
+        addToast(
+          'error',
+          `Email ID "${cleanEmail}" is already registered for another ${editingUser.role} (${existingUserWithEmailSameRole.name}). Same email can only be registered under a different role.`
+        );
+        return;
+      }
     }
 
     const defaultDesig = editingUser.role === 'Admin' ? 'Lead - L&D Leadership' : editingUser.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee';
@@ -420,7 +439,7 @@ export const UserManagement: React.FC = () => {
     const updatedUsers = users.map((u) => {
       if (u.id === editingUser.id) {
         const cleanEmail = (editingUser.email && editingUser.email.trim()) ? editingUser.email.trim() : '-';
-        const cleanVam = (editingUser.vamId && editingUser.vamId.trim()) ? editingUser.vamId.trim() : '-';
+        const cleanVam = (editingUser.vamId && editingUser.vamId.trim()) ? editingUser.vamId.replace(/\D/g, '').slice(0, 10) : '-';
         const defaultPw = cleanEmail !== '-' ? (editingUser.password || u.password || getDefaultPasswordForEmail(cleanEmail)) : undefined;
 
         return {
@@ -911,17 +930,24 @@ export const UserManagement: React.FC = () => {
                         />
                       </div>
 
-                      {/* 3. VAM ID */}
+                      {/* 3. VAM ID (10 Digits Numbers Only) */}
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1.5">
-                          VAM ID {isAssociate && <span className="text-slate-400 font-normal">(Optional for Associate)</span>}
-                        </label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-slate-700 font-bold">
+                            VAM ID (10 Digits Numbers Only) {isAssociate && <span className="text-slate-400 font-normal">(Optional)</span>}
+                          </label>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {(entry.vamId || '').replace(/\D/g, '').length}/10
+                          </span>
+                        </div>
                         <input
-                          type="text"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={10}
                           value={entry.vamId || ''}
-                          onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value)}
-                          placeholder={isAssociate ? 'VAM ID (Optional)' : 'VAM ID'}
-                          className="w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
+                          onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder={isAssociate ? '10-digit VAM ID (Optional)' : 'e.g. 1000012345'}
+                          className="w-full border rounded-xl px-3.5 py-2.5 font-mono font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                         />
                       </div>
 
@@ -996,6 +1022,9 @@ export const UserManagement: React.FC = () => {
                           const cleanE = (entry.email || '').trim().toLowerCase();
                           const hasEmail = cleanE.length > 0;
                           const isInvalidDomain = hasEmail && !isValidEnterpriseEmail(cleanE);
+                          const existingWithEmailSameRole = hasEmail ? users.find((u) => u.role === entry.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanE) : null;
+                          const isBatchEmailRoleDuplicate = hasEmail && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.email || '').trim().toLowerCase() === cleanE);
+                          const isEmailError = isInvalidDomain || Boolean(existingWithEmailSameRole || isBatchEmailRoleDuplicate);
 
                           return (
                             <div>
@@ -1006,7 +1035,7 @@ export const UserManagement: React.FC = () => {
                                 onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
                                 placeholder={isAssociate ? 'name@valuemomentum.com (Optional)' : 'name@valuemomentum.com'}
                                 className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white text-slate-900 transition-colors ${
-                                  isInvalidDomain
+                                  isEmailError
                                     ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
                                     : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
                                 }`}
@@ -1019,7 +1048,21 @@ export const UserManagement: React.FC = () => {
                                 </p>
                               )}
 
-                              {!isInvalidDomain && entry.email && entry.email.includes('@') && (
+                              {!isInvalidDomain && existingWithEmailSameRole && (
+                                <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                                  <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                                  <span>Email already registered for another <strong>{entry.role}</strong> ({existingWithEmailSameRole.name}). Same email can only be registered under a different role.</span>
+                                </p>
+                              )}
+
+                              {!isInvalidDomain && !existingWithEmailSameRole && isBatchEmailRoleDuplicate && (
+                                <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                                  <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                                  <span>Duplicate email entered for <strong>{entry.role}</strong> role in another row</span>
+                                </p>
+                              )}
+
+                              {!isEmailError && entry.email && entry.email.includes('@') && (
                                 <p className="text-[11px] text-blue-600 font-semibold mt-1.5 flex items-center gap-1">
                                   <Key className="w-3 h-3 shrink-0" />
                                   <span>Initial Login Password: <strong>{getDefaultPasswordForEmail(entry.email)}</strong></span>
@@ -1153,15 +1196,22 @@ export const UserManagement: React.FC = () => {
                 />
               </div>
 
-              {/* VAM ID */}
+              {/* VAM ID (10 Digits Numbers Only) */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1.5">VAM ID</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-slate-700 font-bold">VAM ID (10 Digits Numbers Only)</label>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {(editingUser.vamId || '').replace(/\D/g, '').length}/10
+                  </span>
+                </div>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
                   value={editingUser.vamId || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, vamId: e.target.value })}
-                  placeholder="Enter VAM ID"
-                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none focus:border-blue-600"
+                  onChange={(e) => setEditingUser({ ...editingUser, vamId: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                  placeholder="e.g. 1000012345"
+                  className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-mono shadow-xs focus:outline-none focus:border-blue-600"
                 />
               </div>
 
@@ -1204,6 +1254,8 @@ export const UserManagement: React.FC = () => {
                   const cleanE = (editingUser.email || '').trim().toLowerCase();
                   const hasEmail = cleanE.length > 0 && cleanE !== '-';
                   const isInvalidDomain = hasEmail && !isValidEnterpriseEmail(cleanE);
+                  const existingOtherWithEmailSameRole = hasEmail ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanE) : null;
+                  const isEmailError = isInvalidDomain || Boolean(existingOtherWithEmailSameRole);
 
                   return (
                     <div>
@@ -1213,7 +1265,7 @@ export const UserManagement: React.FC = () => {
                         onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                         placeholder="name@valuemomentum.com"
                         className={`w-full bg-white border rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none text-slate-900 transition-colors ${
-                          isInvalidDomain
+                          isEmailError
                             ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
                             : 'border-slate-300 focus:border-blue-600'
                         }`}
@@ -1223,6 +1275,13 @@ export const UserManagement: React.FC = () => {
                         <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
                           <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
                           <span>Only <strong>@valuemomentum.com</strong> and <strong>@owlsure.com</strong> email domains are permitted.</span>
+                        </p>
+                      )}
+
+                      {!isInvalidDomain && existingOtherWithEmailSameRole && (
+                        <p className="text-[11px] text-rose-600 font-bold mt-1.5 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 inline shrink-0" />
+                          <span>Email already registered for another <strong>{editingUser.role}</strong> ({existingOtherWithEmailSameRole.name}). Same email can only be registered under a different role.</span>
                         </p>
                       )}
                     </div>
