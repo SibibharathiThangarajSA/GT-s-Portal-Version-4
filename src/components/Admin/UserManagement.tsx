@@ -468,9 +468,7 @@ export const UserManagement: React.FC = () => {
       'Mail ID': u.email && u.email !== '-' ? u.email : '-',
       'Added On': u.addedOn || '-',
       'Role': u.role || 'Employee',
-      'Designation': u.designation || (u.role === 'Admin' ? 'Lead - L&D Leadership' : u.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee'),
-      'Status': u.status || 'Active',
-      'Access': u.access || 'Enabled'
+      'Designation': u.designation || (u.role === 'Admin' ? 'Lead - L&D Leadership' : u.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee')
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -484,9 +482,7 @@ export const UserManagement: React.FC = () => {
       { wch: 38 }, // Mail ID
       { wch: 14 }, // Added On
       { wch: 14 }, // Role
-      { wch: 30 }, // Designation
-      { wch: 12 }, // Status
-      { wch: 12 }  // Access
+      { wch: 30 }  // Designation
     ];
     worksheet['!cols'] = colWidths;
 
