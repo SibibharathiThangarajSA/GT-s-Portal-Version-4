@@ -946,7 +946,7 @@ export const UserManagement: React.FC = () => {
                           maxLength={10}
                           value={entry.vamId || ''}
                           onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                          placeholder={isAssociate ? '10-digit VAM ID (Optional)' : 'e.g. 1000012345'}
+                          placeholder={isAssociate ? '10-digit VAM ID (Optional)' : '1000012345'}
                           className="w-full border rounded-xl px-3.5 py-2.5 font-mono font-medium focus:outline-none shadow-xs bg-white border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10"
                         />
                       </div>
