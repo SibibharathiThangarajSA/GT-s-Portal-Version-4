@@ -236,7 +236,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         {
           title: 'Corporate Login — Graduate Trainee',
           description:
-            'Includes the role toggle, credential option, employee email, password, remember me, forgot password, login, and signup controls.',
+            'Includes the role toggle, credential option, employee email, password, forgot password, login, and signup controls.',
         },
         {
           title: 'Create Account (Sign Up) — Graduate Trainee',
@@ -256,7 +256,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         {
           title: 'Corporate Login — L&D Admin',
           description:
-            'Includes the L&D Admin role toggle, employee email, password, remember me, forgot password, login, and signup controls.',
+            'Includes the L&D Admin role toggle, employee email, password, forgot password, login, and signup controls.',
         },
         {
           title: 'Learner-Facing Windows',

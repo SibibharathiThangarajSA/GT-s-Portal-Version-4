@@ -67,7 +67,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+
 
   // Mobile OTP Login Fields
   const [mobileCountryCode, setMobileCountryCode] = useState('+91');
@@ -761,17 +761,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between text-xs text-slate-600 font-medium pt-0.5">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className={`rounded border-slate-300 bg-white focus:ring-0 cursor-pointer ${selectedRole === 'Admin' ? 'text-emerald-600' : 'text-blue-600'}`}
-                />
-                <span>Remember me</span>
-              </label>
+            {/* Forgot Password */}
+            <div className="flex items-center justify-end text-xs text-slate-600 font-medium pt-0.5">
               <button
                 type="button"
                 onClick={() => {
