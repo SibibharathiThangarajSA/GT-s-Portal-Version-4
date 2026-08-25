@@ -53,6 +53,8 @@ interface FormCredentialEntry {
   designation: string;
   addedOn: string;
   password?: string;
+  enableVamId?: boolean;
+  enableEmail?: boolean;
 }
 
 export const getEffectiveDesignation = (user: { designation?: string; role?: string }): string => {
@@ -79,6 +81,8 @@ export const UserManagement: React.FC = () => {
 
   // Edit modal country code state
   const [editCountryCode, setEditCountryCode] = useState('+91');
+  const [editEnableVamId, setEditEnableVamId] = useState(false);
+  const [editEnableEmail, setEditEnableEmail] = useState(false);
 
   // Submit attempt state for showing validation warnings only after submit button click
   const [hasSubmittedAddForm, setHasSubmittedAddForm] = useState(false);
@@ -206,7 +210,9 @@ export const UserManagement: React.FC = () => {
         phoneNumber: '',
         email: '',
         designation: 'Graduate Trainee',
-        addedOn: getTodayFormatted()
+        addedOn: getTodayFormatted(),
+        enableVamId: true,
+        enableEmail: true
       }
     ]);
     setIsAddModalOpen(true);
@@ -225,7 +231,9 @@ export const UserManagement: React.FC = () => {
         phoneNumber: '',
         email: '',
         designation: 'Graduate Trainee',
-        addedOn: getTodayFormatted()
+        addedOn: getTodayFormatted(),
+        enableVamId: true,
+        enableEmail: true
       }
     ]);
   };
@@ -242,17 +250,23 @@ export const UserManagement: React.FC = () => {
       const updated = [...prev];
       const entry = { ...updated[index], [field]: value };
 
-      // Handle role change designation defaults
+      // Handle role change designation & unlock defaults
       if (field === 'role') {
         if (value === 'Associate') {
+          entry.enableVamId = false;
+          entry.enableEmail = false;
           if (!entry.designation || entry.designation === 'Graduate Trainee' || entry.designation === 'Lead - L&D Leadership') {
             entry.designation = 'Associate Trainee';
           }
         } else if (value === 'Admin') {
+          entry.enableVamId = true;
+          entry.enableEmail = true;
           if (!entry.designation || entry.designation === 'Graduate Trainee' || entry.designation === 'Associate Trainee') {
             entry.designation = 'Lead - L&D Leadership';
           }
         } else if (value === 'Employee') {
+          entry.enableVamId = true;
+          entry.enableEmail = true;
           if (!entry.designation || entry.designation === 'Associate Trainee' || entry.designation === 'Lead - L&D Leadership') {
             entry.designation = 'Graduate Trainee';
           }
@@ -301,8 +315,9 @@ export const UserManagement: React.FC = () => {
       seenBatchPhoneRoles.add(rolePhoneKey);
 
       // Email & VAM validations for Employee / Admin / Associate roles
-      const cleanEmail = entry.email ? entry.email.trim().toLowerCase() : '';
-      if (entry.role !== 'Associate' || cleanEmail.length > 0) {
+      const isAssoc = entry.role === 'Associate';
+      const cleanEmail = (!isAssoc || entry.enableEmail) && entry.email ? entry.email.trim().toLowerCase() : '';
+      if (!isAssoc || (entry.enableEmail && cleanEmail.length > 0)) {
         if (!cleanEmail || !cleanEmail.includes('@')) {
           addToast('error', `${rowLabel}Valid enterprise email is required.`);
           return;
@@ -329,25 +344,24 @@ export const UserManagement: React.FC = () => {
       }
 
       // VAM ID numeric 10-digit validation (Role Scoped)
-      if (entry.vamId && entry.vamId.trim() && entry.vamId.trim() !== '-') {
-        const cleanVam = entry.vamId.replace(/\D/g, '').trim().slice(0, 10);
-        if (cleanVam) {
-          const existingUserWithVamSameRole = users.find(
-            (u) => u.role === entry.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam
-          );
-          const roleVamKey = `${entry.role}:${cleanVam}`;
-          if (existingUserWithVamSameRole || seenBatchVamIds.has(roleVamKey)) {
-            addToast('error', `${rowLabel}Credential already exists.`);
-            return;
-          }
-          seenBatchVamIds.add(roleVamKey);
+      const cleanVam = (!isAssoc || entry.enableVamId) && entry.vamId ? entry.vamId.replace(/\D/g, '').trim().slice(0, 10) : '';
+      if (cleanVam) {
+        const existingUserWithVamSameRole = users.find(
+          (u) => u.role === entry.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam
+        );
+        const roleVamKey = `${entry.role}:${cleanVam}`;
+        if (existingUserWithVamSameRole || seenBatchVamIds.has(roleVamKey)) {
+          addToast('error', `${rowLabel}Credential already exists.`);
+          return;
         }
+        seenBatchVamIds.add(roleVamKey);
       }
     }
 
     const newRecords: UserManagementRecord[] = formEntries.map((entry, idx) => {
-      const cleanEmail = (entry.email && entry.email.trim()) ? entry.email.trim() : '-';
-      const cleanVam = (entry.vamId && entry.vamId.trim()) ? entry.vamId.trim() : '-';
+      const isAssoc = entry.role === 'Associate';
+      const cleanEmail = (!isAssoc || entry.enableEmail) && entry.email && entry.email.trim() ? entry.email.trim() : '-';
+      const cleanVam = (!isAssoc || entry.enableVamId) && entry.vamId && entry.vamId.trim() ? entry.vamId.trim() : '-';
       const defaultPw = cleanEmail !== '-' ? (entry.password || getDefaultPasswordForEmail(cleanEmail)) : undefined;
       const defaultDesig = entry.role === 'Admin' ? 'Lead - L&D Leadership' : entry.role === 'Associate' ? 'Associate Trainee' : 'Graduate Trainee';
 
@@ -404,8 +418,9 @@ export const UserManagement: React.FC = () => {
       return;
     }
 
-    const cleanEmail = (editingUser.email || '').trim().toLowerCase();
-    if (editingUser.role !== 'Associate' || (cleanEmail && cleanEmail !== '-')) {
+    const isAssoc = editingUser.role === 'Associate';
+    const cleanEmail = (!isAssoc || editEnableEmail) && editingUser.email ? editingUser.email.trim().toLowerCase() : '';
+    if (!isAssoc || (editEnableEmail && cleanEmail.length > 0)) {
       if (!cleanEmail || !cleanEmail.includes('@')) {
         addToast('error', 'Valid enterprise email is required.');
         return;
@@ -424,7 +439,7 @@ export const UserManagement: React.FC = () => {
       }
     }
 
-    const cleanVam = (editingUser.vamId || '').replace(/\D/g, '').trim().slice(0, 10);
+    const cleanVam = (!isAssoc || editEnableVamId) && editingUser.vamId ? editingUser.vamId.replace(/\D/g, '').trim().slice(0, 10) : '';
     if (cleanVam && cleanVam !== '-') {
       const existingUserWithVamSameRole = users.find(
         (u) => u.id !== editingUser.id && u.role === editingUser.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam
@@ -439,15 +454,15 @@ export const UserManagement: React.FC = () => {
 
     const updatedUsers = users.map((u) => {
       if (u.id === editingUser.id) {
-        const cleanEmail = (editingUser.email && editingUser.email.trim()) ? editingUser.email.trim() : '-';
-        const cleanVam = (editingUser.vamId && editingUser.vamId.trim()) ? editingUser.vamId.replace(/\D/g, '').slice(0, 10) : '-';
-        const defaultPw = cleanEmail !== '-' ? (editingUser.password || u.password || getDefaultPasswordForEmail(cleanEmail)) : undefined;
+        const finalEmail = (!isAssoc || editEnableEmail) && editingUser.email && editingUser.email.trim() ? editingUser.email.trim() : '-';
+        const finalVam = (!isAssoc || editEnableVamId) && editingUser.vamId && editingUser.vamId.trim() ? editingUser.vamId.replace(/\D/g, '').slice(0, 10) : '-';
+        const defaultPw = finalEmail !== '-' ? (editingUser.password || u.password || getDefaultPasswordForEmail(finalEmail)) : undefined;
 
         return {
           ...editingUser,
           phoneNumber: cleanPhone,
-          vamId: cleanVam,
-          email: cleanEmail,
+          vamId: finalVam,
+          email: finalEmail,
           designation: editingUser.designation?.trim() || defaultDesig,
           password: defaultPw
         };
@@ -761,6 +776,8 @@ export const UserManagement: React.FC = () => {
                           <button
                             onClick={() => {
                               setEditingUser({ ...u, designation: displayDesignation });
+                              setEditEnableVamId(u.role !== 'Associate' || Boolean(u.vamId && u.vamId !== '-'));
+                              setEditEnableEmail(u.role !== 'Associate' || Boolean(u.email && u.email !== '-'));
                               setHasSubmittedEditForm(false);
                             }}
                             className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors cursor-pointer"
@@ -940,14 +957,27 @@ export const UserManagement: React.FC = () => {
                           <label className="block text-slate-700 font-bold">
                             VAM ID (10 Digits Numbers Only) {isAssociate && <span className="text-slate-400 font-normal">(Optional)</span>}
                           </label>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {(entry.vamId || '').replace(/\D/g, '').length}/10
-                          </span>
+                          {isAssociate ? (
+                            <label className="flex items-center gap-1.5 text-xs text-blue-600 font-bold cursor-pointer hover:text-blue-700 select-none">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(entry.enableVamId)}
+                                onChange={(e) => handleUpdateEntry(index, 'enableVamId', e.target.checked)}
+                                className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <span>Enable VAM ID</span>
+                            </label>
+                          ) : (
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {(entry.vamId || '').replace(/\D/g, '').length}/10
+                            </span>
+                          )}
                         </div>
                         {(() => {
+                          const isVamDisabled = isAssociate && !entry.enableVamId;
                           const cleanVam = (entry.vamId || '').replace(/\D/g, '').trim();
-                          const existingWithVamSameRole = cleanVam.length > 0 ? users.find((u) => u.role === entry.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
-                          const isBatchVamRoleDuplicate = cleanVam.length > 0 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.vamId || '').replace(/\D/g, '').trim() === cleanVam);
+                          const existingWithVamSameRole = !isVamDisabled && cleanVam.length > 0 ? users.find((u) => u.role === entry.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
+                          const isBatchVamRoleDuplicate = !isVamDisabled && cleanVam.length > 0 && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.vamId || '').replace(/\D/g, '').trim() === cleanVam);
                           const isVamError = Boolean(existingWithVamSameRole || isBatchVamRoleDuplicate);
                           const showError = hasSubmittedAddForm && isVamError;
 
@@ -956,13 +986,22 @@ export const UserManagement: React.FC = () => {
                               type="tel"
                               inputMode="numeric"
                               maxLength={10}
-                              value={entry.vamId || ''}
+                              disabled={isVamDisabled}
+                              value={isVamDisabled ? '' : (entry.vamId || '')}
                               onChange={(e) => handleUpdateEntry(index, 'vamId', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                              placeholder={isAssociate ? '10-digit VAM ID (Optional)' : '1000012345'}
-                              className={`w-full border rounded-xl px-3.5 py-2.5 font-mono font-medium focus:outline-none shadow-xs bg-white text-slate-900 transition-colors ${
-                                showError
-                                  ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
-                                  : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
+                              placeholder={
+                                isAssociate
+                                  ? isVamDisabled
+                                    ? 'Disabled for Associate (Check Enable to unlock)'
+                                    : '10-digit VAM ID (Optional)'
+                                  : '1000012345'
+                              }
+                              className={`w-full border rounded-xl px-3.5 py-2.5 font-mono font-medium focus:outline-none shadow-xs transition-colors ${
+                                isVamDisabled
+                                  ? 'bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed'
+                                  : showError
+                                  ? 'bg-white text-slate-900 border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
+                                  : 'bg-white text-slate-900 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
                               }`}
                             />
                           );
@@ -1018,12 +1057,26 @@ export const UserManagement: React.FC = () => {
 
                       {/* 5. Mail ID */}
                       <div>
-                        <label className="block text-slate-700 font-bold mb-1.5">
-                          Mail ID {!isAssociate ? '*' : <span className="text-slate-400 font-normal">(Optional for Associate)</span>}
-                        </label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-slate-700 font-bold">
+                            Mail ID {!isAssociate ? '*' : <span className="text-slate-400 font-normal">(Optional for Associate)</span>}
+                          </label>
+                          {isAssociate && (
+                            <label className="flex items-center gap-1.5 text-xs text-blue-600 font-bold cursor-pointer hover:text-blue-700 select-none">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(entry.enableEmail)}
+                                onChange={(e) => handleUpdateEntry(index, 'enableEmail', e.target.checked)}
+                                className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                              />
+                              <span>Enable Mail ID</span>
+                            </label>
+                          )}
+                        </div>
                         {(() => {
+                          const isEmailDisabled = isAssociate && !entry.enableEmail;
                           const cleanE = (entry.email || '').trim().toLowerCase();
-                          const hasEmail = cleanE.length > 0;
+                          const hasEmail = !isEmailDisabled && cleanE.length > 0;
                           const isInvalidDomain = hasEmail && !isValidEnterpriseEmail(cleanE);
                           const existingWithEmailSameRole = hasEmail ? users.find((u) => u.role === entry.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanE) : null;
                           const isBatchEmailRoleDuplicate = hasEmail && formEntries.some((other, oIdx) => oIdx !== index && other.role === entry.role && (other.email || '').trim().toLowerCase() === cleanE);
@@ -1035,13 +1088,22 @@ export const UserManagement: React.FC = () => {
                               <input
                                 type="email"
                                 required={!isAssociate}
-                                value={entry.email || ''}
+                                disabled={isEmailDisabled}
+                                value={isEmailDisabled ? '' : (entry.email || '')}
                                 onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
-                                placeholder={isAssociate ? 'name@valuemomentum.com (Optional)' : 'name@valuemomentum.com'}
-                                className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs bg-white text-slate-900 transition-colors ${
-                                  showError
-                                    ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
-                                    : 'border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
+                                placeholder={
+                                  isAssociate
+                                    ? isEmailDisabled
+                                      ? 'Disabled for Associate (Check Enable to unlock)'
+                                      : 'name@valuemomentum.com (Optional)'
+                                    : 'name@valuemomentum.com'
+                                }
+                                className={`w-full border rounded-xl px-3.5 py-2.5 font-medium focus:outline-none shadow-xs transition-colors ${
+                                  isEmailDisabled
+                                    ? 'bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed'
+                                    : showError
+                                    ? 'bg-white text-slate-900 border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
+                                    : 'bg-white text-slate-900 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10'
                                 }`}
                               />
 
@@ -1052,7 +1114,7 @@ export const UserManagement: React.FC = () => {
                                 </p>
                               )}
 
-                              {!isEmailError && entry.email && entry.email.includes('@') && (
+                              {!isEmailDisabled && !isEmailError && entry.email && entry.email.includes('@') && (
                                 <p className="text-[11px] text-blue-600 font-semibold mt-1.5 flex items-center gap-1">
                                   <Key className="w-3 h-3 shrink-0" />
                                   <span>Initial Login Password: <strong>{getDefaultPasswordForEmail(entry.email)}</strong></span>
@@ -1180,13 +1242,22 @@ export const UserManagement: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-4 text-xs flex flex-col">
-
               {/* Role */}
               <div>
                 <label className="block text-slate-700 font-bold mb-1.5">Role *</label>
                 <select
                   value={editingUser.role}
-                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as any })}
+                  onChange={(e) => {
+                    const newRole = e.target.value as any;
+                    setEditingUser({ ...editingUser, role: newRole });
+                    if (newRole === 'Associate') {
+                      setEditEnableVamId(false);
+                      setEditEnableEmail(false);
+                    } else {
+                      setEditEnableVamId(true);
+                      setEditEnableEmail(true);
+                    }
+                  }}
                   className="w-full bg-white border border-slate-300 text-slate-900 rounded-xl px-3.5 py-2.5 font-bold focus:outline-none focus:border-blue-600 shadow-xs"
                 >
                   <option value="Employee">Employee (Enterprise)</option>
@@ -1211,13 +1282,27 @@ export const UserManagement: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-slate-700 font-bold">VAM ID (10 Digits Numbers Only)</label>
-                  <span className="text-[10px] font-mono text-slate-400">
-                    {(editingUser.vamId || '').replace(/\D/g, '').length}/10
-                  </span>
+                  {editingUser.role === 'Associate' ? (
+                    <label className="flex items-center gap-1.5 text-xs text-blue-600 font-bold cursor-pointer hover:text-blue-700 select-none">
+                      <input
+                        type="checkbox"
+                        checked={editEnableVamId}
+                        onChange={(e) => setEditEnableVamId(e.target.checked)}
+                        className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span>Enable VAM ID</span>
+                    </label>
+                  ) : (
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {(editingUser.vamId || '').replace(/\D/g, '').length}/10
+                    </span>
+                  )}
                 </div>
                 {(() => {
+                  const isAssoc = editingUser.role === 'Associate';
+                  const isVamDisabled = isAssoc && !editEnableVamId;
                   const cleanVam = (editingUser.vamId || '').replace(/\D/g, '').trim();
-                  const existingWithVamSameRole = cleanVam.length > 0 ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
+                  const existingWithVamSameRole = !isVamDisabled && cleanVam.length > 0 ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.vamId && u.vamId !== '-' && u.vamId.replace(/\D/g, '').trim() === cleanVam) : null;
                   const isVamError = Boolean(existingWithVamSameRole);
                   const showError = hasSubmittedEditForm && isVamError;
 
@@ -1226,13 +1311,16 @@ export const UserManagement: React.FC = () => {
                       type="tel"
                       inputMode="numeric"
                       maxLength={10}
-                      value={editingUser.vamId || ''}
+                      disabled={isVamDisabled}
+                      value={isVamDisabled ? '' : (editingUser.vamId || '')}
                       onChange={(e) => setEditingUser({ ...editingUser, vamId: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                      placeholder="1000012345"
-                      className={`w-full bg-white border rounded-xl px-3.5 py-2.5 font-mono shadow-xs focus:outline-none text-slate-900 transition-colors ${
-                        showError
-                          ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
-                          : 'border-slate-300 focus:border-blue-600'
+                      placeholder={isVamDisabled ? 'Disabled for Associate (Check Enable to unlock)' : '1000012345'}
+                      className={`w-full border rounded-xl px-3.5 py-2.5 font-mono shadow-xs focus:outline-none transition-colors ${
+                        isVamDisabled
+                          ? 'bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed'
+                          : showError
+                          ? 'bg-white text-slate-900 border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
+                          : 'bg-white text-slate-900 border-slate-300 focus:border-blue-600'
                       }`}
                     />
                   );
@@ -1287,10 +1375,25 @@ export const UserManagement: React.FC = () => {
 
               {/* Mail ID */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1.5">Mail ID</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-slate-700 font-bold">Mail ID</label>
+                  {editingUser.role === 'Associate' && (
+                    <label className="flex items-center gap-1.5 text-xs text-blue-600 font-bold cursor-pointer hover:text-blue-700 select-none">
+                      <input
+                        type="checkbox"
+                        checked={editEnableEmail}
+                        onChange={(e) => setEditEnableEmail(e.target.checked)}
+                        className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span>Enable Mail ID</span>
+                    </label>
+                  )}
+                </div>
                 {(() => {
+                  const isAssoc = editingUser.role === 'Associate';
+                  const isEmailDisabled = isAssoc && !editEnableEmail;
                   const cleanE = (editingUser.email || '').trim().toLowerCase();
-                  const hasEmail = cleanE.length > 0 && cleanE !== '-';
+                  const hasEmail = !isEmailDisabled && cleanE.length > 0 && cleanE !== '-';
                   const isInvalidDomain = hasEmail && !isValidEnterpriseEmail(cleanE);
                   const existingOtherWithEmailSameRole = hasEmail ? users.find((u) => u.id !== editingUser.id && u.role === editingUser.role && u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanE) : null;
                   const isEmailError = isInvalidDomain || Boolean(existingOtherWithEmailSameRole);
@@ -1300,13 +1403,16 @@ export const UserManagement: React.FC = () => {
                     <div>
                       <input
                         type="email"
-                        value={editingUser.email || ''}
+                        disabled={isEmailDisabled}
+                        value={isEmailDisabled ? '' : (editingUser.email || '')}
                         onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                        placeholder="name@valuemomentum.com"
-                        className={`w-full bg-white border rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none text-slate-900 transition-colors ${
-                          showError
-                            ? 'border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
-                            : 'border-slate-300 focus:border-blue-600'
+                        placeholder={isEmailDisabled ? 'Disabled for Associate (Check Enable to unlock)' : 'name@valuemomentum.com'}
+                        className={`w-full border rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none transition-colors ${
+                          isEmailDisabled
+                            ? 'bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed'
+                            : showError
+                            ? 'bg-white text-slate-900 border-rose-400 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20'
+                            : 'bg-white text-slate-900 border-slate-300 focus:border-blue-600'
                         }`}
                       />
 
@@ -1317,7 +1423,7 @@ export const UserManagement: React.FC = () => {
                         </p>
                       )}
 
-                      {!isEmailError && editingUser.email && editingUser.email !== '-' && editingUser.email.includes('@') && (
+                      {!isEmailDisabled && !isEmailError && editingUser.email && editingUser.email !== '-' && editingUser.email.includes('@') && (
                         <p className="text-[11px] text-blue-600 font-semibold mt-1.5 flex items-center gap-1">
                           <Key className="w-3 h-3 shrink-0" />
                           <span>Initial Login Password: <strong>{getDefaultPasswordForEmail(editingUser.email)}</strong></span>
