@@ -788,7 +788,7 @@ export function App() {
           <div className="flex items-center gap-2 font-medium">
             <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
             <span>
-              This web application is developed and managed by{' '}
+              This web application is developed and managed by Team{' '}
               <a
                 href="https://prismiq26.vercel.app/"
                 target="_blank"
@@ -796,8 +796,8 @@ export function App() {
                 title="PrismIQ | Mission Possible 2026"
                 className="text-blue-600 dark:text-blue-400 font-extrabold hover:underline inline-flex items-center gap-1 transition-colors"
               >
-                Team PrismIQ
-                <ExternalLink className="w-3.5 h-3.5 inline shrink-0" />
+                PrismIQ
+                {/* <ExternalLink className="w-3.5 h-3.5 inline shrink-0" /> */}
               </a>
             </span>
           </div>
