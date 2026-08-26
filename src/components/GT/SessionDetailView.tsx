@@ -183,12 +183,12 @@ const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?:
   return { provided: providedItems, additional: additionalItems };
 };
 
-const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
 
 const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'loom' | 'gdrive' | 'html5'; embedUrl: string } => {
   if (!url) return { type: 'html5', embedUrl: '' };
 
-  const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
   if (ytMatch && ytMatch[1]) {
     return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0` };
   }
