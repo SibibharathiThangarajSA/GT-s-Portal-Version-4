@@ -118,61 +118,42 @@ const getSavedSession = () => {
 };
 
 export function App() {
-  const initialHashState = getHashState();
   const savedSession = getSavedSession();
-
-  const startingPortal = (initialHashState.portal !== 'Landing')
-    ? initialHashState.portal
-    : (savedSession?.activePortal || 'Landing');
-
-  const startingAuth = savedSession?.isAuthenticated ?? (startingPortal !== 'Landing');
 
   const [currentUser, setCurrentUser] = useState<User>(savedSession?.currentUser || defaultGuestUser);
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Global Authentication State - Persisted across page refresh
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(startingAuth);
+  // Global Authentication State - User remains logged in across tabs
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(savedSession?.isAuthenticated ?? false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalRole, setAuthModalRole] = useState<'GT' | 'Admin'>('GT');
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
 
-  // Admin Authentication State - Persisted across page refresh
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(
-    savedSession?.isAdminAuthenticated ?? (startingPortal === 'Admin')
-  );
+  // Admin Authentication State
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(savedSession?.isAdminAuthenticated ?? false);
   
-  // Navigation State - Preserved on browser refresh
-  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(startingPortal);
-  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
-    initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState 
-      ? initialHashState.gtViewMode 
-      : (savedSession?.gtViewMode || 'sessions')
-  );
-  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>(
-    initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState 
-      ? initialHashState.adminViewMode 
-      : (savedSession?.adminViewMode || 'tracker')
-  );
+  // Navigation State - ALWAYS start on Landing Page when pasting copied URL or opening fresh link
+  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>('Landing');
+  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>('sessions');
+  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>('tracker');
 
-  // Detail Selection State
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    initialHashState.portal === 'GT' && 'selectedSessionId' in initialHashState
-      ? (initialHashState.selectedSessionId ?? null)
-      : (savedSession?.selectedSessionId ?? null)
-  );
-  const [sessionDetailTab, setSessionDetailTab] = useState<string>(
-    initialHashState.portal === 'GT' && 'sessionTab' in initialHashState
-      ? (initialHashState.sessionTab ?? 'roadmap')
-      : (savedSession?.sessionDetailTab ?? 'roadmap')
-  );
-  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>(
-    initialHashState.portal === 'GT' && 'sessionTopicId' in initialHashState
-      ? (initialHashState.sessionTopicId ?? '')
-      : (savedSession?.sessionDetailTopicId ?? '')
-  );
+  // Detail Selection State - Always start clean without deep linked session selection
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [sessionDetailTab, setSessionDetailTab] = useState<string>('roadmap');
+  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>('');
   const [activeAdminSession, setActiveAdminSession] = useState<Session | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [restoredActiveQuiz, setRestoredActiveQuiz] = useState<boolean>(false);
+
+  // Always force clean start at Landing Page on initial mount / fresh URL paste
+  useEffect(() => {
+    setActivePortal('Landing');
+    setSelectedSessionId(null);
+    setActiveQuiz(null);
+    if (typeof window !== 'undefined') {
+      window.location.hash = '#landing';
+    }
+  }, []);
 
   // Features State
   const [inspectModeActive, setInspectModeActive] = useState<boolean>(false);
