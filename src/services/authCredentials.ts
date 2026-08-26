@@ -359,7 +359,7 @@ export const authenticateLocalUser = (
     return getDefaultPasswordForEmail(cleanEmail);
   };
 
-  // Build candidate account list
+  // Build candidate account list (roster records take precedence over seed data)
   let candidateAccounts: Array<{
     id: string;
     email: string;
@@ -369,23 +369,22 @@ export const authenticateLocalUser = (
     batch?: string;
   }> = [];
 
-  rosterMatches.forEach((r) => {
-    const rRole: 'Admin' | 'Employee' | 'Associate' =
-      r.role === 'Admin' ? 'Admin' : r.role === 'Associate' ? 'Associate' : 'Employee';
-    candidateAccounts.push({
-      id: r.id,
-      email: r.email,
-      role: rRole,
-      name: r.name,
-      activePassword: getAccountPassword(rRole, r.id, r.password),
-      batch: r.batch
+  if (rosterMatches.length > 0) {
+    rosterMatches.forEach((r) => {
+      const rRole: 'Admin' | 'Employee' | 'Associate' =
+        r.role === 'Admin' ? 'Admin' : r.role === 'Associate' ? 'Associate' : 'Employee';
+      candidateAccounts.push({
+        id: r.id,
+        email: r.email,
+        role: rRole,
+        name: r.name,
+        activePassword: getAccountPassword(rRole, r.id, r.password),
+        batch: r.batch
+      });
     });
-  });
-
-  seedMatches.forEach((s) => {
-    const sRole: 'Admin' | 'Employee' | 'Associate' = s.role === 'Admin' ? 'Admin' : 'Employee';
-    const exists = candidateAccounts.some((c) => c.role === sRole && c.email.toLowerCase() === cleanEmail);
-    if (!exists) {
+  } else {
+    seedMatches.forEach((s) => {
+      const sRole: 'Admin' | 'Employee' | 'Associate' = s.role === 'Admin' ? 'Admin' : 'Employee';
       candidateAccounts.push({
         id: `seed-${sRole.toLowerCase()}-${cleanEmail}`,
         email: s.email,
@@ -394,8 +393,8 @@ export const authenticateLocalUser = (
         activePassword: getAccountPassword(sRole, undefined, s.defaultPassword),
         batch: s.batch
       });
-    }
-  });
+    });
+  }
 
   if (candidateAccounts.length === 0) {
     return {
