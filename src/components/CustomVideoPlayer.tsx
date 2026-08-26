@@ -69,9 +69,11 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch(err => console.warn("Video playback blocked:", err));
+      setIsPlaying(true);
+      videoRef.current.play().catch(err => {
+        console.warn("Video playback blocked or failed:", err);
+        setIsPlaying(false);
+      });
     } else {
       videoRef.current.pause();
       setIsPlaying(false);
@@ -166,6 +168,28 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     }
   }, [src, playbackRate]);
 
+  // Sync native video events
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => setIsPlaying(false);
+
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('playing', handlePlay);
+    video.addEventListener('pause', handlePause);
+    video.addEventListener('ended', handleEnded);
+
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('playing', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, [src]);
+
   // Fullscreen change listener
   useEffect(() => {
     const handleFsChange = () => {
@@ -174,6 +198,16 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
+
+  // Handle Video Error Fallback if local asset is missing
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const target = e.currentTarget;
+    if (!target.src.includes('gtv-videos-bucket')) {
+      console.warn("Primary video failed to load, switching to fallback sample video.");
+      target.src = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+      target.play().then(() => setIsPlaying(true)).catch(() => {});
+    }
+  };
 
   return (
     <div
@@ -193,6 +227,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
         autoPlay={autoPlay}
         playsInline
         onClick={togglePlay}
+        onError={handleVideoError}
         onPlay={() => setIsPlaying(true)}
         onPlaying={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
