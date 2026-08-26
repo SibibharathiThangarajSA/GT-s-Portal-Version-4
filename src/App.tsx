@@ -221,17 +221,19 @@ export function App() {
       }));
     }
 
-    // Always navigate to Landing Page upon successful login as requested
-    setActivePortal('Landing');
-    if (isRoleAdmin) {
+    // Navigate directly to Dashboard / Portal upon successful login
+    const mappedPortal: 'GT' | 'Admin' = isRoleAdmin ? 'Admin' : 'GT';
+    setActivePortal(mappedPortal);
+    setSelectedSessionId(null);
+    setActiveQuiz(null);
+    if (mappedPortal === 'Admin') {
       setIsAdminAuthenticated(true);
+      setAdminViewMode('tracker');
     } else {
       setIsAdminAuthenticated(false);
+      setGtViewMode('sessions');
     }
     setIsAuthModalOpen(false);
-    if (typeof window !== 'undefined') {
-      window.location.hash = '#landing';
-    }
   };
 
   const { addToast } = useToast();
