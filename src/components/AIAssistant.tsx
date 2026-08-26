@@ -60,48 +60,39 @@ const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 2
     <div
       ref={eyeRef}
       style={{ width: size, height: size }}
-      className={`relative rounded-full bg-slate-950 border-[2.5px] border-white/95 shadow-md flex items-center justify-center overflow-hidden shrink-0 transition-transform hover:scale-110 ${className}`}
+      className={`relative rounded-full border-[2.5px] border-white/95 shadow-md flex items-center justify-center overflow-hidden shrink-0 transition-transform hover:scale-110 ${className}`}
     >
       {/* Sclera - Pure white with glossy top shadow */}
       <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50 to-slate-200 rounded-full" />
 
-      {/* Iris (Big Cute Pookie Eye with Cosmic Sparkle Gradient) */}
+      {/* Cute Glossy Orb/Iris (Follows mouse cursor smoothly) */}
       <div
-        className="relative rounded-full transition-transform duration-75 ease-out flex items-center justify-center shadow-md"
+        className="relative rounded-full transition-transform duration-75 ease-out flex items-center justify-center shadow-md overflow-hidden"
         style={{
-          width: size * 0.66,
-          height: size * 0.66,
+          width: size * 0.72,
+          height: size * 0.72,
           transform: `translate(${pupilOffset.x}px, ${pupilOffset.y}px)`,
-          background: 'radial-gradient(circle, #38bdf8 0%, #818cf8 40%, #4c1d95 80%, #0f172a 100%)',
+          background: 'radial-gradient(circle at 35% 35%, #38bdf8 0%, #6366f1 60%, #1e1b4b 100%)',
         }}
       >
-        {/* Dark Pupil Center */}
+        {/* Main Big Glossy Sparkle Highlight (Top Left) */}
         <div
-          className="rounded-full bg-slate-950 shadow-inner flex items-center justify-center relative"
-          style={{ width: size * 0.36, height: size * 0.36 }}
-        >
-          {/* Main Big Glossy Sparkle Highlight (Top Left) */}
-          <div
-            className="absolute top-0.5 left-0.5 rounded-full bg-white shadow-[0_0_4px_rgba(255,255,255,0.9)] opacity-95"
-            style={{ width: size * 0.16, height: size * 0.16 }}
-          />
-          {/* Secondary Soft Shine Dot (Bottom Right) */}
-          <div
-            className="absolute bottom-0.5 right-0.5 rounded-full bg-sky-200 opacity-80"
-            style={{ width: size * 0.08, height: size * 0.08 }}
-          />
-        </div>
-
-        {/* Cute Iris Highlight Ring */}
-        <div className="absolute inset-0 rounded-full border border-sky-300/30 pointer-events-none" />
+          className="absolute top-1 left-1 rounded-full bg-white shadow-[0_0_5px_rgba(255,255,255,1)] opacity-95"
+          style={{ width: size * 0.2, height: size * 0.2 }}
+        />
+        {/* Secondary Soft Shine Dot (Bottom Right) */}
+        <div
+          className="absolute bottom-1 right-1 rounded-full bg-sky-200 opacity-85 shadow-[0_0_3px_rgba(56,189,248,0.8)]"
+          style={{ width: size * 0.1, height: size * 0.1 }}
+        />
       </div>
 
       {/* Cute Gentle Top Lash Curve */}
-      <div className="absolute top-0 inset-x-0 h-[15%] bg-gradient-to-b from-slate-900/30 to-transparent z-10 pointer-events-none" />
+      <div className="absolute top-0 inset-x-0 h-[15%] bg-gradient-to-b from-slate-900/20 to-transparent z-10 pointer-events-none" />
 
       {/* Eyelid / Blink Animation */}
       <div
-        className={`absolute inset-0 bg-slate-950 transition-all duration-150 ease-in-out z-20 ${
+        className={`absolute inset-0 bg-slate-900 transition-all duration-150 ease-in-out z-20 ${
           isBlinking ? 'h-full opacity-100' : 'h-0 opacity-0'
         }`}
       />
