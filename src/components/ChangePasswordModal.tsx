@@ -6,12 +6,14 @@ import { useToast } from '../context/ToastContext';
 interface ChangePasswordModalProps {
   isOpen: boolean;
   userEmail: string;
+  userRole?: string;
   onClose: () => void;
 }
 
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   isOpen,
   userEmail,
+  userRole,
   onClose,
 }) => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -92,7 +94,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await changePasswordApi(userEmail, currentPassword, newPassword);
+      const res = await changePasswordApi(userEmail, currentPassword, newPassword, userRole);
       setIsLoading(false);
 
       if (res.success) {

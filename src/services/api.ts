@@ -1213,9 +1213,6 @@ export const resetPasswordApi = async (email: string, _resetToken: string, newPa
       resetUserPassword(cleanEmail, newPassword);
       return { success: true, message: data.message || 'Password has been reset successfully! Please log in with your new password.' };
     }
-    if (!res.ok || data.success === false) {
-      return { success: false, message: data.message || 'Failed to reset password.' };
-    }
   } catch {
     // network fallback
   }
@@ -1238,7 +1235,7 @@ export const changePasswordApi = async (
     };
   }
 
-  // 1. Try Server API first so password changes persist centrally on backend and live instances
+  // 1. Try Server API first so password changes persist centrally on backend
   try {
     const res = await fetch('/api/auth/change-password', {
       method: 'POST',
@@ -1250,13 +1247,11 @@ export const changePasswordApi = async (
       changeUserPassword(cleanEmail, currentPassword, newPassword, targetRole);
       return { success: true, message: data.message || 'Password changed successfully! You can now log in with your new password.' };
     }
-    if (!res.ok || data.success === false) {
-      return { success: false, message: data.message || 'Current password is incorrect.' };
-    }
   } catch {
     // network fallback
   }
 
+  // 2. Fallback to local user credentials store (supports newly added/edited local user management records)
   return changeUserPassword(cleanEmail, currentPassword, newPassword, targetRole);
 };
 

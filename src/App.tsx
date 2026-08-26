@@ -750,6 +750,7 @@ export function App() {
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
         userEmail={currentUser.email}
+        userRole={currentUser.role}
         onClose={() => setIsChangePasswordOpen(false)}
       />
 
