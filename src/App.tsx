@@ -204,7 +204,15 @@ export function App() {
 
       try {
         const records = getUserManagementRecords();
-        const found = records.find((r) => r.email && r.email.trim().toLowerCase() === userData.email.trim().toLowerCase());
+        const cleanEmail = userData.email.trim().toLowerCase();
+        const found = records.find((r) => {
+          if (!r.email || r.email === '-') return false;
+          if (r.email.trim().toLowerCase() !== cleanEmail) return false;
+          const rRole = (r.role || 'Employee').trim().toLowerCase();
+          if (isRoleAdmin) return rRole === 'admin';
+          return rRole === 'employee' || rRole === 'gt' || rRole === 'associate';
+        });
+
         if (found) {
           if (found.role) matchedRole = found.role;
           if (found.designation) matchedDesig = found.designation;
