@@ -182,12 +182,12 @@ const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?:
   return { provided: providedItems, additional: additionalItems };
 };
 
-const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
 
 const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'loom' | 'gdrive' | 'html5'; embedUrl: string } => {
   if (!url) return { type: 'html5', embedUrl: '' };
 
-  const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
   if (ytMatch && ytMatch[1]) {
     return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0` };
   }
@@ -659,6 +659,12 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 playsInline
                 key={overviewVideoUrl}
                 src={overviewVideoUrl}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.src.includes('gtv-videos-bucket')) {
+                    target.src = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+                  }
+                }}
                 className="w-full h-full object-contain bg-black"
                 poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=80"
               />

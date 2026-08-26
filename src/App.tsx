@@ -37,7 +37,7 @@ import { AIAssistant } from './components/AIAssistant';
 import { InspectModeOverlay } from './components/InspectModeOverlay';
 import { GlobalSearchModal } from './components/GlobalSearchModal';
 import { UserGuideModal } from './components/UserGuideModal';
-import { X, LayoutDashboard, BookOpen, Terminal, GraduationCap, Sparkles, Table, Users } from 'lucide-react';
+import { X, LayoutDashboard, BookOpen, Terminal, GraduationCap, Sparkles, Table, Users, ExternalLink } from 'lucide-react';
 import { useToast } from './context/ToastContext';
 
 // Helpers for URL Hash Sync & Route Persistence
@@ -776,12 +776,21 @@ export function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-center">
           <div className="flex items-center gap-2 font-medium">
             <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-            <span>This web application is developed and managed by <strong className="text-slate-900 dark:text-white font-extrabold">Team PrismIQ</strong></span>
+            <span>
+              This web application is developed and managed by{' '}
+              <a
+                href="https://prismiq26.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="PrismIQ | Mission Possible 2026"
+                className="text-blue-600 dark:text-blue-400 font-extrabold hover:underline inline-flex items-center gap-1 transition-colors"
+              >
+                Team PrismIQ
+                <ExternalLink className="w-3.5 h-3.5 inline shrink-0" />
+              </a>
+            </span>
           </div>
           <div className="hidden sm:block text-slate-300 dark:text-slate-700">•</div>
-          {/* <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-            GT Companion Portal System • Version 4.0
-          </div> */}
         </div>
       </footer>
 
