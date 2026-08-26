@@ -14,7 +14,7 @@ interface ChatMessage {
   timestamp: string;
 }
 
-// Realistic Interactive Live Eyeball Component for PICO (Follows mouse cursor in real-time)
+// Cute & Premium Live Interactive Eyeball for PICO (Follows mouse cursor in real-time)
 const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 28, className = '' }) => {
   const eyeRef = useRef<HTMLDivElement | null>(null);
   const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
@@ -46,12 +46,12 @@ const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 2
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [size]);
 
-  // Natural blinking effect every 4.5 seconds
+  // Natural blinking effect every 4 seconds
   useEffect(() => {
     const blinkInterval = setInterval(() => {
       setIsBlinking(true);
-      setTimeout(() => setIsBlinking(false), 160);
-    }, 4500);
+      setTimeout(() => setIsBlinking(false), 170);
+    }, 4000);
 
     return () => clearInterval(blinkInterval);
   }, []);
@@ -60,37 +60,48 @@ const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 2
     <div
       ref={eyeRef}
       style={{ width: size, height: size }}
-      className={`relative rounded-full bg-slate-950 border-2 border-white/90 shadow-md flex items-center justify-center overflow-hidden shrink-0 transition-transform ${className}`}
+      className={`relative rounded-full bg-slate-950 border-[2.5px] border-white/95 shadow-md flex items-center justify-center overflow-hidden shrink-0 transition-transform hover:scale-110 ${className}`}
     >
-      {/* Eyeball White Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-100 to-slate-200 rounded-full" />
+      {/* Sclera - Pure white with glossy top shadow */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50 to-slate-200 rounded-full" />
 
-      {/* Iris & Pupil (Follows mouse cursor smoothly) */}
+      {/* Iris (Big Cute Pookie Eye with Cosmic Sparkle Gradient) */}
       <div
-        className="relative rounded-full transition-transform duration-75 ease-out flex items-center justify-center shadow-sm"
+        className="relative rounded-full transition-transform duration-75 ease-out flex items-center justify-center shadow-md"
         style={{
-          width: size * 0.58,
-          height: size * 0.58,
+          width: size * 0.66,
+          height: size * 0.66,
           transform: `translate(${pupilOffset.x}px, ${pupilOffset.y}px)`,
-          background: 'radial-gradient(circle, #06b6d4 0%, #2563eb 60%, #1e1b4b 100%)',
+          background: 'radial-gradient(circle, #38bdf8 0%, #818cf8 40%, #4c1d95 80%, #0f172a 100%)',
         }}
       >
         {/* Dark Pupil Center */}
         <div
           className="rounded-full bg-slate-950 shadow-inner flex items-center justify-center relative"
-          style={{ width: size * 0.32, height: size * 0.32 }}
+          style={{ width: size * 0.36, height: size * 0.36 }}
         >
-          {/* Specular Catchlight Spot */}
+          {/* Main Big Glossy Sparkle Highlight (Top Left) */}
           <div
-            className="absolute top-0.5 right-0.5 rounded-full bg-white opacity-95"
-            style={{ width: size * 0.1, height: size * 0.1 }}
+            className="absolute top-0.5 left-0.5 rounded-full bg-white shadow-[0_0_4px_rgba(255,255,255,0.9)] opacity-95"
+            style={{ width: size * 0.16, height: size * 0.16 }}
+          />
+          {/* Secondary Soft Shine Dot (Bottom Right) */}
+          <div
+            className="absolute bottom-0.5 right-0.5 rounded-full bg-sky-200 opacity-80"
+            style={{ width: size * 0.08, height: size * 0.08 }}
           />
         </div>
+
+        {/* Cute Iris Highlight Ring */}
+        <div className="absolute inset-0 rounded-full border border-sky-300/30 pointer-events-none" />
       </div>
+
+      {/* Cute Gentle Top Lash Curve */}
+      <div className="absolute top-0 inset-x-0 h-[15%] bg-gradient-to-b from-slate-900/30 to-transparent z-10 pointer-events-none" />
 
       {/* Eyelid / Blink Animation */}
       <div
-        className={`absolute inset-0 bg-slate-900 transition-all duration-150 ease-in-out z-10 ${
+        className={`absolute inset-0 bg-slate-950 transition-all duration-150 ease-in-out z-20 ${
           isBlinking ? 'h-full opacity-100' : 'h-0 opacity-0'
         }`}
       />
