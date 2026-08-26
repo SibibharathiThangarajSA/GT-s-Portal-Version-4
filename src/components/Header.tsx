@@ -61,8 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isAdminRole =
     activePortal === 'Admin' ||
-    currentUser.role === 'Admin' ||
-    (typeof currentUser.role === 'string' && currentUser.role.toLowerCase().includes('admin'));
+    (currentUser.role === 'Admin' && activePortal !== 'GT');
 
   // Dynamically fetch exact Role and Designation from the User Management table records
   const userManagementRecord = useMemo(() => {
@@ -72,20 +71,36 @@ export const Header: React.FC<HeaderProps> = ({
 
       if (currentUser.email && currentUser.email !== '-') {
         const cleanEmail = currentUser.email.trim().toLowerCase();
-        const found = records.find((r) => r.email && r.email.trim().toLowerCase() === cleanEmail);
-        if (found) return found;
+        const matches = records.filter((r) => r.email && r.email.trim().toLowerCase() === cleanEmail);
+        if (matches.length > 0) {
+          const roleMatch = matches.find((r) => {
+            const rRole = (r.role || 'Employee').trim().toLowerCase();
+            if (isAdminRole) return rRole === 'admin';
+            return rRole === 'employee' || rRole === 'gt' || rRole === 'associate';
+          });
+          if (roleMatch) return roleMatch;
+          return matches[0];
+        }
       }
 
       if (currentUser.name) {
         const cleanName = currentUser.name.trim().toLowerCase();
-        const found = records.find((r) => r.name && r.name.trim().toLowerCase() === cleanName);
-        if (found) return found;
+        const matches = records.filter((r) => r.name && r.name.trim().toLowerCase() === cleanName);
+        if (matches.length > 0) {
+          const roleMatch = matches.find((r) => {
+            const rRole = (r.role || 'Employee').trim().toLowerCase();
+            if (isAdminRole) return rRole === 'admin';
+            return rRole === 'employee' || rRole === 'gt' || rRole === 'associate';
+          });
+          if (roleMatch) return roleMatch;
+          return matches[0];
+        }
       }
     } catch {
       // Fallback
     }
     return null;
-  }, [currentUser.email, currentUser.name, showProfilePopover]);
+  }, [currentUser.email, currentUser.name, isAdminRole, showProfilePopover]);
 
   const displayDesignation =
     userManagementRecord?.designation ||
