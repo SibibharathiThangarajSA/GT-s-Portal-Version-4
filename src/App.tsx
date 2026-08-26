@@ -118,7 +118,18 @@ const getSavedSession = () => {
 };
 
 export function App() {
+  const initialHashState = getHashState();
   const savedSession = getSavedSession();
+
+  // Tab session check: same tab reloads preserve route, new tab pasted links open on Landing page
+  const isSameTabSession = typeof window !== 'undefined' && sessionStorage.getItem('gt_tab_session_active') === 'true';
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('gt_tab_session_active', 'true');
+  }
+
+  const startingPortal = isSameTabSession
+    ? ((initialHashState.portal !== 'Landing') ? initialHashState.portal : (savedSession?.activePortal || 'Landing'))
+    : 'Landing';
 
   const [currentUser, setCurrentUser] = useState<User>(savedSession?.currentUser || defaultGuestUser);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -132,26 +143,48 @@ export function App() {
   // Admin Authentication State
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(savedSession?.isAdminAuthenticated ?? false);
   
-  // Navigation State - ALWAYS start on Landing Page when pasting copied URL or opening fresh link
-  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>('Landing');
-  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>('sessions');
-  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>('tracker');
+  // Navigation State - Same tab preserves route; new tab starts clean on Landing Page
+  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(startingPortal);
+  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
+    isSameTabSession && initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState 
+      ? initialHashState.gtViewMode 
+      : (savedSession?.gtViewMode || 'sessions')
+  );
+  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>(
+    isSameTabSession && initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState 
+      ? initialHashState.adminViewMode 
+      : (savedSession?.adminViewMode || 'tracker')
+  );
 
-  // Detail Selection State - Always start clean without deep linked session selection
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [sessionDetailTab, setSessionDetailTab] = useState<string>('roadmap');
-  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>('');
+  // Detail Selection State - Preserved only in same tab
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    isSameTabSession && initialHashState.portal === 'GT' && 'selectedSessionId' in initialHashState
+      ? (initialHashState.selectedSessionId ?? null)
+      : (isSameTabSession ? (savedSession?.selectedSessionId ?? null) : null)
+  );
+  const [sessionDetailTab, setSessionDetailTab] = useState<string>(
+    isSameTabSession && initialHashState.portal === 'GT' && 'sessionTab' in initialHashState
+      ? (initialHashState.sessionTab ?? 'roadmap')
+      : (savedSession?.sessionDetailTab ?? 'roadmap')
+  );
+  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>(
+    isSameTabSession && initialHashState.portal === 'GT' && 'sessionTopicId' in initialHashState
+      ? (initialHashState.sessionTopicId ?? '')
+      : (savedSession?.sessionDetailTopicId ?? '')
+  );
   const [activeAdminSession, setActiveAdminSession] = useState<Session | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [restoredActiveQuiz, setRestoredActiveQuiz] = useState<boolean>(false);
 
-  // Always force clean start at Landing Page on initial mount / fresh URL paste
+  // Enforce Landing page when pasting link in a fresh new tab
   useEffect(() => {
-    setActivePortal('Landing');
-    setSelectedSessionId(null);
-    setActiveQuiz(null);
-    if (typeof window !== 'undefined') {
-      window.location.hash = '#landing';
+    if (!isSameTabSession) {
+      setActivePortal('Landing');
+      setSelectedSessionId(null);
+      setActiveQuiz(null);
+      if (typeof window !== 'undefined') {
+        window.location.hash = '#landing';
+      }
     }
   }, []);
 
