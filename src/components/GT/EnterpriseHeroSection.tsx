@@ -192,25 +192,6 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
               poster={currentVideo.thumbnailUrl}
               title={currentVideo.title}
             />
-
-            {/* Overlay when not playing */}
-            {!isPlaying && (
-              <div
-                onClick={(e) => handleTogglePlay(e)}
-                className="absolute inset-0 z-20 cursor-pointer flex items-center justify-center bg-gradient-to-t from-slate-950/80 via-slate-900/30 to-blue-950/20 group-hover:opacity-95 transition-opacity"
-              >
-                {/* Top Left Floating Tag */}
-                <div className="absolute top-3.5 left-3.5 bg-[#2563EB] text-white px-3 py-1 text-xs font-semibold rounded-full shadow-md flex items-center gap-1.5 backdrop-blur-md pointer-events-none">
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
-                  <span>{currentVideo.badgeTag}</span>
-                </div>
-
-                {/* Center Play Button */}
-                <div className="w-[68px] h-[68px] rounded-full bg-white text-[#2563EB] flex items-center justify-center shadow-[0_10px_30px_rgba(15,23,42,0.3)] transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_14px_40px_rgba(37,99,235,0.4)]">
-                  <Play className="w-7 h-7 fill-[#2563EB] text-[#2563EB] translate-x-0.5" />
-                </div>
-              </div>
-            )}
           </div>
         </div>
 

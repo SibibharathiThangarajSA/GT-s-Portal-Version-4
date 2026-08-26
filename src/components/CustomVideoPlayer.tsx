@@ -68,12 +68,15 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   // Toggle Play / Pause
   const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.pause();
+    if (videoRef.current.paused) {
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(err => console.warn("Video playback blocked:", err));
     } else {
-      videoRef.current.play().catch(err => console.warn("Video playback blocked:", err));
+      videoRef.current.pause();
+      setIsPlaying(false);
     }
-  }, [isPlaying]);
+  }, []);
 
   // Skip time (+10s or -10s)
   const skipTime = (seconds: number) => {
@@ -191,9 +194,13 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
         playsInline
         onClick={togglePlay}
         onPlay={() => setIsPlaying(true)}
+        onPlaying={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onTimeUpdate={() => {
-          if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
+          if (videoRef.current) {
+            setCurrentTime(videoRef.current.currentTime);
+            if (!videoRef.current.paused && !isPlaying) setIsPlaying(true);
+          }
         }}
         onLoadedMetadata={() => {
           if (videoRef.current) setDuration(videoRef.current.duration);
@@ -208,12 +215,11 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
           onClick={togglePlay}
           className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center cursor-pointer transition-all duration-300 z-10"
         >
-          <button
-            type="button"
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-600/90 text-white flex items-center justify-center shadow-2xl shadow-blue-600/50 hover:scale-110 hover:bg-blue-600 transition-all duration-300 border-2 border-white/20 pl-1"
+          <div
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-600/90 text-white flex items-center justify-center shadow-2xl shadow-blue-600/50 hover:scale-110 hover:bg-blue-600 transition-all duration-300 border-2 border-white/20 pl-1 pointer-events-none"
           >
             <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-white" />
-          </button>
+          </div>
         </div>
       )}
 
