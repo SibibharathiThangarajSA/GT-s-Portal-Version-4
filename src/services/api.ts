@@ -995,7 +995,11 @@ import {
   syncServerCredentialsOverrides
 } from './authCredentials';
 
-export const loginApi = async (email: string, password?: string): Promise<{ success: boolean; data?: AuthUserDto; message?: string }> => {
+export const loginApi = async (
+  email: string,
+  password?: string,
+  targetRole?: string
+): Promise<{ success: boolean; data?: AuthUserDto; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
 
   // 1. Sync latest user roster and password overrides from backend server
@@ -1019,7 +1023,7 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, password })
+      body: JSON.stringify({ email: cleanEmail, password, role: targetRole })
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success && data.data) {
@@ -1037,7 +1041,7 @@ export const loginApi = async (email: string, password?: string): Promise<{ succ
   }
 
   // 4. Fallback to verified local credentials store if server is unreachable
-  return authenticateLocalUser(cleanEmail, password);
+  return authenticateLocalUser(cleanEmail, password, targetRole);
 };
 
 export interface ForgotPasswordRequest {
@@ -1226,7 +1230,12 @@ export const resetPasswordApi = async (email: string, _resetToken: string, newPa
   return resetUserPassword(cleanEmail, newPassword);
 };
 
-export const changePasswordApi = async (email: string, currentPassword: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {
+export const changePasswordApi = async (
+  email: string,
+  currentPassword: string,
+  newPassword: string,
+  targetRole?: string
+): Promise<{ success: boolean; message?: string }> => {
   const cleanEmail = email.trim().toLowerCase();
 
   if (!isAllowedDomain(cleanEmail)) {
@@ -1241,11 +1250,11 @@ export const changePasswordApi = async (email: string, currentPassword: string, 
     const res = await fetch('/api/auth/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, currentPassword, newPassword })
+      body: JSON.stringify({ email: cleanEmail, currentPassword, newPassword, role: targetRole })
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
-      changeUserPassword(cleanEmail, currentPassword, newPassword);
+      changeUserPassword(cleanEmail, currentPassword, newPassword, targetRole);
       return { success: true, message: data.message || 'Password changed successfully! You can now log in with your new password.' };
     }
     if (!res.ok || data.success === false) {
@@ -1255,7 +1264,7 @@ export const changePasswordApi = async (email: string, currentPassword: string, 
     // network fallback
   }
 
-  return changeUserPassword(cleanEmail, currentPassword, newPassword);
+  return changeUserPassword(cleanEmail, currentPassword, newPassword, targetRole);
 };
 
 // ============================================================================

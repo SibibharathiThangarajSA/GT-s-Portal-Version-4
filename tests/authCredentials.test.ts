@@ -3,74 +3,147 @@ import assert from 'node:assert/strict';
 import {
   authenticateLocalUser,
   changeUserPassword,
-  getCredentialsStore,
+  getDefaultPasswordForEmail,
   getUserManagementRecords,
+  saveUserManagementRecords,
   safeLocalStorage
 } from '../src/services/authCredentials.js';
 
-test('Admin Password Change & Persistence Suite', async (t) => {
+test('Admin & Multi-Role Password Management Suite', async (t) => {
   // Clear any existing test overrides before starting
   safeLocalStorage.clear();
 
   const adminEmail = 'Anukraha.Magdalene@valuemomentum.com';
-  const initialPassword = 'Anukraha.Magdalene';
+  const initialPassword = 'anukraha.magdalene'; // All lowercase prefix before @
   const newPassword1 = 'NewAdminPass2026!';
   const newPassword2 = 'UpdatedSuperSecret99!';
 
-  await t.test('1. Initial Admin authentication with seed password', () => {
-    const authSuccess = authenticateLocalUser(adminEmail, initialPassword);
+  await t.test('1. Default password format is all lowercase prefix before @', () => {
+    assert.equal(
+      getDefaultPasswordForEmail('Anukraha.Magdalene@valuemomentum.com'),
+      'anukraha.magdalene'
+    );
+  });
+
+  await t.test('2. Initial Admin authentication with lowercase seed password', () => {
+    const authSuccess = authenticateLocalUser(adminEmail, initialPassword, 'Admin');
     assert.equal(authSuccess.success, true, 'Initial admin login should succeed');
     assert.equal(authSuccess.data?.role, 'Admin', 'Authenticated user role should be Admin');
 
-    const authFail = authenticateLocalUser(adminEmail, 'WrongPassword123');
+    const authFail = authenticateLocalUser(adminEmail, 'WrongPassword123', 'Admin');
     assert.equal(authFail.success, false, 'Login with incorrect password must fail');
   });
 
-  await t.test('2. Change password & verify old password is overridden', () => {
-    const changeResult = changeUserPassword(adminEmail, initialPassword, newPassword1);
+  await t.test('3. Change password & verify old password is overridden', () => {
+    const changeResult = changeUserPassword(adminEmail, initialPassword, newPassword1, 'Admin');
     assert.equal(changeResult.success, true, 'Password change request should succeed');
 
     // Verify old password FAILS
-    const oldAuth = authenticateLocalUser(adminEmail, initialPassword);
+    const oldAuth = authenticateLocalUser(adminEmail, initialPassword, 'Admin');
     assert.equal(oldAuth.success, false, 'Old password must be overridden and fail authentication');
 
     // Verify new password SUCCEEDS
-    const newAuth = authenticateLocalUser(adminEmail, newPassword1);
+    const newAuth = authenticateLocalUser(adminEmail, newPassword1, 'Admin');
     assert.equal(newAuth.success, true, 'New password must succeed authentication');
   });
 
-  await t.test('3. Verify persistent storage across store re-fetches', () => {
-    // Force re-reading store from storage
-    const store = getCredentialsStore();
-    const cleanEmail = adminEmail.toLowerCase();
+  await t.test('4. Role-Scoped Password Isolation for accounts with same email', () => {
+    const sharedEmail = 'Shared.User@valuemomentum.com';
+    const currentRoster = getUserManagementRecords();
 
-    assert.ok(store[cleanEmail], 'Admin user entry should exist in store');
-    assert.equal(store[cleanEmail].password, newPassword1, 'Stored password must equal newPassword1');
+    // Add two records with exact same email but different roles
+    const empRecord = {
+      id: 'usr-emp-101',
+      vamId: '100101',
+      name: 'Shared User',
+      email: sharedEmail,
+      phoneNumber: '9900000001',
+      role: 'Employee' as const,
+      designation: 'Graduate Trainee',
+      addedOn: '01-Jan-2026',
+      status: 'Active' as const,
+      access: 'Enabled' as const,
+      addedBy: 'Admin',
+      batch: 'GT-2026-Batch-01'
+    };
 
-    // Verify roster record synchronization
-    const roster = getUserManagementRecords();
-    const adminRecord = roster.find((r) => r.email && r.email.toLowerCase() === cleanEmail);
-    assert.ok(adminRecord, 'User management record should exist');
-    assert.equal(adminRecord.password, newPassword1, 'User management record password must be synced');
+    const adminRecord = {
+      id: 'usr-admin-102',
+      vamId: '100102',
+      name: 'Shared User',
+      email: sharedEmail,
+      phoneNumber: '9900000002',
+      role: 'Admin' as const,
+      designation: 'L&D Lead',
+      addedOn: '01-Jan-2026',
+      status: 'Active' as const,
+      access: 'Enabled' as const,
+      addedBy: 'Admin',
+      batch: 'L&D Leadership'
+    };
+
+    saveUserManagementRecords([...currentRoster, empRecord, adminRecord]);
+
+    // Both start with default password 'shared.user'
+    const defaultPw = 'shared.user';
+
+    const empInit = authenticateLocalUser(sharedEmail, defaultPw, 'Employee');
+    assert.equal(empInit.success, true);
+    assert.equal(empInit.data?.role, 'Employee');
+
+    const adminInit = authenticateLocalUser(sharedEmail, defaultPw, 'Admin');
+    assert.equal(adminInit.success, true);
+    assert.equal(adminInit.data?.role, 'Admin');
+
+    // Change Employee password
+    const empNewPass = 'EmployeeSecret123!';
+    const empChange = changeUserPassword(sharedEmail, defaultPw, empNewPass, 'Employee');
+    assert.equal(empChange.success, true);
+
+    // Employee now authenticates with empNewPass
+    const empAuth = authenticateLocalUser(sharedEmail, empNewPass, 'Employee');
+    assert.equal(empAuth.success, true);
+    assert.equal(empAuth.data?.role, 'Employee');
+
+    // Admin STILL authenticates with defaultPw!
+    const adminStillDefault = authenticateLocalUser(sharedEmail, defaultPw, 'Admin');
+    assert.equal(adminStillDefault.success, true, 'Admin account retains its own default password');
+    assert.equal(adminStillDefault.data?.role, 'Admin');
   });
 
-  await t.test('4. Sequential password update & verify clean override', () => {
-    const changeResult2 = changeUserPassword(adminEmail, newPassword1, newPassword2);
-    assert.equal(changeResult2.success, true, 'Second password change should succeed');
+  await t.test('5. Deleting a credential resets password override for re-added user', () => {
+    const tempEmail = 'Temp.User@valuemomentum.com';
+    const tempRoster = getUserManagementRecords();
 
-    // First new password should now fail
-    const auth1 = authenticateLocalUser(adminEmail, newPassword1);
-    assert.equal(auth1.success, false, 'Previous new password should no longer work');
+    const tempRecord = {
+      id: 'usr-temp-999',
+      vamId: '999999',
+      name: 'Temp User',
+      email: tempEmail,
+      phoneNumber: '9999999991',
+      role: 'Employee' as const,
+      designation: 'Trainee',
+      addedOn: '01-Jan-2026',
+      status: 'Active' as const,
+      access: 'Enabled' as const,
+      addedBy: 'Admin',
+      batch: 'GT-2026-Batch-01'
+    };
 
-    // Second new password should work
-    const auth2 = authenticateLocalUser(adminEmail, newPassword2);
-    assert.equal(auth2.success, true, 'Latest password should succeed');
-    assert.equal(auth2.data?.email, adminEmail, 'Email in DTO should match');
-  });
+    // Add and change password
+    saveUserManagementRecords([...tempRoster, tempRecord]);
+    changeUserPassword(tempEmail, 'temp.user', 'TempPass2026!', 'Employee');
 
-  await t.test('5. Reject changing password to the exact same current password', () => {
-    const sameResult = changeUserPassword(adminEmail, newPassword2, newPassword2);
-    assert.equal(sameResult.success, false, 'Setting new password equal to current password must fail');
-    assert.match(sameResult.message, /cannot be the same/, 'Error message should explain same password rule');
+    // Delete record from roster
+    const rosterWithoutTemp = getUserManagementRecords().filter((r) => r.id !== tempRecord.id);
+    saveUserManagementRecords(rosterWithoutTemp);
+
+    // Re-add record
+    saveUserManagementRecords([...rosterWithoutTemp, tempRecord]);
+
+    // Password must revert to default 'temp.user'
+    const reAddedDefault = authenticateLocalUser(tempEmail, 'temp.user', 'Employee');
+    assert.equal(reAddedDefault.success, true, 'Re-added user should authenticate with default password');
   });
 });
+

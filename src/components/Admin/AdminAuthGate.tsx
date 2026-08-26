@@ -26,7 +26,7 @@ export const AdminAuthGate: React.FC<AdminAuthGateProps> = ({ onLoginSuccess, on
     setIsLoading(true);
 
     try {
-      const res = await loginApi(email.trim(), password);
+      const res = await loginApi(email.trim(), password, 'Admin');
 
       if (!res.success || !res.data) {
         setError(res.message || 'Invalid credentials. Please verify your email and password.');

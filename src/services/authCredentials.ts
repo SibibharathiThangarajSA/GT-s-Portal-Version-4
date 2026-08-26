@@ -28,7 +28,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   // ==========================================
   {
     email: 'Sibibharathi.Thangaraj@valuemomentum.com',
-    defaultPassword: 'Sibibharathi.Thangaraj',
+    defaultPassword: 'sibibharathi.thangaraj',
     role: 'GT',
     name: 'Sibibharathi Thangaraj',
     firstName: 'Sibibharathi',
@@ -38,7 +38,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Pavithran.Sivanandham@valuemomentum.com',
-    defaultPassword: 'Pavithran.Sivanandham',
+    defaultPassword: 'pavithran.sivanandham',
     role: 'GT',
     name: 'Pavithran Sivanandham',
     firstName: 'Pavithran',
@@ -48,7 +48,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Aswin.Muruganandham@valuemomentum.com',
-    defaultPassword: 'Aswin.Muruganandham',
+    defaultPassword: 'aswin.muruganandham',
     role: 'GT',
     name: 'Aswin Muruganandham',
     firstName: 'Aswin',
@@ -58,7 +58,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Harshini.Radhakrishnan@valuemomentum.com',
-    defaultPassword: 'Harshini.Radhakrishnan',
+    defaultPassword: 'harshini.radhakrishnan',
     role: 'GT',
     name: 'Harshini Radhakrishnan',
     firstName: 'Harshini',
@@ -68,7 +68,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Imran.Aupe@valuemomentum.com',
-    defaultPassword: 'Imran.Aupe',
+    defaultPassword: 'imran.aupe',
     role: 'GT',
     name: 'Imran Aupe',
     firstName: 'Imran',
@@ -78,7 +78,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Kruthika.Devaraje@valuemomentum.com',
-    defaultPassword: 'Kruthika.Devaraje',
+    defaultPassword: 'kruthika.devaraje',
     role: 'GT',
     name: 'Kruthika Devaraje',
     firstName: 'Kruthika',
@@ -88,7 +88,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Vaishali.Karunai@valuemomentum.com',
-    defaultPassword: 'Vaishali.Karunai',
+    defaultPassword: 'vaishali.karunai',
     role: 'GT',
     name: 'Vaishali Karunai',
     firstName: 'Vaishali',
@@ -98,7 +98,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Tanvitha.Nadukuda@valuemomentum.com',
-    defaultPassword: 'Tanvitha.Nadukuda',
+    defaultPassword: 'tanvitha.nadukuda',
     role: 'GT',
     name: 'Tanvitha Nadukuda',
     firstName: 'Tanvitha',
@@ -112,7 +112,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   // ==========================================
   {
     email: 'Anukraha.Magdalene@valuemomentum.com',
-    defaultPassword: 'Anukraha.Magdalene',
+    defaultPassword: 'anukraha.magdalene',
     role: 'Admin',
     name: 'Anukraha Magdalene',
     firstName: 'Anukraha',
@@ -122,7 +122,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Keren.Christobel@valuemomentum.com',
-    defaultPassword: 'Keren.Christobel',
+    defaultPassword: 'keren.christobel',
     role: 'Admin',
     name: 'Keren Christobel',
     firstName: 'Keren',
@@ -132,7 +132,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Janani.Selvaraj@valuemomentum.com',
-    defaultPassword: 'Janani.Selvaraj',
+    defaultPassword: 'janani.selvaraj',
     role: 'Admin',
     name: 'Janani Selvaraj',
     firstName: 'Janani',
@@ -142,7 +142,7 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
   },
   {
     email: 'Sudhir.Vittapu@owlsure.com',
-    defaultPassword: 'Sudhir.Vittapu',
+    defaultPassword: 'sudhir.vittapu',
     role: 'Admin',
     name: 'Sudhir Vittapu',
     firstName: 'Sudhir',
@@ -153,6 +153,12 @@ export const INITIAL_CREDENTIALS: RegisteredCredential[] = [
 ];
 
 const STORAGE_KEY = 'gt_custom_credentials_store_v2';
+
+export const getCredentialStorageKey = (role: string, identifier: string): string => {
+  const cleanRole = (role || 'employee').trim().toLowerCase();
+  const cleanId = (identifier || '').trim().toLowerCase();
+  return `${cleanRole}:${cleanId}`;
+};
 
 // Safe localStorage abstraction supporting both browser and server/test environments
 let memoryStorage: Record<string, string> = {};
@@ -209,6 +215,12 @@ export const getCredentialsStore = (): Record<string, { password: string; profil
   // 1. Seed initial credentials
   INITIAL_CREDENTIALS.forEach((cred) => {
     const lowerEmail = cred.email.trim().toLowerCase();
+    const roleKey = getCredentialStorageKey(cred.role, lowerEmail);
+
+    store[roleKey] = {
+      password: cred.defaultPassword,
+      profile: { ...cred }
+    };
     store[lowerEmail] = {
       password: cred.defaultPassword,
       profile: { ...cred }
@@ -221,26 +233,32 @@ export const getCredentialsStore = (): Record<string, { password: string; profil
   activeRoster.forEach((u) => {
     if (!u.email || u.email === '-' || !u.email.includes('@')) return;
     const lowerEmail = u.email.trim().toLowerCase();
-    const existing = store[lowerEmail];
-    const defaultPw = u.password || (existing ? existing.password : (lowerEmail.split('@')[0] || '').toLowerCase());
+    const userRole: 'Admin' | 'GT' | 'Associate' = u.role === 'Admin' ? 'Admin' : u.role === 'Associate' ? 'Associate' : 'GT';
+    const roleKey = getCredentialStorageKey(userRole, lowerEmail);
+
+    const defaultPw = u.password || getDefaultPasswordForEmail(lowerEmail);
     const parts = (u.name || '').trim().split(' ');
 
-    const userRole: 'Admin' | 'GT' | 'Associate' = u.role === 'Admin' ? 'Admin' : u.role === 'Associate' ? 'Associate' : 'GT';
+    const profileData: RegisteredCredential = {
+      email: u.email.trim(),
+      defaultPassword: defaultPw,
+      role: userRole,
+      name: u.name,
+      firstName: parts[0] || u.name,
+      lastName: parts.slice(1).join(' ') || '',
+      batch: u.batch || 'GT-2026-Batch-01',
+      avatar: u.role === 'Admin'
+        ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+    };
 
+    store[roleKey] = {
+      password: defaultPw,
+      profile: profileData
+    };
     store[lowerEmail] = {
       password: defaultPw,
-      profile: {
-        email: u.email.trim(),
-        defaultPassword: defaultPw,
-        role: userRole,
-        name: u.name,
-        firstName: parts[0] || u.name,
-        lastName: parts.slice(1).join(' ') || '',
-        batch: u.batch || 'GT-2026-Batch-01',
-        avatar: u.role === 'Admin'
-          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-          : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-      }
+      profile: profileData
     };
   });
 
@@ -250,24 +268,9 @@ export const getCredentialsStore = (): Record<string, { password: string; profil
     if (raw) {
       const overrides = JSON.parse(raw);
       if (typeof overrides === 'object' && overrides !== null) {
-        Object.keys(overrides).forEach((emailKey) => {
-          const lowerKey = emailKey.toLowerCase();
-          if (typeof overrides[emailKey] === 'string') {
-            if (store[lowerKey]) {
-              store[lowerKey].password = overrides[emailKey];
-            } else {
-              store[lowerKey] = {
-                password: overrides[emailKey],
-                profile: {
-                  email: emailKey,
-                  defaultPassword: overrides[emailKey],
-                  role: emailKey.toLowerCase().includes('admin') ? 'Admin' : 'GT',
-                  name: emailKey.split('@')[0],
-                  firstName: emailKey.split('@')[0],
-                  lastName: ''
-                }
-              };
-            }
+        Object.keys(overrides).forEach((key) => {
+          if (typeof overrides[key] === 'string' && store[key.toLowerCase()]) {
+            store[key.toLowerCase()].password = overrides[key];
           }
         });
       }
@@ -312,11 +315,12 @@ export const isAllowedDomain = (email: string): boolean => {
 };
 
 /**
- * Authenticates a user against the registered credentials store
+ * Authenticates a user against the registered credentials store with strict Role-Scoping
  */
 export const authenticateLocalUser = (
   email: string,
-  password?: string
+  password?: string,
+  targetRole?: string
 ): { success: boolean; data?: AuthUserDto; message?: string } => {
   const cleanEmail = email.trim().toLowerCase();
 
@@ -328,45 +332,120 @@ export const authenticateLocalUser = (
     };
   }
 
-  const store = getCredentialsStore();
-  const userEntry = store[cleanEmail];
+  // 2. Load roster records and seed credentials matching cleanEmail
+  const roster = getUserManagementRecords();
+  const rosterMatches = roster.filter(
+    (u) => u.email && u.email !== '-' && u.email.trim().toLowerCase() === cleanEmail
+  );
 
-  // 2. Check if user exists in credentials store
-  if (!userEntry) {
-    return {
-      success: false,
-      message: 'Incorrect email ID or password.'
-    };
-  }
+  const seedMatches = INITIAL_CREDENTIALS.filter(
+    (c) => c.email.trim().toLowerCase() === cleanEmail
+  );
 
-  // 3. Strict Case-Sensitive Password Match against Active Stored Password
+  let rawOverrides: Record<string, string> = {};
+  try {
+    const raw = safeLocalStorage.getItem(STORAGE_KEY);
+    if (raw) rawOverrides = JSON.parse(raw) || {};
+  } catch {}
+
   const cleanPassword = (password || '').trim();
-  const storedPassword = (userEntry.password || '').trim();
 
-  // Password matching must be strictly case-sensitive against the active stored password.
-  const isMatch = cleanPassword === storedPassword;
+  // Helper to determine active password for a given candidate role & account
+  const getAccountPassword = (role: string, uId?: string, recordPassword?: string): string => {
+    const rKey = getCredentialStorageKey(role, cleanEmail);
+    if (rawOverrides[rKey]) return rawOverrides[rKey].trim();
+    if (uId && rawOverrides[uId]) return rawOverrides[uId].trim();
+    if (rawOverrides[cleanEmail]) return rawOverrides[cleanEmail].trim();
+    if (recordPassword && recordPassword.trim() && recordPassword !== '-') return recordPassword.trim();
+    return getDefaultPasswordForEmail(cleanEmail);
+  };
 
-  if (!password || !isMatch) {
+  // Build candidate account list
+  let candidateAccounts: Array<{
+    id: string;
+    email: string;
+    role: 'Admin' | 'Employee' | 'Associate';
+    name: string;
+    activePassword: string;
+    batch?: string;
+  }> = [];
+
+  rosterMatches.forEach((r) => {
+    const rRole: 'Admin' | 'Employee' | 'Associate' =
+      r.role === 'Admin' ? 'Admin' : r.role === 'Associate' ? 'Associate' : 'Employee';
+    candidateAccounts.push({
+      id: r.id,
+      email: r.email,
+      role: rRole,
+      name: r.name,
+      activePassword: getAccountPassword(rRole, r.id, r.password),
+      batch: r.batch
+    });
+  });
+
+  seedMatches.forEach((s) => {
+    const sRole: 'Admin' | 'Employee' | 'Associate' = s.role === 'Admin' ? 'Admin' : 'Employee';
+    const exists = candidateAccounts.some((c) => c.role === sRole && c.email.toLowerCase() === cleanEmail);
+    if (!exists) {
+      candidateAccounts.push({
+        id: `seed-${sRole.toLowerCase()}-${cleanEmail}`,
+        email: s.email,
+        role: sRole,
+        name: s.name,
+        activePassword: getAccountPassword(sRole, undefined, s.defaultPassword),
+        batch: s.batch
+      });
+    }
+  });
+
+  if (candidateAccounts.length === 0) {
     return {
       success: false,
       message: 'Incorrect email ID or password.'
     };
   }
 
-  // 4. Return valid authenticated user DTO
-  const user = userEntry.profile;
-  const token = `token-${user.role.toLowerCase()}-${user.email}-${Date.now()}`;
+  // Filter or prioritize targetRole if specified
+  if (targetRole) {
+    const cleanTargetRole = targetRole.trim().toLowerCase();
+    const roleMatched = candidateAccounts.filter((acc) => {
+      const accRole = acc.role.toLowerCase();
+      if (accRole === cleanTargetRole) return true;
+      if (cleanTargetRole === 'admin' && accRole === 'admin') return true;
+      if ((cleanTargetRole === 'employee' || cleanTargetRole === 'gt') && (accRole === 'employee' || accRole === 'gt')) return true;
+      if (cleanTargetRole === 'associate' && accRole === 'associate') return true;
+      return false;
+    });
+    if (roleMatched.length > 0) {
+      candidateAccounts = roleMatched;
+    }
+  }
+
+  // Match password strictly
+  const matchedAccount = candidateAccounts.find(
+    (acc) => acc.activePassword === cleanPassword
+  );
+
+  if (!matchedAccount || !password) {
+    return {
+      success: false,
+      message: 'Incorrect email ID or password.'
+    };
+  }
+
+  const parts = matchedAccount.name.trim().split(' ');
+  const token = `token-${matchedAccount.role.toLowerCase()}-${matchedAccount.email}-${Date.now()}`;
 
   return {
     success: true,
     data: {
-      id: `user-${user.email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}`,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
+      id: matchedAccount.id,
+      email: matchedAccount.email,
+      firstName: parts[0] || matchedAccount.name,
+      lastName: parts.slice(1).join(' ') || '',
+      role: matchedAccount.role,
       token,
-      batch: user.batch || 'GT-2026-Batch-01',
+      batch: matchedAccount.batch || 'GT-2026-Batch-01',
       xp: 2850,
       level: 5,
       streakDays: 14,
@@ -378,12 +457,13 @@ export const authenticateLocalUser = (
 };
 
 /**
- * Changes a user's password and persists it to localStorage
+ * Changes a user's password strictly for their specific Role Account and persists it
  */
 export const changeUserPassword = (
   email: string,
   currentPassword: string,
-  newPassword: string
+  newPassword: string,
+  targetRole?: string
 ): { success: boolean; message: string } => {
   const cleanEmail = email.trim().toLowerCase();
 
@@ -394,17 +474,8 @@ export const changeUserPassword = (
     };
   }
 
-  const store = getCredentialsStore();
-  const userEntry = store[cleanEmail];
-
-  if (!userEntry) {
-    return {
-      success: false,
-      message: 'User account not found.'
-    };
-  }
-
-  if (currentPassword !== userEntry.password) {
+  const authResult = authenticateLocalUser(cleanEmail, currentPassword, targetRole);
+  if (!authResult.success || !authResult.data) {
     return {
       success: false,
       message: 'Current password is incorrect.'
@@ -425,25 +496,34 @@ export const changeUserPassword = (
     };
   }
 
-  // 1. Save new password into persistent storage override
+  const userRole = authResult.data.role;
+  const rKey = getCredentialStorageKey(userRole, cleanEmail);
+
+  // 1. Save new password into persistent storage override under role-scoped key
   try {
     let overrides: Record<string, string> = {};
     const raw = safeLocalStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      overrides = JSON.parse(raw) || {};
-    }
-    overrides[cleanEmail] = newPassword;
+    if (raw) overrides = JSON.parse(raw) || {};
+    overrides[rKey] = newPassword;
+    overrides[authResult.data.id] = newPassword;
     safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch (e) {
     console.warn('Failed to persist new password to storage', e);
   }
 
-  // 2. Also update User Management roster record if present
+  // 2. Also update User Management roster record for THAT SPECIFIC RECORD ONLY
   try {
     const roster = getUserManagementRecords();
     let updated = false;
     const updatedRoster = roster.map((r) => {
-      if (r.email && r.email.trim().toLowerCase() === cleanEmail) {
+      if (
+        r.id === authResult.data?.id ||
+        (r.email &&
+          r.email.trim().toLowerCase() === cleanEmail &&
+          (r.role.toLowerCase() === userRole.toLowerCase() ||
+            (r.role === 'Employee' && userRole === 'GT') ||
+            (r.role === 'Associate' && userRole === 'Associate')))
+      ) {
         updated = true;
         return { ...r, password: newPassword };
       }
@@ -467,7 +547,8 @@ export const changeUserPassword = (
  */
 export const resetUserPassword = (
   email: string,
-  newPassword: string
+  newPassword: string,
+  targetRole?: string
 ): { success: boolean; message: string } => {
   const cleanEmail = email.trim().toLowerCase();
 
@@ -478,16 +559,6 @@ export const resetUserPassword = (
     };
   }
 
-  const store = getCredentialsStore();
-  const userEntry = store[cleanEmail];
-
-  if (!userEntry) {
-    return {
-      success: false,
-      message: 'User account not found.'
-    };
-  }
-
   if (!newPassword || newPassword.length < 8) {
     return {
       success: false,
@@ -495,23 +566,35 @@ export const resetUserPassword = (
     };
   }
 
+  const roster = getUserManagementRecords();
+  let matched = roster.find(
+    (u) =>
+      u.email &&
+      u.email.trim().toLowerCase() === cleanEmail &&
+      (!targetRole || u.role.toLowerCase() === targetRole.toLowerCase())
+  );
+
+  const matchedRole = matched ? matched.role : targetRole || 'Employee';
+  const rKey = getCredentialStorageKey(matchedRole, cleanEmail);
+
   try {
     let overrides: Record<string, string> = {};
     const raw = safeLocalStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      overrides = JSON.parse(raw) || {};
-    }
-    overrides[cleanEmail] = newPassword;
+    if (raw) overrides = JSON.parse(raw) || {};
+    overrides[rKey] = newPassword;
+    if (matched) overrides[matched.id] = newPassword;
     safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch (e) {
     console.warn('Failed to persist reset password to storage', e);
   }
 
   try {
-    const roster = getUserManagementRecords();
     let updated = false;
     const updatedRoster = roster.map((r) => {
-      if (r.email && r.email.trim().toLowerCase() === cleanEmail) {
+      if (
+        (matched && r.id === matched.id) ||
+        (r.email && r.email.trim().toLowerCase() === cleanEmail && r.role === matchedRole)
+      ) {
         updated = true;
         return { ...r, password: newPassword };
       }
@@ -725,7 +808,7 @@ const USER_MGMT_STORAGE_KEY = 'gt_user_management_records_store_v1';
 
 export const getDefaultPasswordForEmail = (email: string): string => {
   if (!email || email === '-' || !email.includes('@')) return '';
-  return email.split('@')[0].toLowerCase();
+  return email.split('@')[0].trim().toLowerCase();
 };
 
 export const getUserManagementRecords = (): UserManagementRecord[] => {
@@ -745,6 +828,33 @@ export const getUserManagementRecords = (): UserManagementRecord[] => {
 
 export const saveUserManagementRecords = (records: UserManagementRecord[]): void => {
   try {
+    const current = getUserManagementRecords();
+    const currentIds = new Set(current.map((c) => c.id));
+    const newIds = new Set(records.map((r) => r.id));
+
+    // Identify deleted records to clear password overrides
+    const deletedRecords = current.filter((c) => !newIds.has(c.id));
+    if (deletedRecords.length > 0) {
+      try {
+        const rawOverrides = safeLocalStorage.getItem(STORAGE_KEY);
+        if (rawOverrides) {
+          const overrides = JSON.parse(rawOverrides) || {};
+          deletedRecords.forEach((d) => {
+            const cleanEmail = (d.email || '').trim().toLowerCase();
+            const cleanPhone = (d.phoneNumber || '').replace(/\D/g, '').trim();
+            const rRole = d.role || 'Employee';
+
+            delete overrides[getCredentialStorageKey(rRole, cleanEmail)];
+            delete overrides[getCredentialStorageKey(rRole, cleanPhone)];
+            delete overrides[d.id];
+            delete overrides[cleanEmail];
+            delete overrides[cleanPhone];
+          });
+          safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+        }
+      } catch {}
+    }
+
     safeLocalStorage.setItem(USER_MGMT_STORAGE_KEY, JSON.stringify(records));
   } catch (e) {
     console.warn('Failed to save user management records to storage', e);
