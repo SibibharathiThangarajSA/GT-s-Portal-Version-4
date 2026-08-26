@@ -355,7 +355,6 @@ export const authenticateLocalUser = (
     const rKey = getCredentialStorageKey(role, cleanEmail);
     if (rawOverrides[rKey]) return rawOverrides[rKey].trim();
     if (uId && rawOverrides[uId]) return rawOverrides[uId].trim();
-    if (rawOverrides[cleanEmail]) return rawOverrides[cleanEmail].trim();
     if (recordPassword && recordPassword.trim() && recordPassword !== '-') return recordPassword.trim();
     return getDefaultPasswordForEmail(cleanEmail);
   };
@@ -408,13 +407,13 @@ export const authenticateLocalUser = (
   // Filter or prioritize targetRole if specified
   if (targetRole) {
     const cleanTargetRole = targetRole.trim().toLowerCase();
+    const isCompanionTarget = cleanTargetRole === 'gt' || cleanTargetRole === 'employee' || cleanTargetRole === 'associate';
+
     const roleMatched = candidateAccounts.filter((acc) => {
       const accRole = acc.role.toLowerCase();
-      if (accRole === cleanTargetRole) return true;
-      if (cleanTargetRole === 'admin' && accRole === 'admin') return true;
-      if ((cleanTargetRole === 'employee' || cleanTargetRole === 'gt') && (accRole === 'employee' || accRole === 'gt')) return true;
-      if (cleanTargetRole === 'associate' && accRole === 'associate') return true;
-      return false;
+      if (cleanTargetRole === 'admin') return accRole === 'admin';
+      if (isCompanionTarget) return accRole === 'employee' || accRole === 'gt' || accRole === 'associate';
+      return accRole === cleanTargetRole;
     });
     if (roleMatched.length > 0) {
       candidateAccounts = roleMatched;

@@ -1358,9 +1358,11 @@ export const mergeUserRosters = (
 
   const getRecordKey = (r: UserManagementRecord): string => {
     if (r.id) return r.id;
-    if (r.email && r.email !== '-') return `email:${r.email.trim().toLowerCase()}`;
-    if (r.phoneNumber) return `phone:${r.phoneNumber.replace(/\D/g, '').trim()}`;
-    return `name:${r.name}`;
+    const cleanEmail = r.email && r.email !== '-' ? r.email.trim().toLowerCase() : '';
+    const cleanRole = (r.role || 'Employee').trim().toLowerCase();
+    if (cleanEmail) return `email:${cleanRole}:${cleanEmail}`;
+    if (r.phoneNumber) return `phone:${cleanRole}:${r.phoneNumber.replace(/\D/g, '').trim()}`;
+    return `name:${cleanRole}:${r.name}`;
   };
 
   // Add server records first

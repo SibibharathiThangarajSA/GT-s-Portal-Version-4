@@ -88,8 +88,9 @@ export const AdminAuthGate: React.FC<AdminAuthGateProps> = ({ onLoginSuccess, on
               type="email"
               name="admin_login_email"
               autoComplete="off"
+              maxLength={320}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value.slice(0, 320))}
               placeholder="Anukraha.Magdalene@valuemomentum.com"
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               required

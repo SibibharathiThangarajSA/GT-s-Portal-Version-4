@@ -703,10 +703,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="email"
                   name="gt_user_email"
                   autoComplete="off"
+                  maxLength={320}
                   placeholder="employee.name@valuemomentum.com"
                   value={email}
                   onChange={(e) => {
-                    setEmail(e.target.value);
+                    setEmail(e.target.value.slice(0, 320));
                     if (errorMsg) setErrorMsg('');
                   }}
                   className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg

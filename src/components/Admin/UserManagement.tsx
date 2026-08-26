@@ -1087,10 +1087,11 @@ export const UserManagement: React.FC = () => {
                             <div>
                               <input
                                 type="email"
+                                maxLength={320}
                                 required={!isAssociate}
                                 disabled={isEmailDisabled}
                                 value={isEmailDisabled ? '' : (entry.email || '')}
-                                onChange={(e) => handleUpdateEntry(index, 'email', e.target.value)}
+                                onChange={(e) => handleUpdateEntry(index, 'email', e.target.value.slice(0, 320))}
                                 placeholder={
                                   isAssociate
                                     ? isEmailDisabled
@@ -1403,9 +1404,10 @@ export const UserManagement: React.FC = () => {
                     <div>
                       <input
                         type="email"
+                        maxLength={320}
                         disabled={isEmailDisabled}
                         value={isEmailDisabled ? '' : (editingUser.email || '')}
-                        onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                        onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value.slice(0, 320) })}
                         placeholder={isEmailDisabled ? 'Disabled for Associate (Check Enable to unlock)' : 'name@valuemomentum.com'}
                         className={`w-full border rounded-xl px-3.5 py-2.5 shadow-xs focus:outline-none transition-colors ${
                           isEmailDisabled
