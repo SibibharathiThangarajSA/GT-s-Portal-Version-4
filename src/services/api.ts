@@ -1357,11 +1357,13 @@ export const mergeUserRosters = (
   const map = new Map<string, UserManagementRecord>();
 
   const getRecordKey = (r: UserManagementRecord): string => {
-    if (r.id) return r.id;
     const cleanEmail = r.email && r.email !== '-' ? r.email.trim().toLowerCase() : '';
     const cleanRole = (r.role || 'Employee').trim().toLowerCase();
+    const cleanPhone = (r.phoneNumber || '').replace(/\D/g, '').trim();
+
     if (cleanEmail) return `email:${cleanRole}:${cleanEmail}`;
-    if (r.phoneNumber) return `phone:${cleanRole}:${r.phoneNumber.replace(/\D/g, '').trim()}`;
+    if (cleanPhone) return `phone:${cleanRole}:${cleanPhone}`;
+    if (r.id) return `id:${r.id}`;
     return `name:${cleanRole}:${r.name}`;
   };
 

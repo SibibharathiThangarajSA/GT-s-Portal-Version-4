@@ -419,10 +419,15 @@ export const authenticateLocalUser = (
     }
   }
 
-  // Match password strictly
-  const matchedAccount = candidateAccounts.find(
-    (acc) => acc.activePassword === cleanPassword
-  );
+  // Match password: check exact match or case-insensitive default password match
+  const matchedAccount = candidateAccounts.find((acc) => {
+    const activePw = (acc.activePassword || '').trim();
+    const inputPw = cleanPassword.trim();
+    if (!inputPw || !activePw) return false;
+    if (activePw === inputPw) return true;
+    if (activePw.toLowerCase() === inputPw.toLowerCase()) return true;
+    return false;
+  });
 
   if (!matchedAccount || !password) {
     return {

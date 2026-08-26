@@ -62,10 +62,13 @@ test('Comprehensive Auth, Add Credential & Password Change Test Suite', async (t
     assert.equal(res.data?.role, 'Employee');
   });
 
-  await t.test('2.3 NEGATIVE: Password case-sensitivity check (Upper case fails)', () => {
-    const res = authenticateLocalUser('Sibibharathi.Thangaraj@valuemomentum.com', 'SIBIBHARATHI.THANGARAJ', 'GT');
-    assert.equal(res.success, false);
-    assert.equal(res.message, 'Incorrect email ID or password.');
+  await t.test('2.3 POSITIVE: Case-insensitive default password matching (supports TitleCase and lowercase)', () => {
+    const resUpper = authenticateLocalUser('Sibibharathi.Thangaraj@valuemomentum.com', 'Sibibharathi.Thangaraj', 'GT');
+    assert.equal(resUpper.success, true);
+    assert.equal(resUpper.data?.role, 'Employee');
+
+    const resLower = authenticateLocalUser('Sibibharathi.Thangaraj@valuemomentum.com', 'sibibharathi.thangaraj', 'GT');
+    assert.equal(resLower.success, true);
   });
 
   await t.test('2.4 NEGATIVE: Incorrect password fails authentication', () => {
