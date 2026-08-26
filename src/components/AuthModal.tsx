@@ -236,7 +236,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const res = await loginApi(email.trim(), password.trim());
+      const res = await loginApi(email.trim(), password.trim(), selectedRole);
       setIsLoading(false);
 
       if (res.success && res.data) {
