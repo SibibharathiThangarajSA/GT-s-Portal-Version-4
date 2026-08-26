@@ -118,73 +118,46 @@ const getSavedSession = () => {
 };
 
 export function App() {
-  const initialHashState = getHashState();
-  const savedSession = getSavedSession();
-
-  // Tab session check: same tab reloads preserve route, new tab pasted links open on Landing page
-  const isSameTabSession = typeof window !== 'undefined' && sessionStorage.getItem('gt_tab_session_active') === 'true';
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem('gt_tab_session_active', 'true');
-  }
-
-  const startingPortal = isSameTabSession
-    ? ((initialHashState.portal !== 'Landing') ? initialHashState.portal : (savedSession?.activePortal || 'Landing'))
-    : 'Landing';
-
-  const [currentUser, setCurrentUser] = useState<User>(savedSession?.currentUser || defaultGuestUser);
+  const [currentUser, setCurrentUser] = useState<User>(defaultGuestUser);
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Global Authentication State - User remains logged in across tabs
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(savedSession?.isAuthenticated ?? false);
+  // Global Authentication State - Hard refresh resets authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalRole, setAuthModalRole] = useState<'GT' | 'Admin'>('GT');
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
 
   // Admin Authentication State
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(savedSession?.isAdminAuthenticated ?? false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   
-  // Navigation State - Same tab preserves route; new tab starts clean on Landing Page
-  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(startingPortal);
-  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
-    isSameTabSession && initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState 
-      ? initialHashState.gtViewMode 
-      : (savedSession?.gtViewMode || 'sessions')
-  );
-  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>(
-    isSameTabSession && initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState 
-      ? initialHashState.adminViewMode 
-      : (savedSession?.adminViewMode || 'tracker')
-  );
+  // Navigation State - Always start on Landing Page
+  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>('Landing');
+  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>('sessions');
+  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>('tracker');
 
-  // Detail Selection State - Preserved only in same tab
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    isSameTabSession && initialHashState.portal === 'GT' && 'selectedSessionId' in initialHashState
-      ? (initialHashState.selectedSessionId ?? null)
-      : (isSameTabSession ? (savedSession?.selectedSessionId ?? null) : null)
-  );
-  const [sessionDetailTab, setSessionDetailTab] = useState<string>(
-    isSameTabSession && initialHashState.portal === 'GT' && 'sessionTab' in initialHashState
-      ? (initialHashState.sessionTab ?? 'roadmap')
-      : (savedSession?.sessionDetailTab ?? 'roadmap')
-  );
-  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>(
-    isSameTabSession && initialHashState.portal === 'GT' && 'sessionTopicId' in initialHashState
-      ? (initialHashState.sessionTopicId ?? '')
-      : (savedSession?.sessionDetailTopicId ?? '')
-  );
+  // Detail Selection State
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [sessionDetailTab, setSessionDetailTab] = useState<string>('roadmap');
+  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>('');
   const [activeAdminSession, setActiveAdminSession] = useState<Session | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [restoredActiveQuiz, setRestoredActiveQuiz] = useState<boolean>(false);
 
-  // Enforce Landing page when pasting link in a fresh new tab
+  // Hard Refresh -> Always logout and reset cleanly to Landing Page
   useEffect(() => {
-    if (!isSameTabSession) {
-      setActivePortal('Landing');
-      setSelectedSessionId(null);
-      setActiveQuiz(null);
-      if (typeof window !== 'undefined') {
-        window.location.hash = '#landing';
-      }
+    try {
+      localStorage.removeItem('gt_auth_session');
+      sessionStorage.removeItem('gt_auth_session');
+      sessionStorage.removeItem('gt_tab_session_active');
+    } catch (e) {}
+    setIsAuthenticated(false);
+    setIsAdminAuthenticated(false);
+    setCurrentUser(defaultGuestUser);
+    setActivePortal('Landing');
+    setSelectedSessionId(null);
+    setActiveQuiz(null);
+    if (typeof window !== 'undefined') {
+      window.location.hash = '#landing';
     }
   }, []);
 
@@ -221,10 +194,10 @@ export function App() {
     setIsChangePasswordOpen(true);
   };
 
+  // Login Success Handler: Authenticates user and presents Landing Page with portal entry
   const handleAuthSuccess = (role: 'GT' | 'Admin' | 'Associate' | string, userData?: { name: string; email: string; isGuest?: boolean }) => {
     setIsAuthenticated(true);
     const isRoleAdmin = Boolean(role && (role === 'Admin' || role.toLowerCase().includes('admin')));
-    const mappedPortal: 'GT' | 'Admin' = isRoleAdmin ? 'Admin' : 'GT';
     if (userData) {
       let matchedRole = isRoleAdmin ? 'Admin' : 'Employee';
       let matchedDesig = isRoleAdmin ? 'Lead - L&D Leadership' : 'Graduate Trainee';
@@ -247,14 +220,18 @@ export function App() {
         isGuest: userData.isGuest ?? prev.isGuest
       }));
     }
-    setActivePortal(mappedPortal);
-    if (mappedPortal === 'Admin') {
+
+    // Always navigate to Landing Page upon successful login as requested
+    setActivePortal('Landing');
+    if (isRoleAdmin) {
       setIsAdminAuthenticated(true);
-      setAdminViewMode('tracker');
     } else {
       setIsAdminAuthenticated(false);
     }
     setIsAuthModalOpen(false);
+    if (typeof window !== 'undefined') {
+      window.location.hash = '#landing';
+    }
   };
 
   const { addToast } = useToast();
@@ -263,47 +240,19 @@ export function App() {
     try {
       localStorage.removeItem('gt_auth_session');
       sessionStorage.removeItem('gt_auth_session');
+      sessionStorage.removeItem('gt_tab_session_active');
     } catch (e) {}
     setIsAuthenticated(false);
     setIsAdminAuthenticated(false);
+    setCurrentUser(defaultGuestUser);
     setActivePortal('Landing');
     setSelectedSessionId(null);
     setActiveQuiz(null);
-    window.location.hash = '#landing';
+    if (typeof window !== 'undefined') {
+      window.location.hash = '#landing';
+    }
     addToast('info', 'You have been logged out.');
   };
-
-  // Persist session & current navigation state across browser refreshes
-  useEffect(() => {
-    try {
-      if (activePortal !== 'Landing' || isAuthenticated) {
-        const sessionData = {
-          isAuthenticated,
-          isAdminAuthenticated,
-          currentUser,
-          activePortal,
-          gtViewMode,
-          adminViewMode,
-          selectedSessionId,
-          sessionDetailTab,
-          sessionDetailTopicId
-        };
-        localStorage.setItem('gt_auth_session', JSON.stringify(sessionData));
-      } else {
-        localStorage.removeItem('gt_auth_session');
-      }
-    } catch (e) {}
-  }, [
-    isAuthenticated,
-    isAdminAuthenticated,
-    currentUser,
-    activePortal,
-    gtViewMode,
-    adminViewMode,
-    selectedSessionId,
-    sessionDetailTab,
-    sessionDetailTopicId
-  ]);
 
   // Sync URL Hash whenever navigation state changes (Pushing browser history entries)
   useEffect(() => {
