@@ -244,19 +244,24 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
         className="w-full h-full object-contain cursor-pointer"
       />
 
-      {/* Large Central Play Button Overlay when paused */}
-      {!isPlaying && (
-        <div
-          onClick={togglePlay}
-          className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center cursor-pointer transition-all duration-300 z-10"
+      {/* Large Central Play Button Overlay (Visible when PAUSED) */}
+      <div
+        onClick={togglePlay}
+        className={`absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center cursor-pointer transition-all duration-300 z-20 ${
+          !isPlaying ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-105 pointer-events-none'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+          }}
+          className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-600/90 text-white flex items-center justify-center shadow-2xl shadow-blue-600/50 hover:scale-110 hover:bg-blue-600 transition-all duration-300 border-2 border-white/20 pl-1 cursor-pointer"
         >
-          <div
-            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-600/90 text-white flex items-center justify-center shadow-2xl shadow-blue-600/50 hover:scale-110 hover:bg-blue-600 transition-all duration-300 border-2 border-white/20 pl-1 pointer-events-none"
-          >
-            <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-white" />
-          </div>
-        </div>
-      )}
+          <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-white" />
+        </button>
+      </div>
 
       {/* Video Title Header Overlay */}
       {title && (
