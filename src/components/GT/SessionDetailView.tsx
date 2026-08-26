@@ -6,6 +6,7 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { useToast } from '../../context/ToastContext';
 import { openDocument, downloadDocument } from '../../services/documentAccess';
 import { UploadProgressOverlay } from '../UploadProgressOverlay';
+import { CustomVideoPlayer } from '../CustomVideoPlayer';
 import {
   ArrowLeft,
   BookOpen,
@@ -654,13 +655,11 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
               );
             }
             return (
-              <video
-                controls
-                playsInline
+              <CustomVideoPlayer
                 key={overviewVideoUrl}
                 src={overviewVideoUrl}
-                className="w-full h-full object-contain bg-black"
                 poster="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&auto=format&fit=crop&q=80"
+                title={session?.name ? `${session.name} - Session Video` : "Overview Video"}
               />
             );
           })() : (

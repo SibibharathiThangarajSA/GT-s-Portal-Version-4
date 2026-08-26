@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SITE_VIDEOS } from '../../data/videoAssets';
 import { appConfig, AppConfig } from '../../config/appConfig';
+import { CustomVideoPlayer } from '../CustomVideoPlayer';
 import {
   BookOpen,
   Play,
@@ -187,24 +188,12 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
             onClick={(e) => handleTogglePlay(e)}
             className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200/80 shadow-xl shadow-blue-900/12 group cursor-pointer transition-all duration-300 hover:scale-[1.005] bg-slate-950"
           >
-            {/* HTML5 Video Element */}
-            <video
-              ref={videoRef}
+            {/* Custom Video Player */}
+            <CustomVideoPlayer
+              key={currentVideo.id}
               src={currentVideo.sampleVideoUrl}
               poster={currentVideo.thumbnailUrl}
-              preload="metadata"
-              playsInline
-              controls
-              onTimeUpdate={() => {
-                if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
-              }}
-              onLoadedMetadata={() => {
-                if (videoRef.current) setDuration(videoRef.current.duration);
-              }}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              onEnded={() => setIsPlaying(false)}
-              className="w-full h-full object-cover"
+              title={currentVideo.title}
             />
 
             {/* Overlay when not playing */}
@@ -337,13 +326,13 @@ export const EnterpriseHeroSection: React.FC<EnterpriseHeroSectionProps> = ({
                 </button>
               </div>
 
-              {/* Video Element */}
-              <div className="aspect-video w-full bg-black relative">
-                <video
+              {/* Custom Video Player Component */}
+              <div className="w-full bg-black relative">
+                <CustomVideoPlayer
                   src={currentVideo.sampleVideoUrl}
-                  controls
-                  autoPlay
-                  className="w-full h-full object-contain"
+                  poster={currentVideo.thumbnailUrl}
+                  title={currentVideo.title}
+                  autoPlay={true}
                 />
               </div>
             </motion.div>

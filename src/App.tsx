@@ -109,45 +109,66 @@ const buildHashFromState = (
   return '#landing';
 };
 
+const getSavedSession = () => {
+  try {
+    const saved = typeof window !== 'undefined' ? (localStorage.getItem('gt_auth_session') || sessionStorage.getItem('gt_auth_session')) : null;
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return null;
+};
+
 export function App() {
   const initialHashState = getHashState();
+  const savedSession = getSavedSession();
 
-  const [currentUser, setCurrentUser] = useState<User>(defaultGuestUser);
+  const startingPortal = (initialHashState.portal !== 'Landing')
+    ? initialHashState.portal
+    : (savedSession?.activePortal || 'Landing');
+
+  const startingAuth = savedSession?.isAuthenticated ?? (startingPortal !== 'Landing');
+
+  const [currentUser, setCurrentUser] = useState<User>(savedSession?.currentUser || defaultGuestUser);
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Global Authentication State - Always starts clean on Landing page on fresh link open
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  // Global Authentication State - Persisted across page refresh
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(startingAuth);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalRole, setAuthModalRole] = useState<'GT' | 'Admin'>('GT');
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
 
-  // Admin Authentication State
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+  // Admin Authentication State - Persisted across page refresh
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(
+    savedSession?.isAdminAuthenticated ?? (startingPortal === 'Admin')
+  );
   
-  // Navigation State - Always default to Landing page when visiting site root
-  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>('Landing');
+  // Navigation State - Preserved on browser refresh
+  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(startingPortal);
   const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
-    initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState ? initialHashState.gtViewMode : 'sessions'
+    initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState 
+      ? initialHashState.gtViewMode 
+      : (savedSession?.gtViewMode || 'sessions')
   );
   const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>(
-    initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState ? initialHashState.adminViewMode : 'tracker'
+    initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState 
+      ? initialHashState.adminViewMode 
+      : (savedSession?.adminViewMode || 'tracker')
   );
 
   // Detail Selection State
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     initialHashState.portal === 'GT' && 'selectedSessionId' in initialHashState
       ? (initialHashState.selectedSessionId ?? null)
-      : null
+      : (savedSession?.selectedSessionId ?? null)
   );
   const [sessionDetailTab, setSessionDetailTab] = useState<string>(
     initialHashState.portal === 'GT' && 'sessionTab' in initialHashState
       ? (initialHashState.sessionTab ?? 'roadmap')
-      : 'roadmap'
+      : (savedSession?.sessionDetailTab ?? 'roadmap')
   );
   const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>(
     initialHashState.portal === 'GT' && 'sessionTopicId' in initialHashState
       ? (initialHashState.sessionTopicId ?? '')
-      : ''
+      : (savedSession?.sessionDetailTopicId ?? '')
   );
   const [activeAdminSession, setActiveAdminSession] = useState<Session | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
@@ -175,8 +196,6 @@ export function App() {
   useEffect(() => {
     fetchUserManagementRecordsApi().catch(() => {});
   }, []);
-
-
 
   // Auth Handlers
   const handleOpenLogin = (role: 'GT' | 'Admin' = 'GT') => {
@@ -227,7 +246,10 @@ export function App() {
   const { addToast } = useToast();
 
   const handleLogout = () => {
-    localStorage.removeItem('gt_auth_session');
+    try {
+      localStorage.removeItem('gt_auth_session');
+      sessionStorage.removeItem('gt_auth_session');
+    } catch (e) {}
     setIsAuthenticated(false);
     setIsAdminAuthenticated(false);
     setActivePortal('Landing');
@@ -237,13 +259,37 @@ export function App() {
     addToast('info', 'You have been logged out.');
   };
 
-  // Clean up any legacy saved session so every page open starts clean on Landing Page
+  // Persist session & current navigation state across browser refreshes
   useEffect(() => {
     try {
-      localStorage.removeItem('gt_auth_session');
-      sessionStorage.removeItem('gt_auth_session');
+      if (activePortal !== 'Landing' || isAuthenticated) {
+        const sessionData = {
+          isAuthenticated,
+          isAdminAuthenticated,
+          currentUser,
+          activePortal,
+          gtViewMode,
+          adminViewMode,
+          selectedSessionId,
+          sessionDetailTab,
+          sessionDetailTopicId
+        };
+        localStorage.setItem('gt_auth_session', JSON.stringify(sessionData));
+      } else {
+        localStorage.removeItem('gt_auth_session');
+      }
     } catch (e) {}
-  }, []);
+  }, [
+    isAuthenticated,
+    isAdminAuthenticated,
+    currentUser,
+    activePortal,
+    gtViewMode,
+    adminViewMode,
+    selectedSessionId,
+    sessionDetailTab,
+    sessionDetailTopicId
+  ]);
 
   // Sync URL Hash whenever navigation state changes (Pushing browser history entries)
   useEffect(() => {
