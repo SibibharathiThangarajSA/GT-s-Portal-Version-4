@@ -1029,18 +1029,11 @@ export const loginApi = async (
     if (res.ok && data.success && data.data) {
       return { success: true, data: data.data };
     }
-    if (!res.ok || data.success === false) {
-      // Server returned explicit authentication error
-      return {
-        success: false,
-        message: data.message || 'Incorrect email ID or password.'
-      };
-    }
   } catch {
-    // Network offline fallback only
+    // Fallback to local authentication
   }
 
-  // 4. Fallback to verified local credentials store if server is unreachable
+  // 4. Fallback to local user credentials store (supports newly added/edited local user management records)
   return authenticateLocalUser(cleanEmail, password, targetRole);
 };
 
