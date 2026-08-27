@@ -848,7 +848,9 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 </div>
 
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-500 font-mono">Provided by L&D – {mat.updatedAt}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    Provided by {session?.trainerName ? session.trainerName : 'Trainer'} – {mat.updatedAt}
+                  </span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
