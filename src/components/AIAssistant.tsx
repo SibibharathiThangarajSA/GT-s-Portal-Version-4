@@ -14,7 +14,23 @@ interface ChatMessage {
   timestamp: string;
 }
 
-// Realistic Interactive Live Eyeball Component for PICO (Follows mouse cursor in real-time)
+// RAG Response Icon Component
+const RagResponseLogo: React.FC<{ size?: number; className?: string }> = ({ size = 28, className = '' }) => {
+  return (
+    <div
+      style={{ width: size, height: size }}
+      className={`rounded-lg bg-black border border-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-sm ${className}`}
+    >
+      <img
+        src="/Assets/rag_logo.png"
+        alt="RAG Response Logo"
+        className="w-full h-full object-cover"
+      />
+    </div>
+  );
+};
+
+// Cute & Premium Live Interactive Eyeball for PICO (Follows mouse cursor in real-time)
 const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 28, className = '' }) => {
   const eyeRef = useRef<HTMLDivElement | null>(null);
   const [pupilOffset, setPupilOffset] = useState({ x: 0, y: 0 });
@@ -46,12 +62,12 @@ const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 2
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [size]);
 
-  // Natural blinking effect every 4.5 seconds
+  // Natural blinking effect every 4 seconds
   useEffect(() => {
     const blinkInterval = setInterval(() => {
       setIsBlinking(true);
-      setTimeout(() => setIsBlinking(false), 160);
-    }, 4500);
+      setTimeout(() => setIsBlinking(false), 170);
+    }, 4000);
 
     return () => clearInterval(blinkInterval);
   }, []);
@@ -60,37 +76,39 @@ const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 2
     <div
       ref={eyeRef}
       style={{ width: size, height: size }}
-      className={`relative rounded-full bg-slate-950 border-2 border-white/90 shadow-md flex items-center justify-center overflow-hidden shrink-0 transition-transform ${className}`}
+      className={`relative rounded-full border-[2.5px] border-white/95 shadow-md flex items-center justify-center overflow-hidden shrink-0 transition-transform hover:scale-110 ${className}`}
     >
-      {/* Eyeball White Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-100 to-slate-200 rounded-full" />
+      {/* Sclera - Pure white with glossy top shadow */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50 to-slate-200 rounded-full" />
 
-      {/* Iris & Pupil (Follows mouse cursor smoothly) */}
+      {/* Cute Glossy Orb/Iris (Follows mouse cursor smoothly) */}
       <div
-        className="relative rounded-full transition-transform duration-75 ease-out flex items-center justify-center shadow-sm"
+        className="relative rounded-full transition-transform duration-75 ease-out flex items-center justify-center shadow-md overflow-hidden"
         style={{
-          width: size * 0.58,
-          height: size * 0.58,
+          width: size * 0.72,
+          height: size * 0.72,
           transform: `translate(${pupilOffset.x}px, ${pupilOffset.y}px)`,
-          background: 'radial-gradient(circle, #06b6d4 0%, #2563eb 60%, #1e1b4b 100%)',
+          background: 'radial-gradient(circle at 35% 35%, #38bdf8 0%, #6366f1 60%, #1e1b4b 100%)',
         }}
       >
-        {/* Dark Pupil Center */}
+        {/* Main Big Glossy Sparkle Highlight (Top Left) */}
         <div
-          className="rounded-full bg-slate-950 shadow-inner flex items-center justify-center relative"
-          style={{ width: size * 0.32, height: size * 0.32 }}
-        >
-          {/* Specular Catchlight Spot */}
-          <div
-            className="absolute top-0.5 right-0.5 rounded-full bg-white opacity-95"
-            style={{ width: size * 0.1, height: size * 0.1 }}
-          />
-        </div>
+          className="absolute top-1 left-1 rounded-full bg-white shadow-[0_0_5px_rgba(255,255,255,1)] opacity-95"
+          style={{ width: size * 0.2, height: size * 0.2 }}
+        />
+        {/* Secondary Soft Shine Dot (Bottom Right) */}
+        <div
+          className="absolute bottom-1 right-1 rounded-full bg-sky-200 opacity-85 shadow-[0_0_3px_rgba(56,189,248,0.8)]"
+          style={{ width: size * 0.1, height: size * 0.1 }}
+        />
       </div>
+
+      {/* Cute Gentle Top Lash Curve */}
+      <div className="absolute top-0 inset-x-0 h-[15%] bg-gradient-to-b from-slate-900/20 to-transparent z-10 pointer-events-none" />
 
       {/* Eyelid / Blink Animation */}
       <div
-        className={`absolute inset-0 bg-slate-900 transition-all duration-150 ease-in-out z-10 ${
+        className={`absolute inset-0 bg-slate-900 transition-all duration-150 ease-in-out z-20 ${
           isBlinking ? 'h-full opacity-100' : 'h-0 opacity-0'
         }`}
       />
@@ -327,31 +345,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
           {!isMinimized && (
             <>
-              {/* Preset Prompt Chips */}
-              <div className="bg-slate-100/80 px-4 py-2 border-b border-slate-200 flex items-center gap-2 overflow-x-auto no-scrollbar text-xs">
-                <button
-                  onClick={() => handleSend("Explain SOLID Principles with C# examples")}
-                  className="px-2.5 py-1 rounded-full bg-white hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap border border-slate-200 flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                >
-                  <Code2 className="w-3 h-3 text-blue-600" />
-                  Explain SOLID
-                </button>
-                <button
-                  onClick={() => handleSend("Generate top 3 interview questions for ASP.NET Core")}
-                  className="px-2.5 py-1 rounded-full bg-white hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap border border-slate-200 flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                >
-                  <HelpCircle className="w-3 h-3 text-amber-600" />
-                  Interview Prep
-                </button>
-                <button
-                  onClick={() => handleSend("What should I learn next after C# LINQ?")}
-                  className="px-2.5 py-1 rounded-full bg-white hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap border border-slate-200 flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
-                >
-                  <BookOpen className="w-3 h-3 text-emerald-600" />
-                  Next Step
-                </button>
-              </div>
-
               {/* Messages Body */}
               <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs bg-slate-50/50">
                 {messages.map((m) => (
@@ -360,9 +353,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     className={`flex gap-3 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {m.sender === 'ai' && (
-                      <div className="w-7 h-7 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5 overflow-hidden">
-                        <PicoLiveEye size={24} />
-                      </div>
+                      <RagResponseLogo size={30} className="mt-0.5" />
                     )}
                     <div
                       className={`max-w-[85%] p-3.5 rounded-2xl leading-relaxed shadow-sm ${
@@ -385,12 +376,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
                 {loading && (
                   <div className="flex items-center gap-3 text-slate-600">
-                    <div className="w-7 h-7 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 overflow-hidden">
-                      <PicoLiveEye size={24} />
-                    </div>
-                    <span className="text-xs italic font-medium flex items-center gap-1.5">
+                    <RagResponseLogo size={28} />
+                    <span className="text-xs italic font-medium flex items-center gap-1.5 text-slate-700">
                       <RefreshCw className="w-3 h-3 animate-spin text-blue-600" />
-                      <span>Ask PICO is crafting response...</span>
+                      <span>PICO RAG AI is crafting response...</span>
                     </span>
                   </div>
                 )}
