@@ -14,6 +14,22 @@ interface ChatMessage {
   timestamp: string;
 }
 
+// RAG Response Icon Component
+const RagResponseLogo: React.FC<{ size?: number; className?: string }> = ({ size = 28, className = '' }) => {
+  return (
+    <div
+      style={{ width: size, height: size }}
+      className={`rounded-lg bg-black border border-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-sm ${className}`}
+    >
+      <img
+        src="/Assets/rag_logo.png"
+        alt="RAG Response Logo"
+        className="w-full h-full object-cover"
+      />
+    </div>
+  );
+};
+
 // Cute & Premium Live Interactive Eyeball for PICO (Follows mouse cursor in real-time)
 const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 28, className = '' }) => {
   const eyeRef = useRef<HTMLDivElement | null>(null);
@@ -362,9 +378,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     className={`flex gap-3 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {m.sender === 'ai' && (
-                      <div className="w-7 h-7 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5 overflow-hidden">
-                        <PicoLiveEye size={24} />
-                      </div>
+                      <RagResponseLogo size={30} className="mt-0.5" />
                     )}
                     <div
                       className={`max-w-[85%] p-3.5 rounded-2xl leading-relaxed shadow-sm ${
@@ -387,12 +401,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
                 {loading && (
                   <div className="flex items-center gap-3 text-slate-600">
-                    <div className="w-7 h-7 rounded-lg bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 overflow-hidden">
-                      <PicoLiveEye size={24} />
-                    </div>
-                    <span className="text-xs italic font-medium flex items-center gap-1.5">
+                    <RagResponseLogo size={28} />
+                    <span className="text-xs italic font-medium flex items-center gap-1.5 text-slate-700">
                       <RefreshCw className="w-3 h-3 animate-spin text-blue-600" />
-                      <span>Ask PICO is crafting response...</span>
+                      <span>PICO RAG AI is crafting response...</span>
                     </span>
                   </div>
                 )}
