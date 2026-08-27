@@ -142,18 +142,8 @@ export function App() {
   const startingAdminAuth = isNormalReload ? (savedSession?.isAdminAuthenticated ?? false) : false;
   const startingUser = isNormalReload ? (savedSession?.currentUser || defaultGuestUser) : defaultGuestUser;
   
-  const isStartingUserAdmin = Boolean(
-    startingUser?.role === 'Admin' ||
-    (typeof startingUser?.role === 'string' && startingUser.role.toLowerCase().includes('admin'))
-  );
-
-  let startingPortal: 'Landing' | 'GT' | 'Admin' = isNormalReload
-    ? ((initialHashState.portal !== 'Landing') ? initialHashState.portal : (savedSession?.activePortal || 'Landing'))
-    : 'Landing';
-
-  if (startingPortal === 'Admin' && (!startingAuth || !isStartingUserAdmin)) {
-    startingPortal = startingAuth ? 'GT' : 'Landing';
-  }
+  // Direct URL Copy-Paste Directive: Always start on Landing Page (#landing) on fresh app load or URL paste
+  const startingPortal: 'Landing' | 'GT' | 'Admin' = 'Landing';
 
   const [currentUser, setCurrentUser] = useState<User>(startingUser);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -167,38 +157,25 @@ export function App() {
   // Admin Authentication State
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(startingAdminAuth);
   
-  // Navigation State - Restored on normal reload; reset to Landing page on hard reload
+  // Navigation State - Always start on Landing Page
   const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(startingPortal);
-  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
-    isNormalReload && initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState 
-      ? initialHashState.gtViewMode 
-      : (isNormalReload ? (savedSession?.gtViewMode || 'sessions') : 'sessions')
-  );
-  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>(
-    isNormalReload && initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState 
-      ? initialHashState.adminViewMode 
-      : (isNormalReload ? (savedSession?.adminViewMode || 'tracker') : 'tracker')
-  );
+  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>('sessions');
+  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>('tracker');
 
-  // Detail Selection State - Preserved on normal reload
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    isNormalReload && initialHashState.portal === 'GT' && 'selectedSessionId' in initialHashState
-      ? (initialHashState.selectedSessionId ?? null)
-      : (isNormalReload ? (savedSession?.selectedSessionId ?? null) : null)
-  );
-  const [sessionDetailTab, setSessionDetailTab] = useState<string>(
-    isNormalReload && initialHashState.portal === 'GT' && 'sessionTab' in initialHashState
-      ? (initialHashState.sessionTab ?? 'roadmap')
-      : (isNormalReload ? (savedSession?.sessionDetailTab ?? 'roadmap') : 'roadmap')
-  );
-  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>(
-    isNormalReload && initialHashState.portal === 'GT' && 'sessionTopicId' in initialHashState
-      ? (initialHashState.sessionTopicId ?? '')
-      : (isNormalReload ? (savedSession?.sessionDetailTopicId ?? '') : '')
-  );
+  // Detail Selection State
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [sessionDetailTab, setSessionDetailTab] = useState<string>('roadmap');
+  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>('');
   const [activeAdminSession, setActiveAdminSession] = useState<Session | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [restoredActiveQuiz, setRestoredActiveQuiz] = useState<boolean>(false);
+
+  // Direct URL Copy-Paste Handler: Ensure fresh initial app load starts on Landing page (#landing)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.location.hash = '#landing';
+    }
+  }, []);
 
   // Hard Refresh Handler: If NOT a normal reload (Hard Refresh / Cache bypass), perform complete logout
   useEffect(() => {
