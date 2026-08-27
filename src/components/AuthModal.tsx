@@ -256,7 +256,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         }
 
-        localStorage.setItem('token', res.data.token);
+        sessionStorage.setItem('token', res.data.token);
+        localStorage.removeItem('token');
         const fullName = `${res.data.firstName} ${res.data.lastName}`.trim();
         const targetRole: 'GT' | 'Admin' = res.data.role === 'Admin' ? 'Admin' : 'GT';
 
@@ -392,7 +393,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setIsLoading(false);
 
       if (res.success && res.data) {
-        localStorage.setItem('token', res.data.token);
+        sessionStorage.setItem('token', res.data.token);
+        localStorage.removeItem('token');
         const targetRole: 'GT' | 'Admin' = res.data.role === 'Admin' ? 'Admin' : 'GT';
         const fullName = `${res.data.firstName} ${res.data.lastName}`.trim();
 
