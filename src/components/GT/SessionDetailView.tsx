@@ -155,7 +155,7 @@ const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?:
       fileName: material.fileName,
       fileType: material.fileType,
       description: material.description || 'Official study material provided for this session.',
-      updatedAt: material.versions?.[0]?.updatedAt || 'Live from portal',
+      updatedAt: material.versions?.[0]?.updatedAt || '',
       sourceOrAuthor: material.versions?.[0]?.updatedBy || 'Portal',
       tags: material.tags || ['Official'],
       fileSizeOrDuration: material.durationOrPages || 'Live file'
@@ -174,7 +174,7 @@ const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?:
       fileName: material.fileName,
       fileType: material.fileType,
       description: material.description || 'Supplementary reference material for this session.',
-      updatedAt: material.versions?.[0]?.updatedAt || 'Live from portal',
+      updatedAt: material.versions?.[0]?.updatedAt || '',
       sourceOrAuthor: material.versions?.[0]?.updatedBy || 'Portal',
       tags: material.tags || ['Reference'],
       fileSizeOrDuration: material.durationOrPages || 'Live file'
@@ -320,7 +320,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           fileName: material.fileName,
           fileType: material.fileType,
           description: material.description || (material.materialCategory === 'Additional' ? 'Supplementary reference material.' : 'Official study material.'),
-          updatedAt: material.versions?.[0]?.updatedAt || 'Live from portal',
+          updatedAt: material.versions?.[0]?.updatedAt || '',
           sourceOrAuthor: material.versions?.[0]?.updatedBy || 'Portal',
           tags: material.tags && material.tags.length > 0 ? material.tags : [material.materialCategory || 'Provided'],
           fileSizeOrDuration: material.durationOrPages || 'Live file'
@@ -849,7 +849,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
                   <span className="text-[11px] text-slate-500 font-mono">
-                    Provided by {session?.trainerName ? session.trainerName : 'Trainer'} – {mat.updatedAt}
+                    Provided by {session?.trainerName ? session.trainerName : 'Trainer'}{mat.updatedAt && mat.updatedAt !== 'Live from portal' ? ` – ${mat.updatedAt}` : ''}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -949,7 +949,7 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 </div>
 
                 <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-500 font-mono">Added: {mat.updatedAt}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">{mat.updatedAt && mat.updatedAt !== 'Live from portal' ? `Added: ${mat.updatedAt}` : 'Resource'}</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1136,13 +1136,13 @@ export const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           {/* Header Card with Privacy Lock Indicator & Export */}
           <div className="bg-gradient-to-r from-blue-50 via-indigo-50/60 to-slate-50 border border-blue-200/80 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/80 border border-emerald-300/80 text-emerald-800 text-xs font-bold shadow-xs">
+              {/* <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/80 border border-emerald-300/80 text-emerald-800 text-xs font-bold shadow-xs">
                 <Lock className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Private to {userName} • Isolated per Associate</span>
-              </div>
-              <h3 className="text-base sm:text-lg font-extrabold text-slate-900">Your Private Reference Notes</h3>
+                <span>Private to {userName} • Isolated for this Associate</span>
+              </div> */}
+              <h3 className="text-base sm:text-lg font-extrabold text-slate-900">Your Reference Notes</h3>
               <p className="text-xs text-slate-600 font-medium max-w-xl leading-relaxed">
-                Record personal key concepts, syntax reminders, and exam takeaways for <span className="font-semibold text-slate-800">{session.name}</span>. These notes are 100% private to you and never shared with other associates.
+                Record personal key concepts, syntax reminders, and exam takeaways for <span className="font-semibold text-slate-800">{session.name}</span>
               </p>
             </div>
 
