@@ -109,57 +109,138 @@ const buildHashFromState = (
   return '#landing';
 };
 
+const checkIsNormalReload = (): boolean => {
+  if (typeof window === 'undefined' || typeof performance === 'undefined') return false;
+  try {
+    const navEntries = performance.getEntriesByType('navigation');
+    if (navEntries && navEntries.length > 0) {
+      const navTiming = navEntries[0] as PerformanceNavigationTiming;
+      return navTiming.type === 'reload';
+    }
+    if ('navigation' in performance && (performance as any).navigation) {
+      return (performance as any).navigation.type === 1;
+    }
+  } catch (e) {}
+  return false;
+};
+
 const getSavedSession = () => {
   try {
-    const saved = typeof window !== 'undefined' ? (localStorage.getItem('gt_auth_session') || sessionStorage.getItem('gt_auth_session')) : null;
+    const saved = typeof window !== 'undefined' ? (sessionStorage.getItem('gt_auth_session') || localStorage.getItem('gt_auth_session')) : null;
     if (saved) return JSON.parse(saved);
   } catch (e) {}
   return null;
 };
 
 export function App() {
-  const [currentUser, setCurrentUser] = useState<User>(defaultGuestUser);
+  const isNormalReload = checkIsNormalReload();
+  const initialHashState = getHashState();
+  const savedSession = getSavedSession();
+
+  const startingAuth = isNormalReload ? (savedSession?.isAuthenticated ?? false) : false;
+  const startingAdminAuth = isNormalReload ? (savedSession?.isAdminAuthenticated ?? false) : false;
+  const startingUser = isNormalReload ? (savedSession?.currentUser || defaultGuestUser) : defaultGuestUser;
+  const startingPortal = isNormalReload
+    ? ((initialHashState.portal !== 'Landing') ? initialHashState.portal : (savedSession?.activePortal || 'Landing'))
+    : 'Landing';
+
+  const [currentUser, setCurrentUser] = useState<User>(startingUser);
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Global Authentication State - Hard refresh resets authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  // Global Authentication State - Preserved on normal reload (F5), cleared on hard reload
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(startingAuth);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalRole, setAuthModalRole] = useState<'GT' | 'Admin'>('GT');
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
 
   // Admin Authentication State
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(startingAdminAuth);
   
-  // Navigation State - Always start on Landing Page
-  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>('Landing');
-  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>('sessions');
-  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>('tracker');
+  // Navigation State - Restored on normal reload; reset to Landing page on hard reload
+  const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(startingPortal);
+  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
+    isNormalReload && initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState 
+      ? initialHashState.gtViewMode 
+      : (isNormalReload ? (savedSession?.gtViewMode || 'sessions') : 'sessions')
+  );
+  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>(
+    isNormalReload && initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState 
+      ? initialHashState.adminViewMode 
+      : (isNormalReload ? (savedSession?.adminViewMode || 'tracker') : 'tracker')
+  );
 
-  // Detail Selection State
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [sessionDetailTab, setSessionDetailTab] = useState<string>('roadmap');
-  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>('');
+  // Detail Selection State - Preserved on normal reload
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    isNormalReload && initialHashState.portal === 'GT' && 'selectedSessionId' in initialHashState
+      ? (initialHashState.selectedSessionId ?? null)
+      : (isNormalReload ? (savedSession?.selectedSessionId ?? null) : null)
+  );
+  const [sessionDetailTab, setSessionDetailTab] = useState<string>(
+    isNormalReload && initialHashState.portal === 'GT' && 'sessionTab' in initialHashState
+      ? (initialHashState.sessionTab ?? 'roadmap')
+      : (isNormalReload ? (savedSession?.sessionDetailTab ?? 'roadmap') : 'roadmap')
+  );
+  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>(
+    isNormalReload && initialHashState.portal === 'GT' && 'sessionTopicId' in initialHashState
+      ? (initialHashState.sessionTopicId ?? '')
+      : (isNormalReload ? (savedSession?.sessionDetailTopicId ?? '') : '')
+  );
   const [activeAdminSession, setActiveAdminSession] = useState<Session | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [restoredActiveQuiz, setRestoredActiveQuiz] = useState<boolean>(false);
 
-  // Hard Refresh -> Always logout and reset cleanly to Landing Page
+  // Hard Refresh Handler: If NOT a normal reload (Hard Refresh / Cache bypass), perform complete logout
   useEffect(() => {
-    try {
-      localStorage.removeItem('gt_auth_session');
-      sessionStorage.removeItem('gt_auth_session');
-      sessionStorage.removeItem('gt_tab_session_active');
-    } catch (e) {}
-    setIsAuthenticated(false);
-    setIsAdminAuthenticated(false);
-    setCurrentUser(defaultGuestUser);
-    setActivePortal('Landing');
-    setSelectedSessionId(null);
-    setActiveQuiz(null);
-    if (typeof window !== 'undefined') {
-      window.location.hash = '#landing';
+    if (!isNormalReload) {
+      try {
+        localStorage.removeItem('gt_auth_session');
+        sessionStorage.removeItem('gt_auth_session');
+      } catch (e) {}
+      setIsAuthenticated(false);
+      setIsAdminAuthenticated(false);
+      setCurrentUser(defaultGuestUser);
+      setActivePortal('Landing');
+      setSelectedSessionId(null);
+      setActiveQuiz(null);
+      if (typeof window !== 'undefined') {
+        window.location.hash = '#landing';
+      }
     }
   }, []);
+
+  // Session persistence while user is authenticated
+  useEffect(() => {
+    try {
+      if (isAuthenticated) {
+        const sessionData = {
+          isAuthenticated,
+          isAdminAuthenticated,
+          currentUser,
+          activePortal,
+          gtViewMode,
+          adminViewMode,
+          selectedSessionId,
+          sessionDetailTab,
+          sessionDetailTopicId
+        };
+        sessionStorage.setItem('gt_auth_session', JSON.stringify(sessionData));
+        localStorage.setItem('gt_auth_session', JSON.stringify(sessionData));
+      } else {
+        sessionStorage.removeItem('gt_auth_session');
+        localStorage.removeItem('gt_auth_session');
+      }
+    } catch (e) {}
+  }, [
+    isAuthenticated,
+    isAdminAuthenticated,
+    currentUser,
+    activePortal,
+    gtViewMode,
+    adminViewMode,
+    selectedSessionId,
+    sessionDetailTab,
+    sessionDetailTopicId
+  ]);
 
   // Features State
   const [inspectModeActive, setInspectModeActive] = useState<boolean>(false);
