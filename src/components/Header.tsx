@@ -158,9 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-50 border border-blue-200/80 shadow-xs">
                   <UserCheck className="w-4 h-4 text-blue-600" />
-                  <span className="text-xs font-bold text-blue-800 tracking-tight">
-                    {isAdminRole ? 'GT View (Admin)' : 'GT Portal'}
-                  </span>
+                  <span className="text-xs font-bold text-blue-800 tracking-tight">GT Portal</span>
                 </div>
               )}
             </div>
