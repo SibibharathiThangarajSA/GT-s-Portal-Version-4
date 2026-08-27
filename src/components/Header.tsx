@@ -79,6 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
             return rRole === 'employee' || rRole === 'gt' || rRole === 'associate';
           });
           if (roleMatch) return roleMatch;
+          if (isAdminRole) return null;
           return matches[0];
         }
       }
@@ -93,6 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
             return rRole === 'employee' || rRole === 'gt' || rRole === 'associate';
           });
           if (roleMatch) return roleMatch;
+          if (isAdminRole) return null;
           return matches[0];
         }
       }
@@ -202,19 +204,17 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => setShowProfilePopover((prev) => !prev)}
                   aria-label="Open profile menu"
                   title="Open profile menu"
-                  className={`relative p-0.5 rounded-xl bg-white border ${
-                    isAdminRole
+                  className={`relative p-0.5 rounded-xl bg-white border ${isAdminRole
                       ? 'border-emerald-300 hover:border-emerald-500 focus:ring-emerald-500/40'
                       : 'border-slate-200 hover:border-blue-500/50 focus:ring-blue-500/40'
-                  } transition-all focus:outline-none focus:ring-2 shadow-sm`}
+                    } transition-all focus:outline-none focus:ring-2 shadow-sm`}
                 >
                   <ProfileImage
                     src={currentUser.avatar}
                     alt={currentUser.name}
                     defaultSrc={isAdminRole ? '/Assets/default-avatar-admin.svg' : '/Assets/default-avatar.svg'}
-                    className={`w-8 h-8 rounded-lg object-cover ring-2 ${
-                      isAdminRole ? 'ring-emerald-500' : 'ring-blue-500/40'
-                    }`}
+                    className={`w-8 h-8 rounded-lg object-cover ring-2 ${isAdminRole ? 'ring-emerald-500' : 'ring-blue-500/40'
+                      }`}
                   />
                 </button>
 
@@ -225,9 +225,8 @@ export const Header: React.FC<HeaderProps> = ({
                         src={currentUser.avatar}
                         alt={currentUser.name}
                         defaultSrc={isAdminRole ? '/Assets/default-avatar-admin.svg' : '/Assets/default-avatar.svg'}
-                        className={`w-11 h-11 rounded-xl object-cover ring-2 ${
-                          isAdminRole ? 'ring-emerald-500' : 'ring-blue-500/50'
-                        }`}
+                        className={`w-11 h-11 rounded-xl object-cover ring-2 ${isAdminRole ? 'ring-emerald-500' : 'ring-blue-500/50'
+                          }`}
                       />
                       <div>
                         <span className="font-bold text-sm text-slate-900 block leading-snug">{currentUser.name}</span>
