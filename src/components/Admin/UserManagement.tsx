@@ -1047,7 +1047,7 @@ export const UserManagement: React.FC = () => {
                                 maxLength={10}
                                 value={entry.phoneNumber}
                                 onChange={(e) => handleUpdateEntry(index, 'phoneNumber', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                placeholder="mobile number"
+                                placeholder="Mobile number"
                                 className="w-full px-3.5 py-2.5 font-mono font-medium text-slate-900 placeholder-slate-400 focus:outline-none"
                               />
                             </div>

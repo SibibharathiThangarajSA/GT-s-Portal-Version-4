@@ -140,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
                 GT Companion
               </span>
               <span className="block text-[10px] font-mono tracking-wider uppercase font-bold text-blue-700">
-                Built by GT's, for GT's
+                Built by GTs, for GTs
               </span>
             </div>
           </button>
