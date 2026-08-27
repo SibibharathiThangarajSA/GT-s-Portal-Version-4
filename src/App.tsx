@@ -138,17 +138,29 @@ export function App() {
   const initialHashState = getHashState();
   const savedSession = getSavedSession();
 
-  const startingAuth = isNormalReload ? (savedSession?.isAuthenticated ?? false) : false;
-  const startingAdminAuth = isNormalReload ? (savedSession?.isAdminAuthenticated ?? false) : false;
-  const startingUser = isNormalReload ? (savedSession?.currentUser || defaultGuestUser) : defaultGuestUser;
+  const startingAuth = savedSession?.isAuthenticated ?? false;
+  const startingAdminAuth = savedSession?.isAdminAuthenticated ?? false;
+  const startingUser = savedSession?.currentUser || defaultGuestUser;
   
-  // Direct URL Copy-Paste Directive: Always start on Landing Page (#landing) on fresh app load or URL paste
-  const startingPortal: 'Landing' | 'GT' | 'Admin' = 'Landing';
+  const isStartingUserAdmin = Boolean(
+    startingUser?.role === 'Admin' ||
+    (typeof startingUser?.role === 'string' && startingUser.role.toLowerCase().includes('admin'))
+  );
+
+  // Restore current page on refresh (F5), or fallback to Landing page if unauthenticated
+  let startingPortal: 'Landing' | 'GT' | 'Admin' = startingAuth
+    ? ((initialHashState.portal !== 'Landing') ? initialHashState.portal : (savedSession?.activePortal || 'Landing'))
+    : 'Landing';
+
+  // RBAC Guard: If starting portal is Admin but user is NOT Admin, redirect to GT portal
+  if (startingPortal === 'Admin' && (!startingAuth || !isStartingUserAdmin)) {
+    startingPortal = startingAuth ? 'GT' : 'Landing';
+  }
 
   const [currentUser, setCurrentUser] = useState<User>(startingUser);
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Global Authentication State - Preserved on normal reload (F5), cleared on hard reload
+  // Global Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(startingAuth);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalRole, setAuthModalRole] = useState<'GT' | 'Admin'>('GT');
@@ -157,25 +169,40 @@ export function App() {
   // Admin Authentication State
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(startingAdminAuth);
   
-  // Navigation State - Always start on Landing Page
+  // Navigation State - Restored on refresh to current page
   const [activePortal, setActivePortal] = useState<'Landing' | 'GT' | 'Admin'>(startingPortal);
-  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>('sessions');
-  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>('tracker');
+  const [gtViewMode, setGtViewMode] = useState<'sessions' | 'playground'>(
+    initialHashState.portal === 'GT' && 'gtViewMode' in initialHashState 
+      ? initialHashState.gtViewMode 
+      : (savedSession?.gtViewMode || 'sessions')
+  );
+  const [adminViewMode, setAdminViewMode] = useState<'dashboard' | 'sessions' | 'tracker' | 'roadmap-builder' | 'material-uploader' | 'quiz-builder' | 'user-management'>(
+    initialHashState.portal === 'Admin' && 'adminViewMode' in initialHashState 
+      ? initialHashState.adminViewMode 
+      : (savedSession?.adminViewMode || 'tracker')
+  );
 
-  // Detail Selection State
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [sessionDetailTab, setSessionDetailTab] = useState<string>('roadmap');
-  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>('');
+  // Detail Selection State - Preserved on refresh
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    initialHashState.portal === 'GT' && 'selectedSessionId' in initialHashState
+      ? (initialHashState.selectedSessionId ?? null)
+      : (savedSession?.selectedSessionId ?? null)
+  );
+  const [sessionDetailTab, setSessionDetailTab] = useState<string>(
+    initialHashState.portal === 'GT' && 'sessionTab' in initialHashState
+      ? (initialHashState.sessionTab ?? 'roadmap')
+      : (savedSession?.sessionDetailTab ?? 'roadmap')
+  );
+  const [sessionDetailTopicId, setSessionDetailTopicId] = useState<string>(
+    initialHashState.portal === 'GT' && 'sessionTopicId' in initialHashState
+      ? (initialHashState.sessionTopicId ?? '')
+      : (savedSession?.sessionDetailTopicId ?? '')
+  );
   const [activeAdminSession, setActiveAdminSession] = useState<Session | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [restoredActiveQuiz, setRestoredActiveQuiz] = useState<boolean>(false);
 
-  // Direct URL Copy-Paste Handler: Ensure fresh initial app load starts on Landing page (#landing)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.location.hash = '#landing';
-    }
-  }, []);
+
 
   // Hard Refresh Handler: If NOT a normal reload (Hard Refresh / Cache bypass), perform complete logout
   useEffect(() => {
