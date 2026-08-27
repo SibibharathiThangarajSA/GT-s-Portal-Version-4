@@ -60,8 +60,8 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const isAdminRole =
-    activePortal === 'Admin' ||
-    (currentUser.role === 'Admin' && activePortal !== 'GT');
+    currentUser.role === 'Admin' ||
+    (typeof currentUser.role === 'string' && currentUser.role.toLowerCase().includes('admin'));
 
   // Dynamically fetch exact Role and Designation from the User Management table records
   const userManagementRecord = useMemo(() => {
@@ -148,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Current Active Portal Title Badge */}
           {isAuthenticated && (
             <div className="flex items-center gap-2">
-              {isAdminRole ? (
+              {activePortal === 'Admin' ? (
                 <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200/80 shadow-xs">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   <span className="text-xs font-bold text-emerald-800 tracking-tight">Admin Portal</span>
@@ -156,7 +156,9 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-50 border border-blue-200/80 shadow-xs">
                   <UserCheck className="w-4 h-4 text-blue-600" />
-                  <span className="text-xs font-bold text-blue-800 tracking-tight">GT Portal</span>
+                  <span className="text-xs font-bold text-blue-800 tracking-tight">
+                    {isAdminRole ? 'GT View (Admin)' : 'GT Portal'}
+                  </span>
                 </div>
               )}
             </div>

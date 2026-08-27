@@ -126,7 +126,8 @@ const checkIsNormalReload = (): boolean => {
 
 const getSavedSession = () => {
   try {
-    const saved = typeof window !== 'undefined' ? (sessionStorage.getItem('gt_auth_session') || localStorage.getItem('gt_auth_session')) : null;
+    if (typeof window === 'undefined') return null;
+    const saved = sessionStorage.getItem('gt_auth_session');
     if (saved) return JSON.parse(saved);
   } catch (e) {}
   return null;
@@ -140,9 +141,19 @@ export function App() {
   const startingAuth = isNormalReload ? (savedSession?.isAuthenticated ?? false) : false;
   const startingAdminAuth = isNormalReload ? (savedSession?.isAdminAuthenticated ?? false) : false;
   const startingUser = isNormalReload ? (savedSession?.currentUser || defaultGuestUser) : defaultGuestUser;
-  const startingPortal = isNormalReload
+  
+  const isStartingUserAdmin = Boolean(
+    startingUser?.role === 'Admin' ||
+    (typeof startingUser?.role === 'string' && startingUser.role.toLowerCase().includes('admin'))
+  );
+
+  let startingPortal: 'Landing' | 'GT' | 'Admin' = isNormalReload
     ? ((initialHashState.portal !== 'Landing') ? initialHashState.portal : (savedSession?.activePortal || 'Landing'))
     : 'Landing';
+
+  if (startingPortal === 'Admin' && (!startingAuth || !isStartingUserAdmin)) {
+    startingPortal = startingAuth ? 'GT' : 'Landing';
+  }
 
   const [currentUser, setCurrentUser] = useState<User>(startingUser);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -224,7 +235,7 @@ export function App() {
           sessionDetailTopicId
         };
         sessionStorage.setItem('gt_auth_session', JSON.stringify(sessionData));
-        localStorage.setItem('gt_auth_session', JSON.stringify(sessionData));
+        localStorage.removeItem('gt_auth_session');
       } else {
         sessionStorage.removeItem('gt_auth_session');
         localStorage.removeItem('gt_auth_session');
@@ -376,6 +387,25 @@ export function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const state = getHashState();
+
+      // RBAC Guard: Protect Admin Portal against unauthorized access (e.g. Employee/Associate pasting #admin URL)
+      if (state.portal === 'Admin') {
+        const userIsAdmin = Boolean(
+          currentUser?.role === 'Admin' ||
+          (typeof currentUser?.role === 'string' && currentUser.role.toLowerCase().includes('admin')) ||
+          isAdminAuthenticated
+        );
+
+        if (!isAuthenticated || !userIsAdmin) {
+          addToast('error', 'Access Denied: Admin Portal requires L&D Leadership credentials.');
+          setActivePortal(isAuthenticated ? 'GT' : 'Landing');
+          if (typeof window !== 'undefined') {
+            window.location.hash = isAuthenticated ? '#gt/sessions' : '#landing';
+          }
+          return;
+        }
+      }
+
       setActivePortal(state.portal);
       if (state.portal === 'GT') {
         if ('gtViewMode' in state) setGtViewMode(state.gtViewMode);
@@ -401,14 +431,7 @@ export function App() {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('popstate', handleHashChange);
     };
-  }, [sessions]);
-
-  // Reset Admin authentication whenever leaving the Admin portal
-  useEffect(() => {
-    if (activePortal !== 'Admin') {
-      setIsAdminAuthenticated(false);
-    }
-  }, [activePortal]);
+  }, [sessions, isAuthenticated, currentUser, isAdminAuthenticated, addToast]);
 
   const refreshSessions = async () => {
     try {
