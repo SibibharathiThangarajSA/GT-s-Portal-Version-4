@@ -866,8 +866,13 @@ export const saveUserManagementRecords = (records: UserManagementRecord[]): void
 
 export const findUserByPhoneNumber = (phoneNumber: string): UserManagementRecord | undefined => {
   const cleanPhone = (phoneNumber || '').replace(/\D/g, '').trim();
-  if (!cleanPhone) return undefined;
+  if (!cleanPhone || cleanPhone.length < 10) return undefined;
+  const target10 = cleanPhone.slice(-10);
   const records = getUserManagementRecords();
-  return records.find((r) => (r.phoneNumber || '').replace(/\D/g, '').trim() === cleanPhone);
+  return records.find((r) => {
+    const recDigits = (r.phoneNumber || '').replace(/\D/g, '').trim();
+    if (!recDigits || recDigits.length < 10) return false;
+    return recDigits.slice(-10) === target10;
+  });
 };
 

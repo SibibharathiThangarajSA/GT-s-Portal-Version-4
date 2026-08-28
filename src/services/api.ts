@@ -1560,15 +1560,12 @@ export const requestMobileOtpApi = async (
     };
   }
 
-  // Enterprise Credentials Guard: Check if user has VAM ID or Email
-  const hasVamId = user.vamId && user.vamId !== '-' && user.vamId.trim() !== '';
-  const hasEmail = user.email && user.email !== '-' && user.email.includes('@');
-
-  if (hasVamId || hasEmail) {
+  // Admin Role Guard: Admins must login with official email & password
+  if (user.role === 'Admin') {
     return {
       success: false,
       isEnterpriseUser: true,
-      message: 'You have enterprise credentials registered. Please login with your official email and password.'
+      message: 'Admin accounts must login with official email and password.'
     };
   }
 

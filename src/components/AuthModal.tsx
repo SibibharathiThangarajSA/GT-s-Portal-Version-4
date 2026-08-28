@@ -305,10 +305,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         return;
       }
 
-      setSuccessMsg(res.message || 'OTP generated successfully.');
-      if (res.otp) {
-        addToast('info', `Your verification code is: ${res.otp}`);
-      }
+      setSuccessMsg(res.message || 'Verification OTP sent successfully.');
+      addToast('success', res.message || 'Verification code sent to your mobile number via Brevo SMS.');
       setView('mobile-otp-verify');
     } catch (err: any) {
       setIsLoading(false);
@@ -327,12 +325,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setIsResending(false);
 
       if (res.success) {
-        setSuccessMsg('A new OTP has been generated.');
+        setSuccessMsg('A new OTP has been sent via Brevo SMS.');
         setMobileOtpTimerSeconds(300);
         setCanResendMobileOtp(false);
-        if (res.otp) {
-          addToast('info', `Your new verification code is: ${res.otp}`);
-        }
+        addToast('success', 'A new verification code has been sent via Brevo SMS.');
       } else {
         setErrorMsg(res.message || 'Failed to resend OTP.');
       }
@@ -443,11 +439,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (res.success) {
         setTargetAccountEmail(res.userEmail || recoveryEmail.trim());
         setSuccessMsg(res.message || 'OTP sent successfully!');
-        if (res.otp) {
-          addToast('info', `Your 6-digit verification code is: ${res.otp}`);
-        } else {
-          addToast('info', '6-digit verification code generated.');
-        }
+        addToast('success', res.message || 'Verification OTP code sent to your registered email address via Brevo.');
         setOtpDigits(['', '', '', '', '', '']);
         setView('verify-otp');
       } else {
@@ -478,11 +470,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setSuccessMsg('A new 6-digit OTP has been sent to your email.');
         setOtpTimerSeconds(300);
         setCanResend(false);
-        if (res.otp) {
-          addToast('info', `Your new 6-digit verification code is: ${res.otp}`);
-        } else {
-          addToast('info', 'New 6-digit verification code generated.');
-        }
+        addToast('success', 'A new verification OTP has been sent to your email address via Brevo.');
       } else {
         setErrorMsg(res.message || 'Failed to resend OTP.');
         addToast('error', res.message || 'Failed to resend OTP.');
