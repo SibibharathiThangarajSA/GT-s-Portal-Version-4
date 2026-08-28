@@ -80,6 +80,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [mobileOtpTimerSeconds, setMobileOtpTimerSeconds] = useState(1200);
   const [canResendMobileOtp, setCanResendMobileOtp] = useState(false);
   const [lastGeneratedMobileOtp, setLastGeneratedMobileOtp] = useState<string>('');
+  const [lastGeneratedEmailOtp, setLastGeneratedEmailOtp] = useState<string>('');
   const mobileTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // OTP & Reset Password Fields (Forgot Password Flow)
@@ -442,6 +443,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (res.success) {
         setTargetAccountEmail(res.userEmail || recoveryEmail.trim());
         setSuccessMsg(res.message || 'OTP sent successfully!');
+        if (res.otp) setLastGeneratedEmailOtp(res.otp);
         addToast('success', res.message || 'Verification OTP code sent to your registered email address via Brevo.');
         setOtpDigits(['', '', '', '', '', '']);
         setView('verify-otp');
@@ -471,6 +473,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       if (res.success) {
         setSuccessMsg('A new 6-digit OTP has been sent to your email.');
+        if (res.otp) setLastGeneratedEmailOtp(res.otp);
         setOtpTimerSeconds(1200);
         setCanResend(false);
         addToast('success', 'A new verification OTP has been sent to your email address via Brevo.');
@@ -1116,6 +1119,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {recoveryType === 'email' ? recoveryEmail : `${recoveryCountryCode} ${recoveryPhone}`}
                 </strong>
               </p>
+              {lastGeneratedEmailOtp && (
+                <div className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
+                  <span>Verification Code:</span>
+                  <strong className="font-mono font-bold tracking-widest text-emerald-800">{lastGeneratedEmailOtp}</strong>
+                </div>
+              )}
             </div>
 
             {/* 6-Box OTP Inputs */}
