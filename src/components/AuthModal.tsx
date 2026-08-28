@@ -77,7 +77,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [mobileNumber, setMobileNumber] = useState('');
   const [mobileOtpDigits, setMobileOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const mobileOtpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [mobileOtpTimerSeconds, setMobileOtpTimerSeconds] = useState(300);
+  const [mobileOtpTimerSeconds, setMobileOtpTimerSeconds] = useState(1200);
   const [canResendMobileOtp, setCanResendMobileOtp] = useState(false);
   const [lastGeneratedMobileOtp, setLastGeneratedMobileOtp] = useState<string>('');
   const mobileTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -97,7 +97,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // OTP Expiry & Resend Timers
-  const [otpTimerSeconds, setOtpTimerSeconds] = useState(300); // 5 minutes
+  const [otpTimerSeconds, setOtpTimerSeconds] = useState(1200); // 20 minutes
   const [canResend, setCanResend] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -131,10 +131,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   }, [isOpen, initialRole]);
 
-  // Handle Forgot Password OTP Timer Countdown
+  // Handle Forgot Password OTP Timer Countdown (20 Minutes)
   useEffect(() => {
     if (view === 'verify-otp') {
-      setOtpTimerSeconds(300);
+      setOtpTimerSeconds(1200);
       setCanResend(false);
       if (timerRef.current) clearInterval(timerRef.current);
 
@@ -145,7 +145,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setCanResend(true);
             return 0;
           }
-          if (prev === 240) {
+          if (prev === 1140) {
             setCanResend(true);
           }
           return prev - 1;
@@ -160,10 +160,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     };
   }, [view]);
 
-  // Handle Mobile OTP Timer Countdown
+  // Handle Mobile OTP Timer Countdown (20 Minutes)
   useEffect(() => {
     if (view === 'mobile-otp-verify') {
-      setMobileOtpTimerSeconds(300);
+      setMobileOtpTimerSeconds(1200);
       setCanResendMobileOtp(false);
       if (mobileTimerRef.current) clearInterval(mobileTimerRef.current);
 
@@ -174,7 +174,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setCanResendMobileOtp(true);
             return 0;
           }
-          if (prev === 240) {
+          if (prev === 1140) {
             setCanResendMobileOtp(true);
           }
           return prev - 1;
@@ -329,7 +329,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       if (res.success) {
         setSuccessMsg('A new OTP has been sent via Brevo SMS.');
         if (res.otp) setLastGeneratedMobileOtp(res.otp);
-        setMobileOtpTimerSeconds(300);
+        setMobileOtpTimerSeconds(1200);
         setCanResendMobileOtp(false);
         addToast('success', 'A new verification code has been sent via Brevo SMS.');
       } else {
@@ -471,7 +471,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       if (res.success) {
         setSuccessMsg('A new 6-digit OTP has been sent to your email.');
-        setOtpTimerSeconds(300);
+        setOtpTimerSeconds(1200);
         setCanResend(false);
         addToast('success', 'A new verification OTP has been sent to your email address via Brevo.');
       } else {
