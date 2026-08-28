@@ -419,52 +419,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  // --- Handlers: Forgot Password Flow ---
+  // --- Handlers: Forgot Password Flow (Email Only) ---
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (recoveryType === 'email') {
-      if (!recoveryEmail.trim() || !recoveryEmail.includes('@')) {
-        setErrorMsg('Please enter a valid registered email address.');
-        addToast('error', 'Please enter a valid registered email address.');
-        return;
-      }
-    } else {
-      const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
-      if (!cleanPhone || cleanPhone.length < 10) {
-        setErrorMsg('Please enter a valid 10-digit mobile number.');
-        addToast('error', 'Please enter a valid 10-digit mobile number.');
-        return;
-      }
+    if (!recoveryEmail.trim() || !recoveryEmail.includes('@')) {
+      setErrorMsg('Please enter a valid registered email address.');
+      addToast('error', 'Please enter a valid registered email address.');
+      return;
     }
 
     setIsLoading(true);
 
     try {
-      if (recoveryType === 'phone') {
-        const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
-        const res = await requestMobileResetOtpApi(cleanPhone);
-        setIsLoading(false);
-
-        if (res.success) {
-          setTargetAccountEmail(cleanPhone);
-          setSuccessMsg(res.message || 'OTP sent successfully to your mobile number via Brevo SMS.');
-          addToast('success', res.message || 'OTP sent via Brevo SMS.');
-          setOtpDigits(['', '', '', '', '', '']);
-          setView('verify-otp');
-        } else {
-          setErrorMsg(res.message || 'Unable to send OTP via Brevo SMS.');
-          addToast('error', res.message || 'Unable to send OTP via Brevo SMS.');
-        }
-        return;
-      }
-
       const res = await forgotPasswordApi({
-        recoveryType,
-        email: recoveryEmail.trim(),
-        phone: recoveryPhone
+        recoveryType: 'email',
+        email: recoveryEmail.trim()
       });
       setIsLoading(false);
 
@@ -496,32 +468,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
-      if (recoveryType === 'phone') {
-        const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
-        const res = await requestMobileResetOtpApi(cleanPhone);
-        setIsResending(false);
-
-        if (res.success) {
-          setSuccessMsg('A new OTP has been sent via Brevo SMS.');
-          setOtpTimerSeconds(300);
-          setCanResend(false);
-          addToast('success', 'A new OTP has been sent to your mobile number via Brevo SMS.');
-        } else {
-          setErrorMsg(res.message || 'Failed to resend OTP.');
-          addToast('error', res.message || 'Failed to resend OTP.');
-        }
-        return;
-      }
-
       const res = await forgotPasswordApi({
-        recoveryType,
-        email: recoveryEmail.trim(),
-        phone: recoveryPhone
+        recoveryType: 'email',
+        email: recoveryEmail.trim()
       });
       setIsResending(false);
 
       if (res.success) {
-        setSuccessMsg('A new 6-digit OTP has been sent.');
+        setSuccessMsg('A new 6-digit OTP has been sent to your email.');
         setOtpTimerSeconds(300);
         setCanResend(false);
         if (res.otp) {
@@ -590,24 +544,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      if (recoveryType === 'phone') {
-        const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
-        const res = await verifyMobileResetOtpApi(cleanPhone, fullOtp);
-        setIsLoading(false);
-
-        if (res.success && res.resetToken) {
-          setResetToken(res.resetToken);
-          setSuccessMsg('OTP verified successfully!');
-          addToast('success', 'Verification successful. Please create your new password.');
-          setView('new-password');
-        } else {
-          setErrorMsg(res.message || 'Incorrect OTP. Please try again.');
-          addToast('error', res.message || 'Incorrect OTP. Please try again.');
-        }
-        return;
-      }
-
-      const inputVal = recoveryType === 'email' ? recoveryEmail.trim() : recoveryPhone;
+      const inputVal = recoveryEmail.trim();
       const res = await verifyOtpApi(inputVal, fullOtp);
       setIsLoading(false);
 
@@ -617,13 +554,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         addToast('success', 'Verification successful. Please create your new password.');
         setView('new-password');
       } else {
-        setErrorMsg('Incorrect OTP. Please try again.');
-        addToast('error', 'Incorrect OTP. Please try again.');
+        setErrorMsg(res.message || 'Incorrect OTP. Please try again.');
+        addToast('error', res.message || 'Incorrect OTP. Please try again.');
       }
     } catch (err: any) {
       setIsLoading(false);
-      setErrorMsg('Incorrect OTP. Please try again.');
-      addToast('error', 'Incorrect OTP. Please try again.');
+      setErrorMsg(err.message || 'Incorrect OTP. Please try again.');
+      addToast('error', err.message || 'Incorrect OTP. Please try again.');
     }
   };
 
@@ -650,27 +587,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      if (recoveryType === 'phone') {
-        const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
-        const res = await resetPasswordWithMobileOtpApi(cleanPhone, resetToken, newPassword);
-        setIsLoading(false);
-
-        if (res.success) {
-          setSuccessMsg(res.message || 'Password has been reset successfully!');
-          addToast('success', 'Password reset successfully! Old password has been overridden.');
-          setTimeout(() => {
-            setView('login');
-            setPassword('');
-            setErrorMsg('');
-            setSuccessMsg('');
-          }, 1500);
-        } else {
-          setErrorMsg(res.message || 'Failed to reset password.');
-          addToast('error', res.message || 'Failed to reset password.');
-        }
-        return;
-      }
-
       const accEmail = targetAccountEmail || recoveryEmail.trim();
       const res = await resetPasswordApi(accEmail, resetToken, newPassword);
       setIsLoading(false);
@@ -687,6 +603,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }, 1500);
       } else {
         setErrorMsg(res.message || 'Failed to reset password.');
+        addToast('error', res.message || 'Failed to reset password.');
       }
     } catch (err: any) {
       setIsLoading(false);
@@ -1120,108 +1037,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </p>
             </div>
 
-            {/* Radio / Checkbox Pill Options for Email vs Mobile Number */}
-            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200 gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setRecoveryType('email');
-                  setErrorMsg('');
-                }}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${recoveryType === 'email'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                  }`}
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>Email Address</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setRecoveryType('phone');
-                  setErrorMsg('');
-                }}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${recoveryType === 'phone'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                  }`}
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Mobile Number</span>
-              </button>
-            </div>
-
-            {/* Input Field: Email */}
-            {recoveryType === 'email' ? (
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                  Registered Email Address *
-                </label>
-                <div className="relative">
-                  <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
-                  <input
-                    type="email"
-                    placeholder="employee.name@valuemomentum.com"
-                    value={recoveryEmail}
-                    onChange={(e) => {
-                      setRecoveryEmail(e.target.value);
-                      if (errorMsg) setErrorMsg('');
-                    }}
-                    className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
-                        ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
-                        : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
-                      }`}
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
-            ) : (
-              /* Input Field: Phone Number */
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-bold text-slate-700">
-                    Registered Mobile Number (10 Digits) *
-                  </label>
-                  <span className="text-[10px] font-mono text-slate-400">
-                    {recoveryPhone.length}/10
-                  </span>
-                </div>
-                <div
-                  className={`flex rounded-xl border bg-white overflow-hidden shadow-xs focus-within:ring-2 transition-all ${errorMsg
-                      ? 'border-rose-400 focus-within:border-rose-500 focus-within:ring-rose-500/20'
-                      : 'border-slate-300 focus-within:border-blue-600 focus-within:ring-blue-500/20'
+            {/* Input Field: Registered Email Address ONLY */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                Registered Email Address *
+              </label>
+              <div className="relative">
+                <Mail className={`absolute left-3 top-3 w-4 h-4 ${errorMsg ? 'text-rose-400' : 'text-slate-400'}`} />
+                <input
+                  type="email"
+                  placeholder="employee.name@valuemomentum.com"
+                  value={recoveryEmail}
+                  onChange={(e) => {
+                    setRecoveryEmail(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
+                  className={`w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 shadow-sm transition-all ${errorMsg
+                      ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/10'
+                      : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500/20'
                     }`}
-                >
-                  <select
-                    value={recoveryCountryCode}
-                    onChange={(e) => setRecoveryCountryCode(e.target.value)}
-                    className="bg-slate-100/90 px-2.5 py-2.5 text-xs font-bold text-slate-800 border-r border-slate-300 focus:outline-none cursor-pointer"
-                  >
-                    {COUNTRY_CODES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="tel"
-                    maxLength={10}
-                    placeholder="Enter your mobile number"
-                    value={recoveryPhone}
-                    onChange={(e) => {
-                      setRecoveryPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
-                      if (errorMsg) setErrorMsg('');
-                    }}
-                    className="w-full px-3 py-2.5 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:outline-none"
-                    required
-                    autoFocus
-                  />
-                </div>
+                  required
+                  autoFocus
+                />
               </div>
-            )}
+            </div>
 
             {/* Inline error */}
             {errorMsg && (
