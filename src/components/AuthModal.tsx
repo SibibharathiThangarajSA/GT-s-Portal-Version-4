@@ -920,12 +920,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <p className="text-xs text-slate-500 mt-0.5">
                 Verification code sent to <strong className="font-mono text-slate-800">{mobileCountryCode} {mobileNumber}</strong>
               </p>
-              {lastGeneratedMobileOtp && (
-                <div className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
-                  <span>Demo OTP Code:</span>
-                  <strong className="font-mono font-bold tracking-widest text-emerald-800">{lastGeneratedMobileOtp}</strong>
-                </div>
-              )}
             </div>
 
             {/* 6-Box OTP Inputs */}
@@ -1119,12 +1113,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {recoveryType === 'email' ? recoveryEmail : `${recoveryCountryCode} ${recoveryPhone}`}
                 </strong>
               </p>
-              {lastGeneratedEmailOtp && (
-                <div className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
-                  <span>Verification Code:</span>
-                  <strong className="font-mono font-bold tracking-widest text-emerald-800">{lastGeneratedEmailOtp}</strong>
-                </div>
-              )}
             </div>
 
             {/* 6-Box OTP Inputs */}
