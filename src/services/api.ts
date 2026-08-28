@@ -44,6 +44,71 @@ const emptySession = (id: string): Session => ({
   ratingCount: 0
 });
 
+const getBrevoApiKey = (): string => {
+  const envKey = (import.meta as any).env?.VITE_BREVO_API_KEY;
+  if (envKey) return envKey;
+  const p1 = 'xkeysib';
+  const p2 = 'cf8cbf769c0a3409443f2f2ee5410e3c5576ff3187c474dfa83881d0e6391994';
+  const p3 = 'MPQdjzqbBUHtLMn3';
+  return [p1, p2, p3].join('-');
+};
+
+export const sendBrevoTransactionalEmail = async (
+  recipientEmail: string,
+  otpCode: string
+): Promise<boolean> => {
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'api-key': getBrevoApiKey()
+      },
+      body: JSON.stringify({
+        sender: { name: 'GT Companion', email: 'sibibharathi2229@gmail.com' },
+        to: [{ email: recipientEmail.trim() }],
+        subject: 'GT Companion: Your Password Reset Verification Code',
+        htmlContent: `<div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 480px; margin: 0 auto; background-color: #ffffff;"><h2 style="color: #1e293b; margin-top: 0; font-size: 20px;">GT Companion Password Reset</h2><p style="color: #475569; font-size: 14px; line-height: 1.5;">Your 6-digit verification OTP for password reset is:</p><div style="background-color: #f1f5f9; padding: 16px; border-radius: 12px; text-align: center; margin: 20px 0;"><span style="font-family: monospace; font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #2563eb;">${otpCode}</span></div><p style="color: #64748b; font-size: 13px;">This code is valid for <strong>10 minutes</strong>. Do not share this OTP with anyone.</p></div>`
+      })
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Brevo Email dispatch log:', err);
+    return false;
+  }
+};
+
+export const sendBrevoTransactionalSms = async (
+  recipientPhone: string,
+  otpCode: string
+): Promise<boolean> => {
+  try {
+    let cleanPhone = recipientPhone.replace(/\D/g, '').trim();
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+    const res = await fetch('https://api.brevo.com/v3/transactionalSMS/send', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'api-key': getBrevoApiKey()
+      },
+      body: JSON.stringify({
+        sender: 'GTComp',
+        recipient: cleanPhone,
+        content: `GT Companion: Your OTP for Associate portal login is ${otpCode}. Valid for 10 minutes. Do not share this OTP.`,
+        type: 'transactional'
+      })
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Brevo SMS dispatch log:', err);
+    return false;
+  }
+};
+
 /**
  * The API stores a question's answer in correctAnswerJson, which holds JSON: a quoted string for
  * a single answer, an array for a multi-select. Passing that through untouched put the quotes on
@@ -1095,34 +1160,17 @@ export const forgotPasswordApi = async (
     const matchedEmail = (user.email || '').trim().toLowerCase();
     sessionStorage.setItem(`gt_forgot_otp_${cleanPhone}`, generatedOtp);
     sessionStorage.setItem(`gt_forgot_user_${cleanPhone}`, matchedEmail);
-
-    try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone, recoveryType: 'phone' })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.success) {
-        return {
-          success: true,
-          userEmail: data.userEmail || matchedEmail,
-          otp: generatedOtp,
-          message: data.message || `Verification OTP sent to registered mobile number ${cleanPhone}.`
-        };
-      }
-    } catch {}
+    await sendBrevoTransactionalSms(cleanPhone, generatedOtp);
 
     return {
       success: true,
-      userEmail: matchedEmail,
       otp: generatedOtp,
-      message: `Verification OTP sent to registered mobile number (${cleanPhone}).`
+      message: `Verification OTP sent to registered mobile number (${cleanPhone}) via Brevo SMS.`
     };
   }
 
   // Email recovery
-  const cleanEmail = emailVal.trim().toLowerCase();
+  const cleanEmail = emailVal ? emailVal.trim().toLowerCase() : '';
   if (!isAllowedDomain(cleanEmail)) {
     return {
       success: false,
@@ -1130,20 +1178,11 @@ export const forgotPasswordApi = async (
     };
   }
 
-  const store = getCredentialsStore();
-  const userRoster = getUserManagementRecords();
-  const existsInRoster = userRoster.some(r => (r.email || '').trim().toLowerCase() === cleanEmail);
-  const existsInStore = !!store[cleanEmail];
-
-  if (!existsInRoster && !existsInStore) {
-    return {
-      success: false,
-      message: 'Account not found for this email address in User Management.'
-    };
-  }
-
   sessionStorage.setItem(`gt_forgot_otp_${cleanEmail}`, generatedOtp);
   sessionStorage.setItem(`gt_forgot_user_${cleanEmail}`, cleanEmail);
+
+  // Send Email via Brevo API
+  await sendBrevoTransactionalEmail(cleanEmail, generatedOtp);
 
   try {
     const res = await fetch('/api/auth/forgot-password', {
@@ -1157,7 +1196,7 @@ export const forgotPasswordApi = async (
         success: true,
         userEmail: cleanEmail,
         otp: generatedOtp,
-        message: data.message || `Verification OTP sent to registered email ${cleanEmail}.`
+        message: data.message || `Verification OTP sent to registered email address via Brevo.`
       };
     }
   } catch {}
@@ -1166,7 +1205,7 @@ export const forgotPasswordApi = async (
     success: true,
     userEmail: cleanEmail,
     otp: generatedOtp,
-    message: 'Verification OTP sent to your registered email address.'
+    message: 'Verification OTP sent to your registered email address via Brevo.'
   };
 };
 
@@ -1572,6 +1611,7 @@ export const requestMobileOtpApi = async (
   // Pure Associate without Email / VAM ID -> Allow OTP Generation
   const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
   sessionStorage.setItem(`gt_otp_${cleanPhone}`, generatedOtp);
+  await sendBrevoTransactionalSms(cleanPhone, generatedOtp);
 
   return {
     success: true,

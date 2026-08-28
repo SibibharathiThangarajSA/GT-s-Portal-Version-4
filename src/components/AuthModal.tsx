@@ -79,6 +79,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const mobileOtpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [mobileOtpTimerSeconds, setMobileOtpTimerSeconds] = useState(300);
   const [canResendMobileOtp, setCanResendMobileOtp] = useState(false);
+  const [lastGeneratedMobileOtp, setLastGeneratedMobileOtp] = useState<string>('');
   const mobileTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // OTP & Reset Password Fields (Forgot Password Flow)
@@ -306,6 +307,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
 
       setSuccessMsg(res.message || 'Verification OTP sent successfully.');
+      if (res.otp) setLastGeneratedMobileOtp(res.otp);
       addToast('success', res.message || 'Verification code sent to your mobile number via Brevo SMS.');
       setView('mobile-otp-verify');
     } catch (err: any) {
@@ -326,6 +328,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
       if (res.success) {
         setSuccessMsg('A new OTP has been sent via Brevo SMS.');
+        if (res.otp) setLastGeneratedMobileOtp(res.otp);
         setMobileOtpTimerSeconds(300);
         setCanResendMobileOtp(false);
         addToast('success', 'A new verification code has been sent via Brevo SMS.');
@@ -914,6 +917,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <p className="text-xs text-slate-500 mt-0.5">
                 Verification code sent to <strong className="font-mono text-slate-800">{mobileCountryCode} {mobileNumber}</strong>
               </p>
+              {lastGeneratedMobileOtp && (
+                <div className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
+                  <span>Demo OTP Code:</span>
+                  <strong className="font-mono font-bold tracking-widest text-emerald-800">{lastGeneratedMobileOtp}</strong>
+                </div>
+              )}
             </div>
 
             {/* 6-Box OTP Inputs */}
