@@ -24,7 +24,10 @@ import {
   verifyOtpApi,
   resetPasswordApi,
   requestMobileOtpApi,
-  verifyMobileOtpApi
+  verifyMobileOtpApi,
+  requestMobileResetOtpApi,
+  verifyMobileResetOtpApi,
+  resetPasswordWithMobileOtpApi
 } from '../services/api';
 import { useToast } from '../context/ToastContext';
 
@@ -440,6 +443,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
+      if (recoveryType === 'phone') {
+        const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
+        const res = await requestMobileResetOtpApi(cleanPhone);
+        setIsLoading(false);
+
+        if (res.success) {
+          setTargetAccountEmail(cleanPhone);
+          setSuccessMsg(res.message || 'OTP sent successfully to your mobile number via Brevo SMS.');
+          addToast('success', res.message || 'OTP sent via Brevo SMS.');
+          setOtpDigits(['', '', '', '', '', '']);
+          setView('verify-otp');
+        } else {
+          setErrorMsg(res.message || 'Unable to send OTP via Brevo SMS.');
+          addToast('error', res.message || 'Unable to send OTP via Brevo SMS.');
+        }
+        return;
+      }
+
       const res = await forgotPasswordApi({
         recoveryType,
         email: recoveryEmail.trim(),
@@ -475,6 +496,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
+      if (recoveryType === 'phone') {
+        const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
+        const res = await requestMobileResetOtpApi(cleanPhone);
+        setIsResending(false);
+
+        if (res.success) {
+          setSuccessMsg('A new OTP has been sent via Brevo SMS.');
+          setOtpTimerSeconds(300);
+          setCanResend(false);
+          addToast('success', 'A new OTP has been sent to your mobile number via Brevo SMS.');
+        } else {
+          setErrorMsg(res.message || 'Failed to resend OTP.');
+          addToast('error', res.message || 'Failed to resend OTP.');
+        }
+        return;
+      }
+
       const res = await forgotPasswordApi({
         recoveryType,
         email: recoveryEmail.trim(),
@@ -552,6 +590,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
+      if (recoveryType === 'phone') {
+        const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
+        const res = await verifyMobileResetOtpApi(cleanPhone, fullOtp);
+        setIsLoading(false);
+
+        if (res.success && res.resetToken) {
+          setResetToken(res.resetToken);
+          setSuccessMsg('OTP verified successfully!');
+          addToast('success', 'Verification successful. Please create your new password.');
+          setView('new-password');
+        } else {
+          setErrorMsg(res.message || 'Incorrect OTP. Please try again.');
+          addToast('error', res.message || 'Incorrect OTP. Please try again.');
+        }
+        return;
+      }
+
       const inputVal = recoveryType === 'email' ? recoveryEmail.trim() : recoveryPhone;
       const res = await verifyOtpApi(inputVal, fullOtp);
       setIsLoading(false);
@@ -595,6 +650,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
+      if (recoveryType === 'phone') {
+        const cleanPhone = recoveryPhone.replace(/\D/g, '').trim();
+        const res = await resetPasswordWithMobileOtpApi(cleanPhone, resetToken, newPassword);
+        setIsLoading(false);
+
+        if (res.success) {
+          setSuccessMsg(res.message || 'Password has been reset successfully!');
+          addToast('success', 'Password reset successfully! Old password has been overridden.');
+          setTimeout(() => {
+            setView('login');
+            setPassword('');
+            setErrorMsg('');
+            setSuccessMsg('');
+          }, 1500);
+        } else {
+          setErrorMsg(res.message || 'Failed to reset password.');
+          addToast('error', res.message || 'Failed to reset password.');
+        }
+        return;
+      }
+
       const accEmail = targetAccountEmail || recoveryEmail.trim();
       const res = await resetPasswordApi(accEmail, resetToken, newPassword);
       setIsLoading(false);

@@ -1220,6 +1220,60 @@ export const resetPasswordApi = async (email: string, _resetToken: string, newPa
   return resetUserPassword(cleanEmail, newPassword);
 };
 
+export const requestMobileResetOtpApi = async (phoneNumber: string): Promise<{ success: boolean; message?: string }> => {
+  const cleanPhone = phoneNumber.replace(/\D/g, '').trim();
+  try {
+    const res = await fetch('/api/auth/request-reset-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneNumber: cleanPhone })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      return { success: true, message: data.message || 'OTP sent successfully to your mobile number via Brevo SMS.' };
+    }
+    return { success: false, message: data.error || data.message || 'Failed to send OTP.' };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Network error sending OTP via Brevo.' };
+  }
+};
+
+export const verifyMobileResetOtpApi = async (phoneNumber: string, otp: string): Promise<{ success: boolean; resetToken?: string; message?: string }> => {
+  const cleanPhone = phoneNumber.replace(/\D/g, '').trim();
+  try {
+    const res = await fetch('/api/auth/verify-reset-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneNumber: cleanPhone, otp })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success && data.data?.resetToken) {
+      return { success: true, resetToken: data.data.resetToken, message: data.message || 'OTP verified successfully.' };
+    }
+    return { success: false, message: data.error || data.message || 'Invalid or expired OTP.' };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Network error verifying OTP.' };
+  }
+};
+
+export const resetPasswordWithMobileOtpApi = async (phoneNumber: string, resetToken: string, newPassword: string): Promise<{ success: boolean; message?: string }> => {
+  const cleanPhone = phoneNumber.replace(/\D/g, '').trim();
+  try {
+    const res = await fetch('/api/auth/reset-password-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanPhone, resetToken, newPassword })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      return { success: true, message: data.message || 'Password reset successfully!' };
+    }
+    return { success: false, message: data.error || data.message || 'Failed to reset password.' };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Network error resetting password.' };
+  }
+};
+
 export const changePasswordApi = async (
   email: string,
   currentPassword: string,
