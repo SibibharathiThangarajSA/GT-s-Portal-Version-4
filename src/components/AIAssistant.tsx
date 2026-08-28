@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendAiChatMessageApi } from '../services/api';
-import { X, Send, Sparkles, Minimize2, Maximize2, FileText, HelpCircle, Code2, BookOpen, RefreshCw } from 'lucide-react';
+import { X, Send, Sparkles, Minimize2, Maximize2, FileText, HelpCircle, Code2, BookOpen, RefreshCw, Copy, Check } from 'lucide-react';
 
 interface AIAssistantProps {
   currentSessionName?: string;
@@ -116,6 +116,35 @@ const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 2
   );
 };
 
+// Copyable Code Snippet Block Component
+const CodeBlock: React.FC<{ lang?: string; content: string }> = ({ lang, content }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="my-2 bg-slate-900 text-slate-100 rounded-xl overflow-hidden border border-slate-800 shadow-md">
+      <div className="bg-slate-800/90 px-3 py-1.5 text-[10px] font-mono text-slate-400 border-b border-slate-700 flex justify-between items-center select-none">
+        <span className="font-bold text-blue-400">{(lang || 'CODE').toUpperCase()}</span>
+        <button
+          onClick={handleCopy}
+          className="text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer px-1.5 py-0.5 rounded bg-slate-700/50 hover:bg-slate-700"
+          title="Copy code snippet"
+        >
+          {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+          <span>{copied ? 'Copied!' : 'Copy'}</span>
+        </button>
+      </div>
+      <pre className="p-3 font-mono text-[11px] leading-relaxed overflow-x-auto text-emerald-400 whitespace-pre select-text">
+        <code>{content}</code>
+      </pre>
+    </div>
+  );
+};
+
 // Lightweight Rich Markdown Formatter Component
 const FormattedMarkdown: React.FC<{ text: string }> = ({ text }) => {
   if (!text) return null;
@@ -157,20 +186,10 @@ const FormattedMarkdown: React.FC<{ text: string }> = ({ text }) => {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 select-text">
       {parts.map((part, pIdx) => {
         if (part.type === 'code') {
-          return (
-            <div key={pIdx} className="my-2 bg-slate-900 text-slate-100 rounded-xl overflow-hidden border border-slate-800 shadow-md">
-              <div className="bg-slate-800/90 px-3 py-1 text-[10px] font-mono text-slate-400 border-b border-slate-700 flex justify-between items-center">
-                <span className="font-bold text-blue-400">{(part.lang || 'CODE').toUpperCase()}</span>
-                <span className="text-[9px] text-slate-400">Snippet</span>
-              </div>
-              <pre className="p-3 font-mono text-[11px] leading-relaxed overflow-x-auto text-emerald-400 whitespace-pre">
-                <code>{part.content}</code>
-              </pre>
-            </div>
-          );
+          return <CodeBlock key={pIdx} lang={part.lang} content={part.content} />;
         }
 
         const lines = part.content.split('\n');
@@ -223,6 +242,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -238,6 +258,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isOpen]);
+
+  const handleCopyText = (msgId: string, text: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedMessageId(msgId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (e) {
+      console.error('Failed to copy text:', e);
+    }
+  };
 
   const handleSend = async (customPrompt?: string) => {
     const textToSend = customPrompt || input.trim();
@@ -283,12 +313,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 font-sans select-none">
+    <div className="fixed bottom-6 right-6 z-50 font-sans">
       {/* Floating Trigger Button with PicoLiveEye and Multi-Color Glowing Aura */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-3 py-2.5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center gap-2.5 border border-white/40 cursor-pointer"
+          className="group relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-3 py-2.5 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center gap-2.5 border border-white/40 cursor-pointer select-none"
         >
           <div className="relative flex items-center justify-center">
             <PicoLiveEye size={28} />
@@ -309,7 +339,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           }`}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-4 text-white flex items-center justify-between flex-shrink-0 shadow-md">
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-4 text-white flex items-center justify-between flex-shrink-0 shadow-md select-none">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
                 <PicoLiveEye size={30} />
@@ -356,7 +386,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                       <RagResponseLogo size={30} className="mt-0.5" />
                     )}
                     <div
-                      className={`max-w-[85%] p-3.5 rounded-2xl leading-relaxed shadow-sm ${
+                      className={`max-w-[85%] p-3.5 rounded-2xl leading-relaxed shadow-sm relative group select-text ${
                         m.sender === 'user'
                           ? 'bg-blue-600 text-white rounded-tr-none whitespace-pre-wrap'
                           : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none font-sans'
@@ -367,9 +397,31 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                       ) : (
                         <FormattedMarkdown text={m.text} />
                       )}
-                      <span className="block text-[9px] opacity-60 text-right mt-1.5 font-mono">
-                        {m.timestamp}
-                      </span>
+                      
+                      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100/70 opacity-90 text-[10px]">
+                        {m.sender === 'ai' ? (
+                          <button
+                            onClick={() => handleCopyText(m.id, m.text)}
+                            className="text-slate-400 hover:text-blue-600 flex items-center gap-1 transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-slate-100 select-none"
+                            title="Copy AI response"
+                          >
+                            {copiedMessageId === m.id ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span className="text-[9px] font-semibold text-emerald-600">Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span className="text-[9px]">Copy</span>
+                              </>
+                            )}
+                          </button>
+                        ) : <span />}
+                        <span className="font-mono text-[9px] opacity-60 select-none">
+                          {m.timestamp}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
