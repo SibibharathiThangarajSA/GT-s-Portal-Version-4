@@ -1556,7 +1556,7 @@ export const requestMobileOtpApi = async (
   if (!user) {
     return {
       success: false,
-      message: 'Mobile number not found. Please contact your L&D Administrator.'
+      message: 'Mobile number not registered in Associate roster. Please contact your L&D Administrator.'
     };
   }
 
