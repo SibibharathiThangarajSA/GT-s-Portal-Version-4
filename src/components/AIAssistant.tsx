@@ -108,9 +108,8 @@ const PicoLiveEye: React.FC<{ size?: number; className?: string }> = ({ size = 2
 
       {/* Eyelid / Blink Animation */}
       <div
-        className={`absolute inset-0 bg-slate-900 transition-all duration-150 ease-in-out z-20 ${
-          isBlinking ? 'h-full opacity-100' : 'h-0 opacity-0'
-        }`}
+        className={`absolute inset-0 bg-slate-900 transition-all duration-150 ease-in-out z-20 ${isBlinking ? 'h-full opacity-100' : 'h-0 opacity-0'
+          }`}
       />
     </div>
   );
@@ -248,7 +247,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     {
       id: 'init-1',
       sender: 'ai',
-      text: `Hello! I am PICO, your AI learning assistant. I can explain complex technical concepts, summarize study materials, review code, or recommend interview prep questions for ${currentSessionName || 'your learning roadmap'}. How can I assist you today?`,
+      text: `Hello! I am PIKO, your AI learning assistant. I can explain complex technical concepts, summarize study materials, review code, or recommend interview prep questions for ${currentSessionName || 'your learning roadmap'}. How can I assist you today?`,
       timestamp: 'Just now'
     }
   ]);
@@ -324,7 +323,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             <PicoLiveEye size={28} />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-blue-600 animate-pulse z-20" />
           </div>
-          <span className="font-extrabold text-sm pr-0.5 tracking-tight text-white drop-shadow-md">Ask PICO</span>
+          <span className="font-extrabold text-sm pr-0.5 tracking-tight text-white drop-shadow-md">Ask PIKO</span>
           <Sparkles className="w-4 h-4 text-amber-300 group-hover:rotate-12 transition-transform" />
         </button>
       )}
@@ -332,11 +331,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       {/* Chat Window Container */}
       {isOpen && (
         <div
-          className={`bg-white rounded-3xl shadow-2xl border border-slate-200/80 flex flex-col transition-all duration-300 overflow-hidden ${
-            isMinimized
+          className={`bg-white rounded-3xl shadow-2xl border border-slate-200/80 flex flex-col transition-all duration-300 overflow-hidden ${isMinimized
               ? 'w-80 h-16'
               : 'w-[420px] sm:w-[460px] h-[580px] max-h-[85vh]'
-          }`}
+            }`}
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-4 text-white flex items-center justify-between flex-shrink-0 shadow-md select-none">
@@ -346,7 +344,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               </div>
               <div>
                 <h3 className="font-bold text-sm tracking-tight flex items-center gap-1.5">
-                  Ask PICO
+                  Ask PIKO
                 </h3>
                 <p className="text-[10px] text-blue-100/90 font-medium flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -386,18 +384,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                       <RagResponseLogo size={30} className="mt-0.5" />
                     )}
                     <div
-                      className={`max-w-[85%] p-3.5 rounded-2xl leading-relaxed shadow-sm relative group select-text ${
-                        m.sender === 'user'
+                      className={`max-w-[85%] p-3.5 rounded-2xl leading-relaxed shadow-sm relative group select-text ${m.sender === 'user'
                           ? 'bg-blue-600 text-white rounded-tr-none whitespace-pre-wrap'
                           : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none font-sans'
-                      }`}
+                        }`}
                     >
                       {m.sender === 'user' ? (
                         m.text
                       ) : (
                         <FormattedMarkdown text={m.text} />
                       )}
-                      
+
                       <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100/70 opacity-90 text-[10px]">
                         {m.sender === 'ai' ? (
                           <button
@@ -431,7 +428,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     <RagResponseLogo size={28} />
                     <span className="text-xs italic font-medium flex items-center gap-1.5 text-slate-700">
                       <RefreshCw className="w-3 h-3 animate-spin text-blue-600" />
-                      <span>PICO RAG AI is crafting response...</span>
+                      <span>PKCO RAG AI is crafting response...</span>
                     </span>
                   </div>
                 )}
@@ -451,7 +448,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask PICO anything about your learning materials..."
+                    placeholder="Ask PIKO anything about your learning materials..."
                     className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white"
                   />
                   <button
