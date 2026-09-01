@@ -24,6 +24,12 @@ interface CustomVideoPlayerProps {
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2, 4];
 
+const FALLBACK_VIDEOS = [
+  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  '/Assets/Videos/bg-video/premium.mp4'
+];
+
 export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   src,
   poster,
@@ -36,6 +42,8 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [currentSrc, setCurrentSrc] = useState<string>(src || FALLBACK_VIDEOS[0]);
+  const [fallbackIndex, setFallbackIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -45,6 +53,14 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isSpeedMenuOpen, setIsSpeedMenuOpen] = useState(false);
+
+  // Sync state when src prop changes
+  useEffect(() => {
+    setCurrentSrc(src || FALLBACK_VIDEOS[0]);
+    setFallbackIndex(0);
+    setIsPlaying(false);
+    setCurrentTime(0);
+  }, [src]);
 
   // Hover timestamp tooltip states
   const [hoverTime, setHoverTime] = useState<number | null>(null);
@@ -69,11 +85,17 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
-      setIsPlaying(true);
-      videoRef.current.play().catch(err => {
-        console.warn("Video playback blocked or failed:", err);
-        setIsPlaying(false);
-      });
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((err) => {
+            console.warn("Video playback blocked or failed:", err);
+            setIsPlaying(false);
+          });
+      }
     } else {
       videoRef.current.pause();
       setIsPlaying(false);
@@ -166,7 +188,27 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     if (videoRef.current) {
       videoRef.current.playbackRate = playbackRate;
     }
-  }, [src, playbackRate]);
+  }, [currentSrc, playbackRate]);
+
+  // Keyboard controls
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === ' ' || e.key === 'k') {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === 'ArrowLeft' || e.key === 'j') {
+      e.preventDefault();
+      skipTime(-10);
+    } else if (e.key === 'ArrowRight' || e.key === 'l') {
+      e.preventDefault();
+      skipTime(10);
+    } else if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      toggleMute();
+    } else if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      toggleFullscreen();
+    }
+  };
 
   // Sync native video events
   useEffect(() => {
@@ -188,7 +230,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('ended', handleEnded);
     };
-  }, [src]);
+  }, [currentSrc]);
 
   // Fullscreen change listener
   useEffect(() => {
@@ -199,33 +241,38 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  // Handle Video Error Fallback if local asset is missing
-  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    const target = e.currentTarget;
-    if (!target.src.includes('gtv-videos-bucket')) {
-      console.warn("Primary video failed to load, switching to fallback sample video.");
-      target.src = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-      target.play().then(() => setIsPlaying(true)).catch(() => {});
+  // Handle Video Error Fallback if asset is missing or blocked
+  const handleVideoError = () => {
+    console.warn(`[VideoPlayer] Error loading video source: ${currentSrc}`);
+    if (fallbackIndex < FALLBACK_VIDEOS.length) {
+      const nextFallback = FALLBACK_VIDEOS[fallbackIndex];
+      console.warn(`[VideoPlayer] Switching to fallback stream: ${nextFallback}`);
+      setFallbackIndex(prev => prev + 1);
+      setCurrentSrc(nextFallback);
     }
   };
 
   return (
     <div
       ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => {
         if (isPlaying) setShowControls(false);
         setIsSpeedMenuOpen(false);
       }}
-      className={`relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl select-none group border border-slate-800 ${className}`}
+      className={`relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl select-none group border border-slate-800 outline-none focus:ring-2 focus:ring-blue-500/50 ${className}`}
     >
       {/* HTML5 Video Element */}
       <video
         ref={videoRef}
-        src={src}
+        key={currentSrc}
+        src={currentSrc}
         poster={poster}
         autoPlay={autoPlay}
         playsInline
+        preload="metadata"
         onClick={togglePlay}
         onError={handleVideoError}
         onPlay={() => setIsPlaying(true)}

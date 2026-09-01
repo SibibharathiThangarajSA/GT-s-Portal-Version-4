@@ -995,13 +995,18 @@ async function startServer() {
         path.join(process.cwd(), 'public', 'uploads', unescaped),
         path.join(process.cwd(), 'public', unescaped),
         path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', unescaped),
-        path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', 'site-assets', 'videos', path.basename(unescaped))
+        path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', 'site-assets', 'videos', path.basename(unescaped)),
+        path.join(process.cwd(), 'public', 'Assets', 'Videos', 'bg-video', 'premium.mp4')
       ];
 
       for (const localPath of candidatePaths) {
         if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
           return res.sendFile(localPath);
         }
+      }
+
+      if (unescaped.endsWith('.mp4') || unescaped.endsWith('.webm') || unescaped.includes('videos/')) {
+        return res.redirect('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4');
       }
 
       console.warn(`File not found in S3 or local disk: ${unescaped}`);
