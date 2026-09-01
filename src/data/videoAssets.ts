@@ -16,7 +16,8 @@
 const BUCKET_VIDEO_BASE = '/api/materials/files/site-assets/videos';
 
 export const SITE_VIDEOS = {
-  finalOverview: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-  leadershipInsights: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+  finalOverview: `${BUCKET_VIDEO_BASE}/final-overview.mp4`,
+  leadershipInsights: `${BUCKET_VIDEO_BASE}/leadership-insights.mp4`
 } as const;
+
 
