@@ -183,10 +183,10 @@ const buildMaterialItemsFromSession = (sessionData: Session & { studyMaterials?:
   return { provided: providedItems, additional: additionalItems };
 };
 
-const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+const DEFAULT_SESSION_SAMPLE_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
 
 const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'loom' | 'gdrive' | 'html5'; embedUrl: string } => {
-  if (!url) return { type: 'html5', embedUrl: '' };
+  if (!url) return { type: 'html5', embedUrl: DEFAULT_SESSION_SAMPLE_VIDEO };
 
   const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
   if (ytMatch && ytMatch[1]) {
@@ -203,7 +203,7 @@ const getEmbedUrl = (url: string): { type: 'youtube' | 'vimeo' | 'loom' | 'gdriv
     return { type: 'loom', embedUrl: `https://www.loom.com/embed/${loomMatch[1]}` };
   }
 
-  const gdriveMatch = url.match(/drive\.google\.com\/file\/d\/([^\/]+)/i);
+  const gdriveMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/i);
   if (gdriveMatch && gdriveMatch[1]) {
     return { type: 'gdrive', embedUrl: `https://drive.google.com/file/d/${gdriveMatch[1]}/preview` };
   }
