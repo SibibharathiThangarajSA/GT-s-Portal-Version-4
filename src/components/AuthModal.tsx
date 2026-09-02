@@ -747,7 +747,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setRecoveryEmail(email || '');
+                    setRecoveryEmail('');
                     setErrorMsg('');
                     setSuccessMsg('');
                     setView('forgot-email');
@@ -1087,6 +1087,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               onClick={() => {
                 setErrorMsg('');
                 setSuccessMsg('');
+                setRecoveryEmail('');
                 setView('login');
               }}
               className="w-full py-2.5 rounded-xl font-semibold text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all text-center cursor-pointer flex items-center justify-center gap-1.5"

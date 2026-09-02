@@ -354,6 +354,10 @@ export const authenticateLocalUser = (
   const getAccountPassword = (role: string, uId?: string, recordPassword?: string): string => {
     const rKey = getCredentialStorageKey(role, cleanEmail);
     if (rawOverrides[rKey]) return rawOverrides[rKey].trim();
+    if (rawOverrides[cleanEmail]) return rawOverrides[cleanEmail].trim();
+    if (rawOverrides[getCredentialStorageKey('gt', cleanEmail)]) return rawOverrides[getCredentialStorageKey('gt', cleanEmail)].trim();
+    if (rawOverrides[getCredentialStorageKey('employee', cleanEmail)]) return rawOverrides[getCredentialStorageKey('employee', cleanEmail)].trim();
+    if (rawOverrides[getCredentialStorageKey('associate', cleanEmail)]) return rawOverrides[getCredentialStorageKey('associate', cleanEmail)].trim();
     if (uId && rawOverrides[uId]) return rawOverrides[uId].trim();
     if (recordPassword && recordPassword.trim() && recordPassword !== '-') return recordPassword.trim();
     return getDefaultPasswordForEmail(cleanEmail);
@@ -584,8 +588,21 @@ export const resetUserPassword = (
     let overrides: Record<string, string> = {};
     const raw = safeLocalStorage.getItem(STORAGE_KEY);
     if (raw) overrides = JSON.parse(raw) || {};
+    
+    // Set for direct email and all role-scoped variants so login succeeds from any tab
+    overrides[cleanEmail] = newPassword;
     overrides[rKey] = newPassword;
+    ['gt', 'employee', 'associate', 'admin'].forEach((roleName) => {
+      overrides[getCredentialStorageKey(roleName, cleanEmail)] = newPassword;
+    });
+
     if (matched) overrides[matched.id] = newPassword;
+    roster.forEach((u) => {
+      if (u.email && u.email.trim().toLowerCase() === cleanEmail) {
+        overrides[u.id] = newPassword;
+      }
+    });
+
     safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
   } catch (e) {
     console.warn('Failed to persist reset password to storage', e);
@@ -596,7 +613,7 @@ export const resetUserPassword = (
     const updatedRoster = roster.map((r) => {
       if (
         (matched && r.id === matched.id) ||
-        (r.email && r.email.trim().toLowerCase() === cleanEmail && r.role === matchedRole)
+        (r.email && r.email.trim().toLowerCase() === cleanEmail)
       ) {
         updated = true;
         return { ...r, password: newPassword };
