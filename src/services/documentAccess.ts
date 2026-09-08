@@ -128,20 +128,71 @@ export const openDocument = (record: DocumentLike | null | undefined): boolean =
     safeUrl.includes('youtu.be') ||
     safeUrl.includes('vimeo.com');
 
+  const cleanUrl = safeUrl.toLowerCase().split('?')[0];
+  const lowerTitle = docTitle.toLowerCase();
+  const lowerType = (record?.fileType || '').toLowerCase();
+
+  // Check if it's a PowerPoint presentation (.ppt, .pptx, SharePoint PPT)
+  const isPowerPoint =
+    cleanUrl.endsWith('.pptx') ||
+    cleanUrl.endsWith('.ppt') ||
+    lowerTitle.endsWith('.pptx') ||
+    lowerTitle.endsWith('.ppt') ||
+    lowerType.includes('powerpoint') ||
+    lowerType.includes('ppt') ||
+    safeUrl.includes('sharepoint.com') ||
+    safeUrl.includes('1drv.ms') ||
+    safeUrl.includes('onedrive.live.com');
+
   // 1. External Video Streaming Links (YouTube / Vimeo)
   if (isStreamingVideoUrl) {
     window.open(safeUrl, '_blank', 'noopener,noreferrer');
     return true;
   }
 
-  // 2. Direct Enterprise SharePoint / OneDrive Presentation links:
-  if (safeUrl.includes('sharepoint.com') || safeUrl.includes('1drv.ms') || safeUrl.includes('onedrive.live.com')) {
-    const onlinePptUrl = safeUrl.includes('?') ? `${safeUrl}&web=1` : `${safeUrl}?web=1`;
-    window.open(onlinePptUrl, '_blank', 'noopener,noreferrer');
-    return true;
+  // 2. PowerPoint Presentations (.ppt, .pptx, SharePoint PPT):
+  // Must ALWAYS open in PowerPoint (Never in document-viewer.html UI)
+  if (isPowerPoint) {
+    // A. SharePoint / OneDrive / Microsoft 365
+    if (safeUrl.includes('sharepoint.com') || safeUrl.includes('1drv.ms') || safeUrl.includes('onedrive.live.com')) {
+      const onlinePptUrl = safeUrl.includes('?') ? `${safeUrl}&web=1` : `${safeUrl}?web=1`;
+      window.open(onlinePptUrl, '_blank', 'noopener,noreferrer');
+      return true;
+    }
+
+    const fullUrl = safeUrl.startsWith('http') ? safeUrl : `${window.location.origin}${safeUrl.startsWith('/') ? '' : '/'}${safeUrl}`;
+    const isLocalhost = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.endsWith('.local')
+    );
+
+    if (!isLocalhost) {
+      // Production / Public domain: Open directly in Microsoft 365 / Office Online Web PowerPoint Viewer
+      const officeWebPptUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fullUrl)}`;
+      window.open(officeWebPptUrl, '_blank', 'noopener,noreferrer');
+      return true;
+    } else {
+      // Local development: Trigger direct opening in Microsoft PowerPoint Desktop App
+      try {
+        window.location.href = `ms-powerpoint:ofv|u|${fullUrl}`;
+      } catch {}
+
+      // Direct file dispatch so Microsoft PowerPoint opens the presentation file
+      const link = document.createElement('a');
+      link.href = safeUrl;
+      const fileNameExt = (docTitle.endsWith('.pptx') || docTitle.endsWith('.ppt'))
+        ? docTitle
+        : (cleanUrl.endsWith('.ppt') ? `${docTitle}.ppt` : `${docTitle}.pptx`);
+      link.download = fileNameExt;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return true;
+    }
   }
 
-  // 3. ALL other materials (PowerPoint PPT/PPTX, PDF, Word DOC/DOCX, Videos, Audio, Excel XLSX, Images, Code, SQL, Text):
+  // 3. ALL other materials (PDF, Word DOC/DOCX, Videos, Audio, Excel XLSX, Images, Code, SQL, Text):
   // Open in the Universal In-Browser Document Viewer screen
   const viewerUrl = `/document-viewer.html?file=${encodeURIComponent(safeUrl)}&title=${encodeURIComponent(docTitle)}`;
   window.open(viewerUrl, '_blank', 'noopener,noreferrer');
