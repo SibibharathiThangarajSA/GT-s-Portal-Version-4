@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "note-guest-user-session-1787189880163-1787468107040",
+    "userId": "guest-user",
+    "userEmail": "Aswin.Muruganandham@valuemomentum.com",
+    "sessionId": "session-1787189880163",
+    "topicId": "topic-0g8mm6p7n2a4",
+    "topicTitle": "Collections & LINQ",
+    "content": "Remember: LINQ uses deferred execution",
+    "isPinned": false,
+    "createdAt": "Aug 23, 2026 • 12:25 pm",
+    "updatedAt": "Aug 23, 2026 • 12:25 pm"
+  }
+]

@@ -917,6 +917,37 @@ async function startServer() {
     }
   });
 
+  // MIME Type Resolver for videos, documents, slides, and scripts
+  const getMimeType = (filePath: string): string => {
+    const ext = path.extname(filePath).toLowerCase();
+    const map: Record<string, string> = {
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogg': 'video/ogg',
+      '.mov': 'video/quicktime',
+      '.m4v': 'video/x-m4v',
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.pdf': 'application/pdf',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.doc': 'application/msword',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.xls': 'application/vnd.ms-excel',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.svg': 'image/svg+xml',
+      '.webp': 'image/webp',
+      '.gif': 'image/gif',
+      '.txt': 'text/plain',
+      '.sql': 'text/plain',
+      '.json': 'application/json'
+    };
+    return map[ext] || 'application/octet-stream';
+  };
+
   // Stream files / videos with HTTP 206 Partial Content / Range support from S3 & Local Disk
   const streamFileHandler = async (req: express.Request, res: express.Response) => {
     try {
@@ -924,26 +955,46 @@ async function startServer() {
       if (rawPath.startsWith('download/')) {
         rawPath = rawPath.substring('download/'.length);
       }
-      const unescaped = decodeURIComponent(rawPath).replace(/^[\/\\]+/, '');
+
+      // Handle potential single or double URL-encoding (e.g. uploads%2F... or uploads%252F...)
+      let unescaped = rawPath;
+      try {
+        unescaped = decodeURIComponent(rawPath);
+        if (unescaped.includes('%')) {
+          unescaped = decodeURIComponent(unescaped);
+        }
+      } catch {
+        unescaped = rawPath;
+      }
+      unescaped = unescaped.replace(/^[\/\\]+/, '').replace(/\\/g, '/');
 
       if (!unescaped) {
         return res.status(400).json({ message: 'File path not specified' });
       }
 
+      const fileName = path.basename(unescaped);
+      const isVideoFile = /\.(mp4|webm|ogg|mov|m4v)$/i.test(unescaped) || unescaped.includes('videos/');
+      const resolvedContentType = getMimeType(unescaped);
+
       const rangeHeader = req.headers.range;
 
-      // Candidate S3 Bucket Keys to search
+      // Build comprehensive candidate S3 Bucket Keys to search
       const candidateS3Keys = [
         unescaped,
         `uploads/${unescaped}`,
-        `uploads/site-assets/videos/${path.basename(unescaped)}`,
-        `site-assets/videos/${path.basename(unescaped)}`,
-        `videos/${path.basename(unescaped)}`,
-        path.basename(unescaped)
+        unescaped.replace(/^uploads\//, ''),
+        `sessions/${unescaped.replace(/^sessions\//, '')}`,
+        `uploads/sessions/${unescaped.replace(/^sessions\//, '')}`,
+        `uploads/site-assets/videos/${fileName}`,
+        `site-assets/videos/${fileName}`,
+        `videos/${fileName}`,
+        fileName,
+        `uploads/${fileName}`
       ];
 
       const uniqueS3Keys = Array.from(new Set(candidateS3Keys));
       let s3Res: any = null;
+      let matchedKey: string = '';
 
       for (const keyCandidate of uniqueS3Keys) {
         try {
@@ -954,6 +1005,7 @@ async function startServer() {
           });
           s3Res = await s3Client.send(cmd);
           if (s3Res && s3Res.Body) {
+            matchedKey = keyCandidate;
             break;
           }
         } catch {
@@ -963,7 +1015,11 @@ async function startServer() {
 
       if (s3Res && s3Res.Body) {
         res.setHeader('Accept-Ranges', 'bytes');
-        if (s3Res.ContentType) res.setHeader('Content-Type', s3Res.ContentType);
+        const finalContentType = (s3Res.ContentType && s3Res.ContentType !== 'application/octet-stream')
+          ? s3Res.ContentType
+          : resolvedContentType;
+        res.setHeader('Content-Type', finalContentType);
+
         if (s3Res.ContentLength !== undefined) res.setHeader('Content-Length', s3Res.ContentLength.toString());
         if (s3Res.ContentRange) {
           res.setHeader('Content-Range', s3Res.ContentRange);
@@ -972,14 +1028,25 @@ async function startServer() {
           res.status(200);
         }
 
+        // HEAD requests only need headers
+        if (req.method === 'HEAD') {
+          return res.end();
+        }
+
         try {
-          if (typeof (s3Res.Body as any).pipe === 'function') {
-            (s3Res.Body as any).pipe(res);
-          } else if (typeof (s3Res.Body as any).transformToByteArray === 'function') {
-            const bytes = await (s3Res.Body as any).transformToByteArray();
+          const bodyStream = s3Res.Body as any;
+          if (typeof bodyStream.pipe === 'function') {
+            bodyStream.pipe(res);
+            res.on('close', () => {
+              if (typeof bodyStream.destroy === 'function') {
+                bodyStream.destroy();
+              }
+            });
+          } else if (typeof bodyStream.transformToByteArray === 'function') {
+            const bytes = await bodyStream.transformToByteArray();
             res.send(Buffer.from(bytes));
           } else {
-            for await (const chunk of s3Res.Body as any) {
+            for await (const chunk of bodyStream) {
               res.write(chunk);
             }
             res.end();
@@ -987,25 +1054,38 @@ async function startServer() {
           return;
         } catch (streamErr) {
           console.warn('Error piping S3 body stream to response:', streamErr);
+          if (!res.headersSent) {
+            return res.status(500).json({ message: 'Error streaming file from storage' });
+          }
+          return;
         }
       }
 
       // Fallback to local files
       const candidatePaths = [
         path.join(process.cwd(), 'public', 'uploads', unescaped),
+        path.join(process.cwd(), 'public', 'uploads', unescaped.replace(/^uploads\//, '')),
         path.join(process.cwd(), 'public', unescaped),
         path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', unescaped),
-        path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', 'site-assets', 'videos', path.basename(unescaped)),
-        path.join(process.cwd(), 'public', 'Assets', 'Videos', 'bg-video', 'premium.mp4')
+        path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', unescaped.replace(/^uploads\//, '')),
+        path.join(process.cwd(), '..', 'Mission-Possible', 'src', 'GTsPortal.API', 'wwwroot', 'uploads', 'site-assets', 'videos', fileName),
+        path.join(process.cwd(), 'public', 'Assets', 'Videos', 'site-assets', fileName)
       ];
 
       for (const localPath of candidatePaths) {
         if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+          res.setHeader('Content-Type', resolvedContentType);
           return res.sendFile(localPath);
         }
       }
 
-      if (unescaped.endsWith('.mp4') || unescaped.endsWith('.webm') || unescaped.includes('videos/')) {
+      // ONLY fallback to sample video IF the requested file was specifically a video!
+      if (isVideoFile) {
+        const localSampleVideo = path.join(process.cwd(), 'public', 'Assets', 'Videos', 'bg-video', 'premium.mp4');
+        if (fs.existsSync(localSampleVideo)) {
+          res.setHeader('Content-Type', 'video/mp4');
+          return res.sendFile(localSampleVideo);
+        }
         return res.redirect('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4');
       }
 
@@ -1018,7 +1098,11 @@ async function startServer() {
   };
 
   app.get('/api/materials/files/download/*', streamFileHandler);
+  app.head('/api/materials/files/download/*', streamFileHandler);
   app.get('/api/materials/files/*', streamFileHandler);
+  app.head('/api/materials/files/*', streamFileHandler);
+  app.get('/uploads/*', streamFileHandler);
+  app.head('/uploads/*', streamFileHandler);
 
   // --- 5. QUIZZES & ASSIGNMENTS ROUTERS ---
   app.get("/api/quizzes", (req, res) => {

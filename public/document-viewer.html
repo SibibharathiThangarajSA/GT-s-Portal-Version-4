@@ -553,19 +553,15 @@
 
     function getSafePathUrl(rawUrl) {
       if (!rawUrl) return '';
-      const trimmed = rawUrl.trim();
+      let trimmed = rawUrl.trim();
       if (/^https?:\/\//i.test(trimmed)) {
-        try {
-          const urlObj = new URL(trimmed);
-          urlObj.pathname = urlObj.pathname
-            .split('/')
-            .map(seg => encodeURIComponent(decodeURIComponent(seg)))
-            .join('/');
-          return urlObj.toString();
-        } catch {
-          return trimmed;
-        }
+        return trimmed;
       }
+      try {
+        if (trimmed.includes('%2F') || trimmed.includes('%2f')) {
+          trimmed = decodeURIComponent(trimmed);
+        }
+      } catch {}
       const [pathPart, ...queryParts] = trimmed.split('?');
       const safePath = pathPart
         .split('/')
@@ -888,7 +884,36 @@
         return;
       }
 
-      // CASE C: Direct Document & Video Files (Local / Backend Uploads / API / Blobs)
+      // CASE B.2: Direct Video & Audio Streaming (.mp4, .webm, .ogg, .mov, .m4v, .mp3, .wav, or /videos/ in path)
+      const isDirectVideo = cleanUrl.endsWith('.mp4') || cleanUrl.endsWith('.webm') || cleanUrl.endsWith('.ogg') || cleanUrl.endsWith('.mov') || cleanUrl.endsWith('.m4v') || cleanUrl.includes('/videos/') || lowerTitle.endsWith('.mp4') || lowerTitle.endsWith('.webm') || lowerTitle.endsWith('.mov');
+      const isDirectAudio = cleanUrl.endsWith('.mp3') || cleanUrl.endsWith('.wav') || cleanUrl.endsWith('.m4a') || lowerTitle.endsWith('.mp3');
+
+      if (isDirectVideo || isDirectAudio) {
+        formatBadge.textContent = isDirectVideo ? 'VIDEO' : 'AUDIO';
+        loadingState.style.display = 'none';
+        errorState.style.display = 'none';
+        container.style.display = 'block';
+        pdfTarget.style.display = 'none';
+        dynamicTarget.style.display = 'block';
+
+        dynamicTarget.innerHTML = `
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 520px; padding: 24px; background: #0f172a; border-radius: 16px;">
+            ${isDirectVideo ? `
+              <div style="width: 100%; max-width: 960px; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6); background: #000;">
+                <video src="${safeFetchUrl}" controls autoplay playsinline style="width: 100%; max-height: 72vh; display: block;" onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'padding: 32px; text-align: center; color: #f8fafc;\\'><p style=\\'margin-bottom: 12px; font-weight: 600;\\'>Could not play video stream directly.</p><button class=\\'btn btn-primary\\' onclick=\\'window.open(\\\"${safeFetchUrl}\\\", \\\"_blank\\\")\\'>Open Direct Video</button></div>';"></video>
+              </div>
+            ` : `
+              <div style="width: 100%; max-width: 520px; padding: 32px; background: #1e293b; border-radius: 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.4); text-align: center;">
+                <h4 style="color: #f8fafc; margin-bottom: 16px; font-size: 16px;">${customTitle}</h4>
+                <audio src="${safeFetchUrl}" controls autoplay style="width: 100%;"></audio>
+              </div>
+            `}
+          </div>
+        `;
+        return;
+      }
+
+      // CASE C: Direct Document Files (PDF, Word, PPTX, Excel, Images, Code, Text)
       try {
         const res = await fetch(safeFetchUrl);
         if (!res.ok) {
@@ -929,9 +954,15 @@
                 loadingState.style.display = 'none';
                 errorState.style.display = 'none';
                 container.style.display = 'block';
-                pdfTarget.style.display = 'block';
-                dynamicTarget.style.display = 'none';
-                pdfTarget.src = blobUrl;
+                pdfTarget.style.display = 'none';
+                dynamicTarget.style.display = 'block';
+                dynamicTarget.innerHTML = `
+                  <div style="width: 100%; height: calc(100vh - 140px); background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #bae6fd; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.1);">
+                    <object data="${safeFetchUrl}#toolbar=1" type="application/pdf" style="width: 100%; height: 100%;">
+                      <iframe src="${blobUrl}" style="width: 100%; height: 100%; border: none;"></iframe>
+                    </object>
+                  </div>
+                `;
                 activeFileUrl = fallbackCandidate;
                 return;
               }
@@ -951,9 +982,20 @@
           loadingState.style.display = 'none';
           errorState.style.display = 'none';
           container.style.display = 'block';
-          pdfTarget.style.display = 'block';
-          dynamicTarget.style.display = 'none';
-          pdfTarget.src = blobUrl;
+          pdfTarget.style.display = 'none';
+          dynamicTarget.style.display = 'block';
+          dynamicTarget.innerHTML = `
+            <div style="width: 100%; height: calc(100vh - 140px); background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #bae6fd; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.1);">
+              <object data="${safeFetchUrl}#toolbar=1" type="application/pdf" style="width: 100%; height: 100%;">
+                <iframe src="${blobUrl}" style="width: 100%; height: 100%; border: none;">
+                  <p style="padding: 24px; text-align: center; color: #1e293b;">
+                    Unable to display PDF directly in your browser. 
+                    <a href="${safeFetchUrl}" target="_blank" style="color: #2563eb; font-weight: bold; text-decoration: underline;">Click here to open or download the PDF</a>
+                  </p>
+                </iframe>
+              </object>
+            </div>
+          `;
           return;
         }
 

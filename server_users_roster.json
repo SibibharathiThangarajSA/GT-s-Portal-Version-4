@@ -1,16 +1,19 @@
 [
   {
-    "id": "usr-105527",
-    "vamId": "105527",
-    "name": "Sibibharathi Thangaraj",
-    "email": "Sibibharathi.Thangaraj@valuemomentum.com",
-    "phoneNumber": "9345766068",
-    "role": "Employee",
-    "addedOn": "20-Jan-2025",
+    "id": "usr-1787224860259-0",
+    "vamId": "105503",
+    "name": "Vaishali Karunai",
+    "phoneNumber": "8012325313",
+    "email": "Vaishali.Karunai@valuemomentum.com",
+    "designation": "Graduate Trainee",
+    "addedOn": "20-Aug-2026",
+    "role": "Admin",
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "GT-2026-Batch-01"
+    "password": "Vais@123",
+    "batch": "GT-2026-Batch-01",
+    "defaultPassword": "Vais@123"
   },
   {
     "id": "usr-105500",
@@ -23,7 +26,8 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "GT-2026-Batch-01"
+    "batch": "GT-2026-Batch-01",
+    "designation": "Graduate Trainee"
   },
   {
     "id": "usr-105515",
@@ -36,7 +40,10 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "GT-2026-Batch-01"
+    "batch": "GT-2026-Batch-01",
+    "designation": "Graduate Trainee",
+    "password": "Aswin@23",
+    "defaultPassword": "Aswin@23"
   },
   {
     "id": "usr-105520",
@@ -49,7 +56,8 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "GT-2026-Batch-01"
+    "batch": "GT-2026-Batch-01",
+    "designation": "Graduate Trainee"
   },
   {
     "id": "usr-105511",
@@ -62,7 +70,8 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "GT-2026-Batch-01"
+    "batch": "GT-2026-Batch-01",
+    "designation": "Graduate Trainee"
   },
   {
     "id": "usr-105496",
@@ -75,20 +84,8 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "GT-2026-Batch-01"
-  },
-  {
-    "id": "usr-105503",
-    "vamId": "105503",
-    "name": "Vaishali Karunai",
-    "email": "Vaishali.Karunai@valuemomentum.com",
-    "phoneNumber": "8012325313",
-    "role": "Employee",
-    "addedOn": "15-Jan-2025",
-    "status": "Active",
-    "access": "Enabled",
-    "addedBy": "Admin",
-    "batch": "GT-2026-Batch-01"
+    "batch": "GT-2026-Batch-01",
+    "designation": "Graduate Trainee"
   },
   {
     "id": "usr-105529",
@@ -101,7 +98,8 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "GT-2026-Batch-01"
+    "batch": "GT-2026-Batch-01",
+    "designation": "Graduate Trainee"
   },
   {
     "id": "usr-105530",
@@ -114,7 +112,8 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "L&D Leadership"
+    "batch": "L&D Leadership",
+    "designation": "Lead - L&D Leadership"
   },
   {
     "id": "usr-104275",
@@ -127,7 +126,8 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "L&D Management"
+    "batch": "L&D Management",
+    "designation": "Lead - L&D Leadership"
   },
   {
     "id": "usr-102163",
@@ -140,29 +140,18 @@
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",
-    "batch": "L&D Management"
+    "batch": "L&D Management",
+    "designation": "Lead - L&D Leadership"
   },
   {
-    "id": "usr-100137",
-    "vamId": "100137",
-    "name": "Sudhir Vittapu",
-    "email": "Sudhir.Vittapu@owlsure.com",
-    "phoneNumber": "9999999999",
-    "role": "Admin",
-    "addedOn": "10-Jan-2025",
-    "status": "Active",
-    "access": "Enabled",
-    "addedBy": "Admin",
-    "batch": "Technical Facilitation"
-  },
-  {
-    "id": "usr-associate-ram",
+    "id": "usr-1787228965573-0",
     "vamId": "-",
-    "name": "Ram",
+    "name": "Hari",
+    "phoneNumber": "6369275950",
     "email": "-",
-    "phoneNumber": "9894242460",
+    "designation": "Associate Trainee",
+    "addedOn": "20-Aug-2026",
     "role": "Associate",
-    "addedOn": "19-Aug-2026",
     "status": "Active",
     "access": "Enabled",
     "addedBy": "Admin",

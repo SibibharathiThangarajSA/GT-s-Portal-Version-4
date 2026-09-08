@@ -1,1 +1,1143 @@
-[]
+[
+  {
+    "id": "act-1788842536233-jty3z",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-08T04:42:16.713Z"
+  },
+  {
+    "id": "act-1788842514961-rj3vp",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-09-08T04:41:55.454Z"
+  },
+  {
+    "id": "act-1788842501055-pgg3j",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-08T04:41:41.508Z"
+  },
+  {
+    "id": "act-1788436751285-36zhy",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-09-03T11:59:11.123Z"
+  },
+  {
+    "id": "act-1788436069650-elgd1",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-03T11:47:49.479Z"
+  },
+  {
+    "id": "act-1788435839155-34sxz",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-03T11:43:58.976Z"
+  },
+  {
+    "id": "act-1788348720361-n1t1y",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-02T11:32:00.164Z"
+  },
+  {
+    "id": "act-1788257859249-28f32",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-01T10:17:29.053Z"
+  },
+  {
+    "id": "act-1788257677906-j1b8h",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-01T10:14:37.854Z"
+  },
+  {
+    "id": "act-1788254127492-3036l",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-09-01T09:15:27.062Z"
+  },
+  {
+    "id": "act-1788254106175-bt6y1",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-01T09:15:05.755Z"
+  },
+  {
+    "id": "act-1788254095213-aeh9z",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-01T09:14:54.796Z"
+  },
+  {
+    "id": "act-1788245721566-vglpw",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-01T06:55:20.858Z"
+  },
+  {
+    "id": "act-1788245620035-pak7b",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-01T06:53:39.297Z"
+  },
+  {
+    "id": "act-1788245615546-nylpc",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-09-01T06:53:34.805Z"
+  },
+  {
+    "id": "act-1787937727266-s0hsc",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T17:22:06.636Z"
+  },
+  {
+    "id": "act-1787937608626-b3lzy",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T17:20:07.909Z"
+  },
+  {
+    "id": "act-1787937554388-iz7f4",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T17:19:13.658Z"
+  },
+  {
+    "id": "act-1787937540861-xpvax",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T17:19:00.145Z"
+  },
+  {
+    "id": "act-1787937489843-4v8at",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T17:18:09.064Z"
+  },
+  {
+    "id": "act-1787914936931-6pmma",
+    "action": "StartLearning",
+    "details": "User opened learning session: Advanced Data Modeling & Modern Data Platforms",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T11:02:15.105Z"
+  },
+  {
+    "id": "act-1787901223132-nrwyy",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T07:13:42.977Z"
+  },
+  {
+    "id": "act-1787901216118-8j7n2",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T07:13:35.913Z"
+  },
+  {
+    "id": "act-1787901122778-mny0k",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T07:11:33.771Z"
+  },
+  {
+    "id": "act-1787901122767-k3jcu",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T07:11:41.140Z"
+  },
+  {
+    "id": "act-1787901111768-9rnns",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T07:11:51.604Z"
+  },
+  {
+    "id": "act-1787901095318-xfbyo",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-28T07:11:33.771Z"
+  },
+  {
+    "id": "act-1787829889441-2rh28",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T11:24:49.377Z"
+  },
+  {
+    "id": "act-1787829750603-txnyf",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T11:22:30.552Z"
+  },
+  {
+    "id": "act-1787827367049-wudry",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T10:42:46.842Z"
+  },
+  {
+    "id": "act-1787827232497-y9htt",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T10:40:32.296Z"
+  },
+  {
+    "id": "act-1787827224907-4px7u",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T10:40:24.703Z"
+  },
+  {
+    "id": "act-1787825762091-7jlny",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T10:16:01.873Z"
+  },
+  {
+    "id": "act-1787821223197-yz3l3",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T09:00:23.451Z"
+  },
+  {
+    "id": "act-1787820430374-8wym8",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T08:47:10.756Z"
+  },
+  {
+    "id": "act-1787820408230-0z6ws",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T08:46:48.030Z"
+  },
+  {
+    "id": "act-1787820297198-dj6da",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T08:44:57.584Z"
+  },
+  {
+    "id": "act-1787820059997-tvzsq",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T08:41:00.382Z"
+  },
+  {
+    "id": "act-1787820052460-c4yld",
+    "action": "StartLearning",
+    "details": "User opened learning session: DEMO Python ",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T08:40:52.846Z"
+  },
+  {
+    "id": "act-1787819984708-68dvf",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T08:39:45.099Z"
+  },
+  {
+    "id": "act-1787819927561-7dtjp",
+    "action": "StartLearning",
+    "details": "User opened learning session: DEMO Python ",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T08:38:47.951Z"
+  },
+  {
+    "id": "act-1787813729995-ee24s",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:55:29.681Z"
+  },
+  {
+    "id": "act-1787813528750-47tbu",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:52:03.125Z"
+  },
+  {
+    "id": "act-1787813289721-vkkec",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:48:09.544Z"
+  },
+  {
+    "id": "act-1787813197918-bsq30",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:46:37.772Z"
+  },
+  {
+    "id": "act-1787813082752-d8rrl",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:44:42.617Z"
+  },
+  {
+    "id": "act-1787812874786-tuvki",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:41:14.740Z"
+  },
+  {
+    "id": "act-1787812153439-wkpf8",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:29:13.292Z"
+  },
+  {
+    "id": "act-1787812085498-k4y2x",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:28:05.325Z"
+  },
+  {
+    "id": "act-1787811764112-7ev77",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:22:43.778Z"
+  },
+  {
+    "id": "act-1787811256063-z8c0d",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:14:15.916Z"
+  },
+  {
+    "id": "act-1787811100978-f7phh",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:11:40.852Z"
+  },
+  {
+    "id": "act-1787811060693-kf24v",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-27T06:11:00.563Z"
+  },
+  {
+    "id": "act-1787743235946-l2g8x",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T11:20:35.694Z"
+  },
+  {
+    "id": "act-1787743184946-baw7m",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T11:19:44.695Z"
+  },
+  {
+    "id": "act-1787743118305-ptn0z",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T11:18:38.035Z"
+  },
+  {
+    "id": "act-1787739879525-7m6xk",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T10:24:39.366Z"
+  },
+  {
+    "id": "act-1787728102690-9vybp",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T07:08:22.664Z"
+  },
+  {
+    "id": "act-1787728063975-ib86t",
+    "action": "StartLearning",
+    "details": "User opened learning session: HTML, CSS & JavaScript",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T07:07:43.950Z"
+  },
+  {
+    "id": "act-1787728031814-r348z",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T07:07:11.793Z"
+  },
+  {
+    "id": "act-1787727148089-ctuuq",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T06:52:28.158Z"
+  },
+  {
+    "id": "act-1787725466325-xge0w",
+    "action": "StartLearning",
+    "details": "User opened learning session: Campus to Corporate",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T06:24:26.568Z"
+  },
+  {
+    "id": "act-1787725109192-myp2a",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T06:18:29.049Z"
+  },
+  {
+    "id": "act-1787723539160-80ko8",
+    "action": "StartLearning",
+    "details": "User opened learning session: Advanced Data Modeling & Modern Data Platforms",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T05:52:19.199Z"
+  },
+  {
+    "id": "act-1787723404314-4kq6h",
+    "action": "StartLearning",
+    "details": "User opened learning session: Software Testing",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T05:50:04.364Z"
+  },
+  {
+    "id": "act-1787723339369-8los0",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T05:48:59.418Z"
+  },
+  {
+    "id": "act-1787723271518-m8qdt",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T05:47:51.577Z"
+  },
+  {
+    "id": "act-1787722821468-039d1",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T05:40:21.531Z"
+  },
+  {
+    "id": "act-1787722610430-9krl3",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T05:36:50.532Z"
+  },
+  {
+    "id": "act-1787720356825-bxth6",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T04:59:16.866Z"
+  },
+  {
+    "id": "act-1787719236822-43a0g",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-26T04:40:36.978Z"
+  },
+  {
+    "id": "act-1787640435596-v0g0g",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T06:47:15.269Z"
+  },
+  {
+    "id": "act-1787636387910-hhoua",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:39:47.843Z"
+  },
+  {
+    "id": "act-1787636371351-86swm",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:39:31.284Z"
+  },
+  {
+    "id": "act-1787636303135-12h07",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:38:23.069Z"
+  },
+  {
+    "id": "act-1787636104134-9as8t",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:35:04.032Z"
+  },
+  {
+    "id": "act-1787636071529-oe7br",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:34:31.471Z"
+  },
+  {
+    "id": "act-1787636007598-tquwt",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:33:27.079Z"
+  },
+  {
+    "id": "act-1787635827122-5v9zj",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:30:27.072Z"
+  },
+  {
+    "id": "act-1787635637339-e904e",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:27:16.786Z"
+  },
+  {
+    "id": "act-1787635624244-v8qd6",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:27:03.716Z"
+  },
+  {
+    "id": "act-1787635602796-25h2o",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:26:42.265Z"
+  },
+  {
+    "id": "act-1787635553798-e03h1",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:25:53.257Z"
+  },
+  {
+    "id": "act-1787635546896-awoai",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:25:46.356Z"
+  },
+  {
+    "id": "act-1787635533741-stjrq",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-25T05:25:33.201Z"
+  },
+  {
+    "id": "act-1787580916728-jmr07",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T14:15:15.882Z"
+  },
+  {
+    "id": "act-1787580616510-3p7bk",
+    "action": "StartLearning",
+    "details": "User opened learning session: Advanced Data Modeling & Modern Data Platforms",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T14:10:15.774Z"
+  },
+  {
+    "id": "act-1787580603407-1lsjw",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T14:10:02.659Z"
+  },
+  {
+    "id": "act-1787580587413-ci05d",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T14:09:46.666Z"
+  },
+  {
+    "id": "act-1787575273051-fs9q3",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T12:41:12.902Z"
+  },
+  {
+    "id": "act-1787547755286-crold",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T05:02:35.149Z"
+  },
+  {
+    "id": "act-1787547390580-nu5dx",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T04:56:30.414Z"
+  },
+  {
+    "id": "act-1787547310951-16vei",
+    "action": "StartLearning",
+    "details": "User opened learning session: Demo",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T04:55:10.815Z"
+  },
+  {
+    "id": "act-1787547101732-qunnv",
+    "action": "StartLearning",
+    "details": "User opened learning session: Software Testing",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T04:51:41.613Z"
+  },
+  {
+    "id": "act-1787547044082-3k997",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T04:50:43.965Z"
+  },
+  {
+    "id": "act-1787547004262-szb0s",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T04:50:04.145Z"
+  },
+  {
+    "id": "act-1787546977933-dibzu",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T04:49:37.819Z"
+  },
+  {
+    "id": "act-1787546747356-n5nwl",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T04:45:47.219Z"
+  },
+  {
+    "id": "act-1787546286065-zyegn",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-24T04:38:05.943Z"
+  },
+  {
+    "id": "act-1787481015355-6kgga",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-23T10:30:15.243Z"
+  },
+  {
+    "id": "act-1787468524812-2b7b3",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-23T07:02:04.663Z"
+  },
+  {
+    "id": "act-1787468236802-eeem4",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-23T06:57:16.665Z"
+  },
+  {
+    "id": "act-1787467967093-3gaen",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-23T06:52:46.933Z"
+  },
+  {
+    "id": "act-1787465379591-rs58w",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-23T06:09:39.470Z"
+  },
+  {
+    "id": "act-1787465375893-7t1a8",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-23T06:09:35.738Z"
+  },
+  {
+    "id": "act-1787465038705-5t7uf",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-23T06:03:58.575Z"
+  },
+  {
+    "id": "act-1787465018367-6zm9a",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-23T06:03:38.242Z"
+  },
+  {
+    "id": "act-1787311446606-hhjeq",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T11:24:06.074Z"
+  },
+  {
+    "id": "act-1787311434323-ltwlr",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T11:23:54.052Z"
+  },
+  {
+    "id": "act-1787300618746-1ibc0",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T08:23:38.597Z"
+  },
+  {
+    "id": "act-1787300607811-79wf6",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T08:23:27.662Z"
+  },
+  {
+    "id": "act-1787300347555-4e9np",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T08:19:07.389Z"
+  },
+  {
+    "id": "act-1787292327688-31309",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T06:05:27.657Z"
+  },
+  {
+    "id": "act-1787292109725-ypuyh",
+    "action": "StartLearning",
+    "details": "User opened learning session: HTML, CSS & JavaScript",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T06:01:49.682Z"
+  },
+  {
+    "id": "act-1787290507193-0n9rp",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T05:35:06.963Z"
+  },
+  {
+    "id": "act-1787288225067-x9owu",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T04:57:04.752Z"
+  },
+  {
+    "id": "act-1787288061826-wn0sg",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T04:54:21.500Z"
+  },
+  {
+    "id": "act-1787288036867-rjlt6",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T04:53:56.541Z"
+  },
+  {
+    "id": "act-1787287673768-o7k6o",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T04:47:54.078Z"
+  },
+  {
+    "id": "act-1787286804546-kdq96",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-21T04:33:25.036Z"
+  },
+  {
+    "id": "act-1787242739404-ah4jb",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: Campus to Corporate",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T16:18:59.154Z"
+  },
+  {
+    "id": "act-1787242563731-0763x",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T16:16:03.758Z"
+  },
+  {
+    "id": "act-1787242561074-06wri",
+    "action": "StartLearning",
+    "details": "User opened learning session: Campus to Corporate",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T16:16:00.588Z"
+  },
+  {
+    "id": "act-1787242540070-b2ezr",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T16:15:40.127Z"
+  },
+  {
+    "id": "act-1787241430007-ce184",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T15:57:09.454Z"
+  },
+  {
+    "id": "act-1787241149642-xitas",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T15:52:28.953Z"
+  },
+  {
+    "id": "act-1787234726115-hsy3r",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T14:05:25.506Z"
+  },
+  {
+    "id": "act-1787211355570-2y34w",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T07:35:55.388Z"
+  },
+  {
+    "id": "act-1787210377422-iglfl",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T07:19:37.270Z"
+  },
+  {
+    "id": "act-1787209758881-kojxc",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T07:09:18.721Z"
+  },
+  {
+    "id": "act-1787209042632-6ukmh",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:57:22.485Z"
+  },
+  {
+    "id": "act-1787208932325-llg0j",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:55:32.184Z"
+  },
+  {
+    "id": "act-1787208786804-q0dzp",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:53:06.641Z"
+  },
+  {
+    "id": "act-1787208553563-zogip",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:49:13.431Z"
+  },
+  {
+    "id": "act-1787208545660-y3y2r",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:49:05.531Z"
+  },
+  {
+    "id": "act-1787208538529-vmhlp",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:48:58.398Z"
+  },
+  {
+    "id": "act-1787208522862-bk3zf",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:48:42.732Z"
+  },
+  {
+    "id": "act-1787208501981-gh750",
+    "action": "StartLearning",
+    "details": "User opened learning session: Insurance Domain Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:48:21.851Z"
+  },
+  {
+    "id": "act-1787206610227-wsfeq",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T06:16:50.086Z"
+  },
+  {
+    "id": "act-1787204968450-gheua",
+    "action": "StartLearning",
+    "details": "User opened learning session: SQL & Relational Database Engineering",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T05:49:28.301Z"
+  },
+  {
+    "id": "act-1787203116595-nd7rt",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T05:18:36.456Z"
+  },
+  {
+    "id": "act-1787202873395-wer1w",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T05:14:33.650Z"
+  },
+  {
+    "id": "act-1787200241115-ozqql",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T04:30:23.869Z"
+  },
+  {
+    "id": "act-1787200130543-amsjw",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T04:28:51.203Z"
+  },
+  {
+    "id": "act-1787200103227-vmuyi",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T04:28:23.902Z"
+  },
+  {
+    "id": "act-1787200094127-enkkr",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T04:28:14.803Z"
+  },
+  {
+    "id": "act-1787199821770-zs36x",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T04:23:24.415Z"
+  },
+  {
+    "id": "act-1787199801141-anrrc",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T04:23:21.834Z"
+  },
+  {
+    "id": "act-1787197436735-8g6rk",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:43:56.538Z"
+  },
+  {
+    "id": "act-1787197396291-okbg7",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:42:58.346Z"
+  },
+  {
+    "id": "act-1787197153158-17sa1",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:39:12.880Z"
+  },
+  {
+    "id": "act-1787197080431-g48ld",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:37:59.525Z"
+  },
+  {
+    "id": "act-1787196985479-biyty",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:35:58.357Z"
+  },
+  {
+    "id": "act-1787196641742-4od9w",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:30:41.541Z"
+  },
+  {
+    "id": "act-1787196582160-8hgz5",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:29:41.795Z"
+  },
+  {
+    "id": "act-1787196574246-3zw88",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:29:33.865Z"
+  },
+  {
+    "id": "act-1787195131424-8wrv7",
+    "action": "StartQuiz",
+    "details": "User started quiz for session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:05:30.620Z"
+  },
+  {
+    "id": "act-1787195117244-naq3m",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T03:05:16.465Z"
+  },
+  {
+    "id": "act-1787193323928-0swg0",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T02:35:23.134Z"
+  },
+  {
+    "id": "act-1787193111154-kok83",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T02:31:51.588Z"
+  },
+  {
+    "id": "act-1787192955954-dbiub",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T02:29:16.408Z"
+  },
+  {
+    "id": "act-1787192940559-dwrn1",
+    "action": "StartLearning",
+    "details": "User opened learning session: Data Modelling Fundamentals",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T02:29:01.006Z"
+  },
+  {
+    "id": "act-1787191701992-v7cqm",
+    "action": "StartLearning",
+    "details": "User opened learning session: .NET with C#",
+    "userId": "active-user",
+    "timestamp": "2026-08-20T02:08:21.210Z"
+  }
+]
